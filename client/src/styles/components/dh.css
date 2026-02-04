@@ -1,0 +1,200 @@
+/*********************************
+*皮肤样式文件                     
+*1、绿色（默认），蓝色，黑色
+*********************************/
+
+/* #region  1.绿色（ 默认皮肤） */
+:root {
+  /*********************  皮肤Color  ***************************/
+  --el-theme-color: #00ae96;
+  --el-theme-color-light-1: #12d4ba;
+  --el-theme-color-light-2: #009a85;
+  --el-theme-color-light-9: #00ae971a;
+  --el-theme-color-dark-1: #039881;
+  --el-theme-color-dark-2: #019077;
+
+  /* 如hover */
+  --el-theme-color-disabled: #57d8c4;
+  --el-top-area-bg-color: #1e9887;
+  --el-theme-color-transparent-1: rgb(0 174 150 / 10%);
+
+  /* 主色加透明度 */
+  --el-theme-color-transparent-3: rgb(0 174 150 / 30%);
+
+  /* 主色加透明度 */
+  --el-theme-color-transparent-4: rgb(0 174 150 / 40%);
+
+  /* 主色加透明度 */
+  --el-theme-color-transparent-6: rgb(0 174 150 / 60%);
+
+  /* 主色加透明度 */
+
+  /*********************  皮肤icons  ***************************/
+  --el-list-item-more-icon: url('@/assets/images/web/common/base/list-item-more.png')
+    center center no-repeat;
+  --el-base-icons: url('@/assets/images/web/common/base/icons.png') no-repeat;
+  --el-other-icons: url('@/assets/images/web/common/base/icons-other.png')
+    no-repeat;
+  --el-icon-add-file: url('@/assets/images/web/common/base/ico-add-file.png')
+    no-repeat;
+  --el-icon-add-img: url('@/assets/images/web/common/base/ico-add-img.png')
+    no-repeat;
+
+  /*********************  基础Color  ***************************/
+
+  /****  白色  ****/
+  --el-color-white: #fff;
+  --el-color-white-1: rgb(255 255 255 / 10%);
+  --el-color-white-2: rgb(255 255 255 / 20%);
+  --el-color-white-4: rgb(255 255 255 / 40%);
+  --el-color-white-5: rgb(255 255 255 / 50%);
+  --el-color-white-7: rgb(255 255 255 / 70%);
+
+  /****  黑色  ****/
+  --el-color-black: #000;
+  --el-color-black-light-0: rgb(0 0 0 / 0%);
+  --el-color-black-light-3: rgb(0 0 0 / 30%);
+  --el-color-black-light-4: rgb(0 0 0 / 40%);
+  --el-color-black-light-7: rgb(0 0 0 / 70%);
+
+  /****  灰色  ****/
+  --el-color-grey: #686868;
+  --el-color-grey-8: rgb(104 104 104 / 80%);
+  --el-color-grey-dark: #383838;
+  --el-color-grey-f2: #f2f2f2;
+  --el-color-grey-f7: #f7f7f7;
+  --el-color-grey-light: #989898;
+  --el-color-grey-light-1: rgb(152 152 152 / 10%);
+  --el-color-grey-light-1-by-code: #f4f4f4;
+  --el-color-grey-light-16: rgb(152 152 152 / 16%);
+  --el-color-grey-light-2: rgb(152 152 152 / 20%);
+  --el-color-grey-light-26: rgb(152 152 152 / 26%);
+  --el-color-grey-light-3: rgb(152 152 152 / 30%);
+  --el-color-grey-light-45: rgb(152 152 152 / 45%);
+  --el-color-grey-light-5: rgb(152 152 152 / 50%);
+  --el-color-grey-light-54: rgb(152 152 152 / 54%);
+  --el-color-grey-light-7: rgb(152 152 152 / 70%);
+  --el-color-grey-light-9: rgb(152 152 152 / 90%);
+  --el-color-grey-light-9-238: rgb(238 238 238 / 90%);
+
+  /****  彩色  ****/
+  --el-color-red: #f33;
+
+  /* 红色 */
+  --el-color-red-9: rgb(255 51 51 / 90%);
+
+  /* 红色-透明度90 */
+
+  --el-color-orange: #f63;
+  --el-color-orange-light-3: rgb(255 102 51 / 30%);
+
+  /* 橘色 */
+  --el-color-yellow: #fc3;
+
+  /* 黄色 */
+  --el-color-yellow-light-3: rgb(255 204 51 / 30%);
+
+  /* 黄色-透明度30 */
+
+  --el-color-green: #02b05c;
+  --el-color-green-light-3: rgb(2 176 92 / 30%);
+
+  /* 绿色 */
+  --el-color-blue: #2481f0;
+
+  /* 蓝色 */
+
+  /******  echarts默认颜色  ******/
+  --el-color-5470c6: #5470c6;
+  --el-color-91cc75: #91cc75;
+  --el-color-fac858: #fac858;
+  --el-color-ee6666: #e66;
+
+  /* 时间线 */
+  --timeline-line-border-color: rgb(0 174 150 / 26%);
+  --timeline-line-node-bg-color: rgb(0 174 150 / 30%);
+}
+
+/* #endregion */
+
+/* #region  2.蓝色 */
+:root[theme='blue'] {
+  --el-theme-color: #3c8dbc;
+  --el-theme-color-light-1: #8fd0f4;
+  --el-theme-color-light-2: #0595e8;
+  --el-theme-color-light-9: #3c8dbc1e;
+  --el-theme-color-dark-1: #0284c8;
+  --el-theme-color-dark-2: #0178b6;
+
+  /* 如hover */
+  --el-theme-color-disabled: #66b6e3;
+  --el-theme-color-transparent-1: rgb(60 141 188 / 10%);
+
+  /* 主色加透明度 */
+  --el-theme-color-transparent-3: rgb(60 141 188 / 30%);
+
+  /* 主色加透明度 */
+  --el-theme-color-transparent-4: rgb(60 141 188 / 40%);
+
+  /* 主色加透明度 */
+  --el-theme-color-transparent-6: rgb(60 141 188 / 60%);
+
+  /* 主色加透明度 */
+
+  --el-top-area-bg-color: var(--el-theme-color);
+  --el-list-item-more-icon: url('@/assets/images/web/common/theme/ThemeA/list-item-more.png')
+    center center no-repeat;
+  --el-base-icons: url('@/assets/images/web/common/theme/ThemeA/icons.png')
+    no-repeat;
+  --el-other-icons: url('@/assets/images/web/common/theme/ThemeA/icons-other.png')
+    no-repeat;
+  --el-icon-add-file: url('@/assets/images/web/common/theme/ThemeA/ico-add-file.png')
+    no-repeat;
+  --el-icon-add-img: url('@/assets/images/web/common/theme/ThemeA/ico-add-img.png')
+    no-repeat;
+  --timeline-line-border-color: rgb(60 141 188 / 26%);
+  --timeline-line-node-bg-color: rgb(0 174 150 / 30%);
+}
+
+/* #endregion */
+
+/* #region  3.黑色 */
+:root[theme='black'] {
+  --el-theme-color: #1890ff;
+  --el-theme-color-light-1: #8fd0f4;
+  --el-theme-color-light-2: #4ba8fe;
+  --el-theme-color-light-9: #188fff2d;
+  --el-theme-color-dark-1: #0284c8;
+  --el-theme-color-dark-2: #0178b6;
+
+  /* 如hover */
+  --el-theme-color-disabled: #6fbae1;
+  --el-theme-color-transparent-1: rgb(24 144 255 / 10%);
+
+  /* 主色加透明度 */
+  --el-theme-color-transparent-3: rgb(60 141 188 / 30%);
+
+  /* 主色加透明度 */
+  --el-theme-color-transparent-4: rgb(24 144 255 / 40%);
+
+  /* 主色加透明度 */
+  --el-theme-color-transparent-6: rgb(24 144 255 / 60%);
+
+  /* 主色加透明度 */
+
+  --el-top-area-bg-color: #232e40;
+  --el-list-item-more-icon: url('@/assets/images/web/common/theme/ThemeB/list-item-more.png')
+    center center no-repeat;
+  --el-base-icons: url('@/assets/images/web/common/theme/ThemeB/icons.png')
+    no-repeat;
+  --el-other-icons: url('@/assets/images/web/common/theme/ThemeB/icons-other.png')
+    no-repeat;
+  --el-icon-add-file: url('@/assets/images/web/common/theme/ThemeB/ico-add-file.png')
+    no-repeat;
+  --el-icon-add-img: url('@/assets/images/web/common/theme/ThemeB/ico-add-img.png')
+    no-repeat;
+  --timeline-line-border-color: rgb(24 144 255 / 26%);
+  --timeline-line-node-bg-color: rgb(24 144 255 / 30%);
+}
+
+/* #endregion */

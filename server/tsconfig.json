@@ -1,0 +1,29 @@
+{
+  "compilerOptions": {
+    // === 1. 输出配置 (关键修改) ===
+    "target": "ES2020",
+    "module": "commonjs",
+    "outDir": "./dist",
+    "rootDir": "./src",
+    "sourceMap": true, // 建议开启：方便生产环境排查报错行号
+    "noEmit": false, // ★★★ 必须改成 false！否则 build 命令不会生成 js 文件
+
+    // === 2. 路径别名 (保持现状) ===
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["src/*"]
+    },
+
+    // === 3. 类型检查与兼容性 ===
+    "strict": true, // ★★★ 强烈建议开启：后端逻辑严谨很重要，防止空指针报错
+    "esModuleInterop": true, // 允许 import x from 'commonjs-lib'
+    "skipLibCheck": true, // 跳过 node_modules 里的类型检查，加快速度
+    "forceConsistentCasingInFileNames": true,
+
+    // === 4. JS 兼容性 (保留你的需求) ===
+    "allowJs": true, // 允许引入 .js 文件
+    "checkJs": false // 不检查 .js 文件的语法，避免旧代码报错
+  },
+  "include": ["src/**/*"],
+  "exclude": ["node_modules", "dist"] // 排除这两个目录，防止编译死循环
+}

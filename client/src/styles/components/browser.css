@@ -1,0 +1,76 @@
+/* #region 1.2 浏览器兼容样式处理 */
+
+/* 去除设置chrome 类input黄色背景 */
+input:-webkit-autofill {
+  box-shadow: 0 0 0 1000px var(--el-color-white) inset !important;
+}
+
+/* 设置滚动条的样式 */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-ms-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+/* 滚动槽 */
+::-webkit-scrollbar-track {
+  /* background: var(--el-color-white); */
+
+  /* background: var(--el-bg-color); */
+}
+
+/* 滚动条滑块 */
+::-webkit-scrollbar-thumb {
+  /* background: #ddd; */
+  background-color: var(--el-border-color-darker);
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:window-inactive {
+  border-radius: 3px;
+}
+
+/* IE9下支持PlaceHolder的样式 */
+.placeholder {
+  position: absolute;
+  top: 0;
+  z-index: 10;
+  color: #888;
+}
+
+.placeholder-login {
+  position: absolute;
+  top: 0;
+  z-index: 10;
+  color: #888;
+}
+
+.placeholder-backup {
+  position: absolute;
+  top: 0;
+  z-index: 10;
+  color: #888;
+}
+
+/* IE下输入框去除×和眼睛 */
+::-ms-clear,
+::-ms-reveal {
+  display: none;
+}
+
+/* 选中文本样式 */
+::selection {
+  color: var(--el-color-white);
+  background: var(--el-color-primary);
+}
+
+::-ms-selection {
+  color: var(--el-color-white);
+  background: var(--el-color-primary);
+}
+
+/* #endregion */

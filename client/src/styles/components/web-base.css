@@ -1,0 +1,282 @@
+﻿/* #region 1.1 设置默认样式 */
+* {
+  box-sizing: border-box;
+  padding: 0;
+  margin: 0;
+  font-family:
+    -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC',
+    'Hiragino Sans GB', 'Microsoft YaHei', 'Helvetica Neue', Helvetica, Arial,
+    simsun, sans-serif, NotoSansCJK;
+  list-style: none;
+  outline: none;
+}
+
+html {
+  /* min-width: 1024px; */
+  height: 100%;
+  overflow: hidden;
+}
+@media (width >= 1024px) {
+  html {
+    min-width: 1024px;
+  }
+}
+
+html.miniapp {
+  min-width: auto;
+}
+
+body {
+  width: 100% !important;
+  height: inherit;
+  font-size: var(--el-font-size-base);
+
+  margin: 0 !important;
+  /* color: var(--el-color-black); */
+
+  color: var(--el-text-color-primary);
+
+  /* background: var(--el-color-grey-light-1); */
+}
+
+a {
+  color: var(--el-color-primary);
+  text-decoration: none;
+}
+
+p {
+  word-break: break-all !important;
+}
+
+/* #endregion */
+
+/********************************************************************
+*                       2.常用自定义样式                        *
+********************************************************************/
+
+/* #region 2.1 宽度 */
+.width-auto {
+  width: auto !important;
+}
+
+.width-1 {
+  width: 30px !important;
+}
+
+.width-2 {
+  width: 44px !important;
+}
+
+.width-3 {
+  width: 58px !important;
+}
+
+.width-4 {
+  width: 72px !important;
+}
+
+.width-5 {
+  width: 86px !important;
+}
+
+.width-6 {
+  width: 100px !important;
+}
+
+.width-7 {
+  width: 114px !important;
+}
+
+.width-8 {
+  width: 128px !important;
+}
+
+.width-9 {
+  width: 142px !important;
+}
+
+.width-10 {
+  width: 156px !important;
+}
+
+.width-11 {
+  width: 170px !important;
+}
+
+.width-12 {
+  width: 184px !important;
+}
+
+.width-13 {
+  width: 198px !important;
+}
+
+.width-14 {
+  width: 212px !important;
+}
+
+.width-15 {
+  width: 226px !important;
+}
+
+.width-long {
+  width: 370px !important;
+}
+
+.width-date {
+  width: 92px !important;
+}
+
+.width-minute-time {
+  width: 130px !important;
+}
+
+.width-full-time {
+  width: 148px !important;
+}
+
+.width-pre-100 {
+  width: 100% !important;
+}
+
+/* #endregion */
+
+/* #region 2.4 字体相关 */
+
+/* ---------颜色----------- */
+
+/* 主色文字 */
+.main-text {
+  color: var(--el-color-primary) !important;
+  cursor: pointer;
+}
+
+/* 主色边框 */
+.main-border {
+  border-color: var(--el-color-primary) !important;
+}
+
+/* 主色说明文字 */
+.main-text-explain {
+  color: var(--el-color-primary) !important;
+}
+
+/* 成功文字 */
+.green-text {
+  color: var(--el-color-green) !important;
+}
+
+.orange-text {
+  color: var(--el-color-orange) !important;
+}
+
+/* 失败or错误文字 */
+.red-text {
+  color: var(--el-color-red) !important;
+}
+
+/* 黑色文字 */
+.main-black {
+  color: var(--el-color-black) !important;
+}
+
+/* 蓝色文字 */
+.main-blue {
+  color: var(--el-color-blue) !important;
+}
+
+/* 亮灰色字 */
+.gray-light-text {
+  color: var(--el-color-grey-light) !important;
+}
+
+.white-7 {
+  color: var(--el-color-white-7) !important;
+}
+
+/* ---------粗细----------- */
+.font-weight-normal {
+  font-weight: normal;
+}
+
+.font-weight-bold {
+  font-weight: bold;
+}
+
+/* ---------大小----------- */
+.base-font-size {
+  font-size: var(--el-font-size-base) !important;
+}
+
+.font-size-medium {
+  font-size: var(--el-font-size-medium) !important;
+}
+
+.font-size-large {
+  font-size: var(--el-font-size-large) !important;
+}
+
+/* ---------对齐----------- */
+.align-right {
+  text-align: right !important;
+}
+
+.align-left {
+  text-align: left !important;
+}
+
+.align-center {
+  text-align: center !important;
+}
+
+/* 文字单行溢出省略号 */
+.text-overflow {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* 首行缩进两个字符 */
+.text-indent-2 {
+  text-indent: 2em;
+}
+
+/* #endregion */
+
+/* #region 2.5 边框 */
+.border-orange {
+  border-color: var(--el-color-orange) !important;
+}
+
+/* 橙色边框 */
+
+/* 红色警告框 */
+.border-red {
+  border-color: var(--el-color-red) !important;
+}
+
+.border-none {
+  border: none !important;
+}
+
+.border-default {
+  border: 1px solid var(--el-color-black) !important;
+}
+
+/* #endregion */
+
+/* #region 2.6 自定义cursor */
+
+/* 定义了一个名为 .cursor-pointer 的CSS类，
+   将鼠标光标样式设置为手形（通常用于表示链接或可点击的元素），并使用 !important 标记 */
+.cursor-pointer {
+  cursor: pointer !important;
+}
+
+/* 定义了一个名为 .cursor-move 的CSS类，
+   将鼠标光标样式设置为可移动（通常用于表示可拖动的元素），并使用 !important 标记 */
+.cursor-move {
+  cursor: move !important;
+}
+
+/* #endregion */

@@ -1,0 +1,62 @@
+/********************************************************************
+*                        表格(Table)样式                           *
+********************************************************************/
+
+/* 设置表格的基础样式 */
+.el-table {
+  /* 重置字体大小为未设置值，使用!important提升优先级 */
+  font-size: var(--el-font-size-base) !important;
+
+  /* 设置表头背景色，使用变量--el-color-grey-f2，并用!important提升优先级 */
+  --el-table-header-bg-color: var(--el-color-grey-f2) !important;
+
+  /* 设置表头文字颜色，使用变量--el-color-grey-dark */
+  --el-table-header-text-color: var(--el-color-grey-dark);
+
+  /* 设置表格文字颜色，使用变量--el-color-grey-dark，并用!important提升优先级 */
+
+  /* color: var(--el-color-grey-dark) !important; */
+}
+
+/* 设置表格表头样式 */
+.el-table__header thead {
+  /* 设置表头行高 */
+  height: 40px;
+
+  /* 设置表头行内文字垂直居中 */
+  line-height: 40px;
+}
+
+/* 设置表头单元格样式 */
+.el-table__header thead .el-table__cell {
+  /* 重置内边距为0，使用!important提升优先级 */
+  padding: 0 !important;
+  background: var(--el-fill-color-light) !important;
+}
+
+/* 设置表头单元格内部元素样式 */
+.el-table__header thead .el-table__cell > .cell {
+  /* 使用flex布局 */
+  display: flex;
+
+  /* 垂直居中子元素 */
+  align-items: center;
+}
+
+/* 设置居中对齐的表头单元格样式 */
+.el-table__header thead .el-table__cell.is-center > .cell {
+  /* 水平居中子元素 */
+  justify-content: center;
+}
+
+/* 设置表格降序排序图标样式 */
+.el-table .descending .sort-caret.descending {
+  /* 设置顶部边框颜色为变量--el-theme-color定义的颜色，使用!important提升优先级 */
+  border-top-color: var(--el-color-primary) !important;
+}
+
+/* 设置表格升序排序图标样式 */
+.el-table .ascending .sort-caret.ascending {
+  /* 设置底部边框颜色为变量--el-theme-color定义的颜色，使用!important提升优先级 */
+  border-bottom-color: var(--el-color-primary) !important;
+}

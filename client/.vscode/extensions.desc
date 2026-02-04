@@ -1,0 +1,14 @@
+formulahendry.auto-rename-tag: 自动重命名配对的HTML/XML标记
+streetsidesoftware.code-spell-checker: 基本的拼写检查器，可以很好地处理代码和文档
+aminer.codegeex: 基于大模型的智能编程助手，它可以实现代码的生成与补全，自动为代码添加注释，修复代码bug等非常丰富的功能
+dbaeumer.vscode-eslint: 集成eslint到vscode
+visualstudioexptteam.intellicode-api-usage-examples: ai辅助开发中访问使用的api的代码示例
+xabikos.javascriptsnippets: ES6语法的TypeScript/JavaScript代码片段
+esbenp.prettier-vscode: 集成prettier到vscode
+gruntfuggly.todo-tree: 快速查找和标记TODO、FIXME、HACK等注释
+vscode-icons-team.vscode-icons: 为vscode添加文件图标
+visualstudioexptteam.vscodeintellicode: 基于理解代码上下文并结合机器学习，为Python、TypeScript/JavaScript、Java开发者提供ai辅助开发功能
+ms-ceintl.vscode-language-pack-zh-hans: 适用于 VS Code 的中文（简体）语言包
+vue.volar: Vue 3的LSP支持
+baiducomate.comate:文心快码智能代码助手
+christian-kohler.path-intellisense:路径自动补全

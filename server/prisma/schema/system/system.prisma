@@ -1,0 +1,39 @@
+// ==========================================
+// 3. 菜单/权限表 (Menu)
+// ==========================================
+model Menu {
+  id        Int     @id @default(autoincrement())
+  parentId  Int? // 父菜单ID (顶级为null)
+  title     String // 菜单名称
+  path      String? // 路由路径
+  component String? // 前端组件路径
+  perms     String? // 权限标识 (如 todo:list, todo:add)
+  icon      String?
+  type      Int // 1:目录 2:菜单 3:按钮
+  sort      Int     @default(0)
+
+  // 关联：拥有该菜单的角色
+  roles Role[]
+
+  createdAt DateTime @default(now())
+}
+
+// ==========================================
+// 4. 部门表 (Department) - 更新版
+// ==========================================
+model Department {
+  id       Int    @id @default(autoincrement())
+  parentId Int? // 父部门ID
+  name     String // 部门名称
+  sort     Int    @default(0)
+
+  // 新增：部门负责人 (Manager)
+  managerId Int?
+  manager   User? @relation("DeptManager", fields: [managerId], references: [id])
+
+  // 关联：部门下的所有员工
+  users User[] @relation("DeptUsers")
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}

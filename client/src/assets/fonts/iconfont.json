@@ -1,0 +1,23 @@
+{
+  "id": "4665108",
+  "name": "excel",
+  "font_family": "iconfont",
+  "css_prefix_text": "icon-",
+  "description": "",
+  "glyphs": [
+    {
+      "icon_id": "9478378",
+      "name": "导出",
+      "font_class": "daochu",
+      "unicode": "e91c",
+      "unicode_decimal": 59676
+    },
+    {
+      "icon_id": "18174856",
+      "name": "文件,excel",
+      "font_class": "excel-full",
+      "unicode": "ea45",
+      "unicode_decimal": 59973
+    }
+  ]
+}

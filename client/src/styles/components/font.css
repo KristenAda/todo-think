@@ -1,0 +1,36 @@
+:root {
+  /* 字体类型 */
+  --font-family-chinese: '思源黑体', '微软雅黑', '苹方';
+  --font-family-english: 'Arial', 'Helvetica', 'Times New Roman';
+  --font-family: var(--font-family-chinese), var(--font-family-english);
+
+  /* 字号标准 */
+  --font-size-note: 12px;
+  --font-size-content-dense: 14px;
+  --font-size-content-reading: 16px;
+  --font-size-heading-1: 24px;
+  --font-size-heading-2: 20px;
+  --font-size-heading-3: 18px;
+
+  /* 行距、段距 */
+  --line-height-note: calc(var(--font-size-note) * 1.5);
+  --line-height-content-dense: calc(var(--font-size-content-dense) * 1.5);
+  --line-height-content-reading: calc(var(--font-size-content-reading) * 1.5);
+  --line-height-heading-1: calc(var(--font-size-heading-1) * 1.5);
+  --line-height-heading-2: calc(var(--font-size-heading-2) * 1.5);
+  --line-height-heading-3: calc(var(--font-size-heading-3) * 1.5);
+  --paragraph-spacing-note: calc(var(--font-size-note) * 2);
+  --paragraph-spacing-content-dense: calc(var(--font-size-content-dense) * 2);
+  --paragraph-spacing-content-reading: calc(
+    var(--font-size-content-reading) * 2
+  );
+  --paragraph-spacing-heading-1: calc(var(--font-size-heading-1) * 2);
+  --paragraph-spacing-heading-2: calc(var(--font-size-heading-2) * 2);
+  --paragraph-spacing-heading-3: calc(var(--font-size-heading-3) * 2);
+
+  /* 颜色规范 */
+  --color-text: #606266;
+  --color-link: var(
+    --el-color-primary
+  ); /* 假设品牌主色与 ElementPlus 主色一致 */
+}

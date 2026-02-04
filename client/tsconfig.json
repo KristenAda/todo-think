@@ -1,0 +1,27 @@
+{
+  "compilerOptions": {
+    "target": "ESNext",
+    "module": "ESNext", // 必须是 ESNext 或 ES2020 以上，以支持 import.meta
+    "moduleResolution": "bundler", // 如果是 Vite 项目，建议设为 bundler
+    "strict": false, // 考虑到你有 JS 共存，可以先关闭严格检查
+    "allowJs": true, // 允许处理 JS 文件
+    "checkJs": false, // 建议关闭 JS 的静态检查，防止报错过多
+    "noEmit": true, // 只做类型检查，不输出文件
+    "isolatedModules": true,
+    "esModuleInterop": true,
+    "jsx": "preserve",
+    "lib": ["ESNext", "DOM", "DOM.Iterable"],
+    "baseUrl": "./",
+    "paths": {
+      "@/*": ["src/*"]
+    },
+    "types": ["vite/client"]
+  },
+  "include": [
+    "src/**/*.ts",
+    "src/**/*.js",
+    "src/**/*.vue", // 确保包含 vue 文件
+    "auto-imports.d.ts",
+    "components.d.ts"
+  ]
+}

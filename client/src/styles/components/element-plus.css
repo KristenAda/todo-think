@@ -1,0 +1,342 @@
+:root {
+  /* 字体单位 12px为基准点 */
+  --el-font-size-extra-small: 10px !important;
+
+  /* 10px */
+  --el-font-size-small: 11px !important;
+
+  /* 11px */
+  --el-font-size-base: 14px !important;
+
+  /* 12px */
+  --el-font-size-medium: 16px !important;
+
+  /* 14px */
+  --el-font-size-large: 18px !important;
+
+  /* 16px */
+  --el-font-size-extra-large: 20px !important;
+
+  /* 18px */
+  --el-color-grey: #686868;
+  --el-color-grey-8: rgb(104 104 104 / 80%);
+  --el-color-grey-dark: #383838;
+  --el-color-grey-f2: #f2f2f2;
+  --el-color-grey-f7: #f7f7f7;
+  --el-color-grey-f9: #f9f9f9;
+  --el-color-grey-default: #686868;
+  --el-color-grey-light: #989898;
+  --el-color-grey-light-1: rgb(152 152 152 / 10%);
+  --el-color-grey-light-1-by-code: #f4f4f4;
+  --el-color-grey-light-16: rgb(152 152 152 / 16%);
+  --el-color-grey-light-2: rgb(152 152 152 / 20%);
+  --el-color-grey-light-26: rgb(152 152 152 / 26%);
+  --el-color-grey-light-3: rgb(152 152 152 / 30%);
+  --el-color-grey-light-45: rgb(152 152 152 / 45%);
+  --el-color-grey-light-5: rgb(152 152 152 / 50%);
+  --el-color-grey-light-54: rgb(152 152 152 / 54%);
+  --el-color-grey-light-7: rgb(152 152 152 / 70%);
+
+  /* --el-color-grey-light-9: rgb(152 152 152 / 90%); */
+  --el-color-grey-light-9-238: rgb(238 238 238 / 90%);
+
+  /****  白色  ****/
+  --el-color-white-1: rgb(255 255 255 / 10%);
+  --el-color-white-2: rgb(255 255 255 / 20%);
+  --el-color-white-4: rgb(255 255 255 / 40%);
+  --el-color-white-5: rgb(255 255 255 / 50%);
+  --el-color-white-7: rgb(255 255 255 / 70%);
+
+  /****  黑色  ****/
+  --el-color-black-light-0: rgb(0 0 0 / 0%);
+  --el-color-black-light-3: rgb(0 0 0 / 30%);
+  --el-color-black-light-4: rgb(0 0 0 / 40%);
+  --el-color-black-light-7: rgb(0 0 0 / 70%);
+
+  /****  彩色  ****/
+  --el-color-red: #f33;
+
+  /* 红色 */
+  --el-color-red-9: rgb(255 51 51 / 90%);
+
+  /* 红色-透明度90 */
+
+  --el-color-orange: #f63;
+  --el-color-orange-light-3: rgb(255 102 51 / 30%);
+
+  /* 橘色 */
+  --el-color-yellow: #fc3;
+
+  /* 黄色 */
+  --el-color-yellow-light-3: rgb(255 204 51 / 30%);
+
+  /* 黄色-透明度30 */
+
+  --el-color-green: #02b05c;
+  --el-color-green-light-3: rgb(2 176 92 / 30%);
+
+  /* 绿色 */
+  --el-color-blue: #2481f0;
+
+  --el-border-color: #c6e2ff !important;
+}
+
+html.dark {
+  /* wangEditor */
+  --w-e-toolbar-color: #eee;
+  --w-e-toolbar-bg-color: #141414;
+  --w-e-textarea-bg-color: #141414;
+  --w-e-textarea-color: #eee;
+  --w-e-toolbar-active-bg-color: #464646;
+  --w-e-toolbar-border-color: var(--el-border-color-darker);
+
+  .w-e-bar-item button:hover,
+  .w-e-menu-tooltip-v5::before {
+    color: #eee;
+  }
+}
+
+#nprogress .bar {
+  background-color: var(--el-color-primary) !important;
+}
+
+#nprogress .spinner-icon {
+  border-top-color: var(--el-color-primary) !important;
+  border-left-color: var(--el-color-primary) !important;
+}
+
+/* #region 6.1 input */
+.el-input {
+  --el-input-focus-border: var(--el-color-primary);
+  --el-input-focus-border-color: var(--el-color-primary);
+}
+
+.el-textarea {
+  --el-input-focus-border-color: var(--el-color-primary);
+}
+
+.el-input__inner {
+  /* color: var(--el-color-black) !important; */
+  color: var(--el-input-text-color, var(--el-text-color-regular));
+}
+
+/* #endregion */
+
+/* #region 6.2 select */
+.el-select {
+  --el-select-input-focus-border-color: var(--el-color-primary);
+}
+
+.el-select-dropdown__item.selected {
+  color: var(--el-color-primary) !important;
+}
+
+/* #endregion */
+
+/* #region 6.3 date */
+.el-date-picker {
+  --el-datepicker-active-color: var(--el-color-primary);
+  --el-datepicker-hover-text-color: var(--el-color-primary);
+}
+
+.el-date-editor {
+  --el-input-focus-border: var(--el-color-primary);
+  --el-input-focus-border-color: var(--el-color-primary);
+}
+
+.el-date-range-picker {
+  --el-datepicker-active-color: var(--el-color-primary);
+  --el-datepicker-hover-text-color: var(--el-color-primary);
+}
+
+.el-time-panel__btn.confirm {
+  color: var(--el-timepicker-active-color, var(--el-color-primary)) !important;
+}
+
+/* #endregion */
+
+/* #region 6.5 链接 */
+.el-link {
+  font-size: var(--el-font-size-base) !important;
+}
+
+.el-link::after {
+  display: none !important;
+}
+
+.el-link.el-link--primary {
+  --el-link-text-color: var(--el-color-primary) !important;
+  --el-link-hover-text-color: var(--el-color-primary-light-3) !important;
+  --el-link-disabled-text-color: var(--el-color-primary-disabled) !important;
+}
+
+.el-link.is-disabled {
+  color: var(--el-color-grey-light) !important;
+  cursor: not-allowed !important;
+}
+
+/* #endregion */
+
+/* #region 6.6 checkbox & radio */
+.el-checkbox {
+  --el-checkbox-checked-text-color: var(--el-color-primary);
+  --el-checkbox-checked-input-border-color: var(--el-color-primary);
+  --el-checkbox-checked-bg-color: var(--el-color-primary);
+  --el-checkbox-input-border-color-hover: var(--el-color-primary);
+}
+
+.el-radio {
+  --el-radio-input-border-color-hover: var(--el-color-primary) !important;
+}
+
+.el-radio__input.is-checked:not(.is-disabled) .el-radio__inner {
+  background: var(--el-color-primary) !important;
+  border-color: var(--el-color-primary) !important;
+}
+
+.el-radio__input.is-checked:not(.is-disabled) + .el-radio__label {
+  color: var(--el-color-primary) !important;
+}
+
+.el-radio.is-disabled.is-bordered.is-checked {
+  border-color: var(--el-border-color-darker) !important;
+}
+
+/* #endregion */
+
+/* #region 6.7 dropdown-menu */
+
+.el-dropdown-menu__item:not(.is-disabled):focus {
+  color: var(--el-color-primary) !important;
+  background-color: var(--el-color-primary-light-9) !important;
+}
+
+/* #endregion */
+
+/* #region 6.9 气泡卡片 */
+.el-popper.is-light.bottom-start {
+  box-shadow: 0 2px 5px var(--el-color-grey-light-5) !important;
+}
+
+/* #endregion */
+
+/* #region 6.11 详细-descriptions */
+.el-descriptions__body .el-descriptions__table .el-descriptions__cell {
+  font-size: var(--el-font-size-base) !important;
+}
+
+.el-descriptions__label:not(.is-bordered-label) {
+  margin-right: 0 !important;
+  color: var(--el-color-grey) !important;
+}
+
+.el-descriptions__content:not(.is-bordered-label) {
+  color: var(--el-color-black) !important;
+}
+
+/* #endregion */
+
+/* #region 6.12 表单 */
+.el-form-item {
+  font-size: var(--el-font-size-base) !important;
+}
+
+.el-form-item__label {
+  font-size: var(--el-font-size-base) !important;
+  color: var(--el-color-grey-dark) !important;
+}
+
+.el-form-item__content {
+  font-size: var(--el-font-size-base) !important;
+}
+
+.el-checkbox__label {
+  font-size: var(--el-font-size-base) !important;
+}
+
+/* #endregion */
+
+/* #region 6.14 标签页 */
+.el-tabs--card .el-tabs__item.is-top.is-active {
+  /* font-size: var(--el-font-size-medium); */
+  color: var(--el-color-white) !important;
+  background-color: var(--el-color-primary-light-3);
+
+  /* color: var(--el-color-primary) !important; */
+}
+
+.el-tabs--card .el-tabs__item.is-top:not(.is-active):hover {
+  color: var(--el-color-primary) !important;
+}
+
+.el-tabs--border-card .el-tabs__item.is-top.is-active {
+  color: var(--el-color-primary) !important;
+}
+
+.el-tabs--border-card .el-tabs__item.is-top:not(.is-active):hover {
+  color: var(--el-color-primary) !important;
+}
+
+/* #endregion */
+
+/* #region 6.16 无数据提示 */
+.el-empty__description {
+  margin-top: 0 !important;
+  line-height: 30px !important;
+}
+
+/* #endregion */
+
+/* #region 6.17 switch */
+.el-switch {
+  --el-switch-on-color: var(--el-color-primary) !important;
+}
+
+.el-switch--large {
+  height: 32px !important;
+}
+
+/* #endregion */
+
+/* #region 6.15 级联 */
+.el-cascader-panel {
+  --el-cascader-menu-selected-text-color: var(--el-color-primary);
+}
+
+.el-cascader-menu__wrap.el-scrollbar__wrap {
+  height: 350px !important;
+}
+
+.el-cascader .el-input .el-input__suffix-inner .el-icon {
+  width: 18px !important;
+  font-size: var(--el-font-size-medium);
+}
+
+/* #endregion */
+
+/* #region 6.18 checked */
+.el-radio.is-bordered.is-checked {
+  border-color: var(--el-color-primary);
+}
+
+/* #endregion */
+
+/* #endregion */
+
+/* #region 6.13 时间选择器 */
+.el-date-editor .el-range-separator {
+  font-size: var(--el-font-size-base) !important;
+}
+
+.el-picker-panel__footer .el-button.is-plain {
+  --el-button-hover-text-color: var(--el-color-primary);
+  --el-button-hover-border-color: var(--el-color-primary);
+}
+
+.el-year-table td.current:not(.disabled) .cell {
+  width: 36px;
+  color: var(--el-color-white);
+  background-color: var(--el-color-primary);
+}
+
+/* #endregion */

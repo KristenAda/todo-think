@@ -1,0 +1,152 @@
+<!doctype html>
+<html>
+  <head>
+    <meta
+      http-equiv="Cache-Control"
+      content="no-cache, no-store, must-revalidate"
+    />
+
+    <meta http-equiv="Pragma" content="no-cache" />
+    <meta http-equiv="Expires" content="0" />
+    <meta charset="utf-8" />
+    <!-- <link rel="manifest" href="/manifest.json" /> -->
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover"
+    />
+    <style lang="scss">
+      body {
+        font-size: 0.75rem;
+      }
+      .app-loading {
+        display: none;
+      }
+      .app-loading.show-init:not(.init-completed) {
+        display: block;
+      }
+      .app-loading.show-manual {
+        display: block !important;
+      }
+      .app-loading-mask {
+        position: absolute;
+        inset: 0;
+        z-index: 2000;
+        margin: 0;
+        background-color: rgb(255 255 255 / 90%);
+        transition: opacity 0.3s;
+        contain: strict;
+      }
+      .app-loading-mask.is-fullscreen {
+        position: fixed;
+      }
+      .app-loading-mask.is-fullscreen .app-loading-spinner {
+        margin-top: calc((0px - 42px) / 2);
+      }
+      .app-loading-mask.is-fullscreen .app-loading-spinner .circular {
+        width: 42px;
+        height: 42px;
+      }
+      .app-loading-spinner {
+        position: absolute;
+        top: 40%;
+        width: 100%;
+        margin-top: calc((0px - 42px) / 2);
+        text-align: center;
+      }
+      .app-loading-spinner .app-loading-text {
+        margin: 3px 0;
+        font-family:
+          -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC',
+          'Hiragino Sans GB', 'Microsoft YaHei', 'Helvetica Neue', Helvetica,
+          Arial, simsun, sans-serif, NotoSansCJK;
+        font-size: 0.9rem;
+        color: #aaa;
+      }
+      .app-loading-spinner .circular {
+        width: 42px;
+        height: 42px;
+        animation: loading-rotate 2s linear infinite;
+        will-change: transform;
+      }
+      .app-loading-spinner .path {
+        stroke: #ccc;
+        stroke-dasharray: 90, 150;
+        stroke-dashoffset: 0;
+        stroke-linecap: round;
+        stroke-width: 2;
+        animation: loading-dash 1.5s ease-in-out infinite;
+        will-change: stroke-dasharray, stroke-dashoffset;
+      }
+      .app-loading-spinner i {
+        color: #ccc;
+      }
+      .app-loading-fade-enter-from,
+      .app-loading-fade-leave-to {
+        opacity: 0;
+      }
+      @keyframes loading-rotate {
+        0% {
+          transform: rotate(0deg);
+        }
+        100% {
+          transform: rotate(360deg);
+        }
+      }
+      @keyframes loading-dash {
+        0% {
+          stroke-dasharray: 1, 150;
+          stroke-dashoffset: 0;
+        }
+        50% {
+          stroke-dasharray: 90, 150;
+          stroke-dashoffset: -35;
+        }
+        100% {
+          stroke-dasharray: 90, 150;
+          stroke-dashoffset: -124;
+        }
+      }
+    </style>
+    <link rel="icon" href="/vite.svg" />
+    <title>%VITE_APP_TITLE%</title>
+  </head>
+
+  <body>
+    <noscript>
+      <strong
+        >We're sorry but %VITE_APP_TITLE% doesn't work properly without
+        JavaScript enabled. Please enable it to continue.</strong
+      >
+    </noscript>
+    <div id="app" class="main-content"></div>
+    <!-- <div id="app-loading" class="app-loading">
+      <div class="app-loading-mask is-fullscreen">
+        <div class="app-loading-spinner">
+          <svg class="circular" viewBox="0 0 50 50">
+            <circle class="path" cx="25" cy="25" r="20" fill="none"></circle>
+          </svg>
+          <div class="app-loading-text">加载中...</div>
+        </div>
+      </div>
+    </div> -->
+    <script type="module" src="/src/main.js"></script>
+    <script src="/lib/emss-lib.umd.js"></script>
+    <script>
+      // 优化用户体验，初始化的loading延迟执行：
+      // 如果资源加载较快，则loading不显示（layout中会手动设置为隐藏）
+      // 如果资源加载较慢，则延迟后显示loading，直到layout中资源加载完成后，才隐藏loading
+      // setTimeout(() => {
+      //    document.getElementById('app-loading')?.classList.add('show-init');
+      // }, 200);
+
+      // const globalState = JSON.parse(window.localStorage.getItem('g-global'));
+      // if (globalState) {
+      //   const dot = document.querySelectorAll('.dot i');
+      //   const html = document.querySelector('html');
+      //   dot.forEach((item) => (item.style.background = globalState.primary));
+      //   if (globalState.isDark) html.style.background = '#61A1DF';
+      // }
+    </script>
+  </body>
+</html>

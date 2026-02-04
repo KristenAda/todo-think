@@ -1,0 +1,100 @@
+{
+  "editor.codeActionsOnSave": {
+    // "source.organizeImports": "explicit",
+    "source.fixAll.eslint": "explicit"
+  },
+  "[vue]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode"
+  },
+  "[javascript]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode"
+  },
+  "[typescript]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode"
+  },
+  "[css]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode"
+  },
+  "[jsonc]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode"
+  },
+  "[json]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode"
+  },
+  "cSpell.words": [
+    "attachmentitemheight",
+    "bcryptjs",
+    "beian",
+    "cascader",
+    "clen",
+    "collectionbtncontainerwidth",
+    "Commitlint",
+    "consts",
+    "datepicker",
+    "datepickerwidth",
+    "daterange",
+    "datetimerange",
+    "divx",
+    "dlcs",
+    "dompurify",
+    "echarts",
+    "endregion",
+    "eruda",
+    "flyflow",
+    "glcz",
+    "gnlx",
+    "graysale",
+    "gxsj",
+    "headerbtn",
+    "hexs",
+    "itemsmarginbottom",
+    "lasttime",
+    "lineheight",
+    "locala",
+    "loglevel",
+    "menuxwidth",
+    "messagebox",
+    "micromessenger",
+    "mockjs",
+    "msgbox",
+    "nprogress",
+    "oper",
+    "Pinia",
+    "pkid",
+    "popconfirm",
+    "postcss",
+    "pxtorem",
+    "qrcode",
+    "rmvb",
+    "rollup",
+    "simsun",
+    "sjmc",
+    "sortablejs",
+    "sortnum",
+    "ssyhlx",
+    "stompjs",
+    "stranslate",
+    "syzd",
+    "thisimagethumbnailheight",
+    "thisimagethumbnailwidth",
+    "timepicker",
+    "ueditor",
+    "unplugin",
+    "uploadimage",
+    "uploadmainmargintop",
+    "uploadvideo",
+    "uuidv",
+    "vite",
+    "vueuse",
+    "wangeditor",
+    "wechat",
+    "wisdomedu",
+    "dh",
+    "zzbn"
+  ],
+  "editor.wordWrap": "on",
+  "Codegeex.CompletionModel": "CodeGeeX Pro[Beta]",
+  "Codegeex.GenerationPreference": "line by line",
+  "i18n-ally.localesPaths": ["src/languages"],
+  "git.ignoreLimitWarning": true
+}

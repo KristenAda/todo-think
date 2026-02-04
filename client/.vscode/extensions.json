@@ -1,0 +1,17 @@
+{
+  "recommendations": [
+    "formulahendry.auto-rename-tag",
+    "streetsidesoftware.code-spell-checker",
+    "dbaeumer.vscode-eslint",
+    "visualstudioexptteam.intellicode-api-usage-examples",
+    "xabikos.javascriptsnippets",
+    "esbenp.prettier-vscode",
+    "gruntfuggly.todo-tree",
+    "vscode-icons-team.vscode-icons",
+    "visualstudioexptteam.vscodeintellicode",
+    "ms-ceintl.vscode-language-pack-zh-hans",
+    "christian-kohler.path-intellisense",
+    "chakrounanas.turbo-console-log",
+    "pranaygp.vscode-css-peek"
+  ]
+}

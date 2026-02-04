@@ -1,0 +1,78 @@
+【dependencies】
+@vueuse/core: 一个基于Composition API的实用工具库，提供各种常用的函数和工具方法。
+animate.css: 一个强大的CSS动画库，提供各种动画效果。
+axios: 用于发起HTTP请求的库。
+bcryptjs: 一个用于加密和解密密码的库。
+crypto-js: 一个用于加密和解密数据的库。
+echarts: 一个强大的数据可视化库，用于生成各种类型的图表和图表组件。
+element-plus: 一个基于Vue 3的UI库。
+element-plus/icons-vue：一个Element Plus的图标组件库。
+file-saver: 一个用于保存文件的库。如需更高的支持可以使用stream-saver
+image-conversion: 一个用于转换图片格式的库，附带图片压缩功能。
+js-cookie: 用于操作Cookie的库。
+jszip: 一个用于操作压缩文件的库。
+lodash-es: 一个实用工具库，提供各种常用的函数和工具方法。ES模块版本。
+loglevel: 一个用于控制日志输出的库。
+mockjs: 用于生成模拟数据的库。
+dayjs: 一个用于处理日期和时间的库。
+pinia: 用于构建Vue 3应用程序的状态管理库。
+qs: 用于处理查询字符串的库。
+sortablejs: 一个用于实现拖拽排序的库。
+vue: 用于构建用户界面的渐进式JavaScript框架。
+vue-router: 用于构建单页面应用的路由管理器。
+xlsx: 一个用于处理Excel文件的库。
+xlsx-style-ts: 用于处理Excel文件的样式，基于xlsx-style和vite。 
+nprogress：一个用于显示加载进度的库。
+@wangeditor-next/editor  用于构建编辑器的库。
+@wangeditor-next/editor-for-vue: 用于构建Vue 3编辑器的库。
+vue-dompurify-html: 用于处理DOMPurify的Vue 3插件。
+pinia-plugin-persistedstate: 用于实现pinia状态持久化的插件。
+vue-i18n: 用于实现国际化支持的库。
+vite-plugin-require-transform：用于在vite中处理require语句的插件。
+vue-dompurify-html：用于处理DOMPurify的Vue 3插件。
+@rollup/plugin-commonjs：用于vite在rollup中处理CommonJS模块的插件。
+uuid：用于生成唯一标识符的库。
+html2pdf.js：用于将HTML转换为PDF的库。
+vue-draggable-plus：用于实现拖拽排序的Vue 3插件。
+
+
+【devDependencies】
+@typescript-eslint/eslint-plugin: 用于支持TypeScript的ESLint插件。
+@typescript-eslint/parser: 用于解析TypeScript代码的库。
+@vitejs/plugin-vue: 用于支持Vue 3的Vite插件。
+eslint: 用于检查JavaScript代码的库。
+eslint-config-airbnb-base: 基于Airbnb风格指南的ESLint配置。
+eslint-config-prettier: 用于关闭与prettier冲突的ESLint规则。
+eslint-import-resolver-alias: 用于解析别名导入的ESLint插件。
+eslint-plugin-import: 用于检查导入语句的ESLint插件。
+eslint-plugin-jest: 用于检查Jest测试代码的ESLint插件。 // TODO 待使用
+eslint-plugin-prettier: 用于将prettier的规则集成到ESLint中。
+eslint-plugin-vue: 用于检查Vue组件代码的ESLint插件。
+fs-extra: 用于操作文件系统的库。
+node-ssh: 用于通过SSH连接远程服务器执行命令的库。
+node-windows: 用于支持在windows系统重执行node的库
+ora: 用于显示命令执行中的loading动画的库。
+postcss: 一个用于处理CSS的库。
+postcss-preset-env: 用于处理CSS的预设配置，包含各种浏览器兼容性修复和CSS变量支持。
+# postcss-pxtorem: 一个用于将CSS中的像素单位转换为rem单位的插件。
+# postcss-px-to-viewport: 一个用于将CSS中的像素单位转换为vw单位的插件。
+prettier: 用于格式化代码的库。
+rollup-plugin-visualizer: 解析rollup打包后的文件，生成一个可视化的依赖关系图，方便查看模块之间的依赖关系。
+
+unplugin-auto-import: 自动导入Vue 3和Vue Router的常用函数和组件。
+unplugin-vue-components: 自动导入Vue 3和Vue Router的常用函数和组件。
+vite: 一个用于构建Vue 3应用程序的工具。
+vite-plugin-compression: 用于压缩打包后的文件，提高网站的加载速度。
+vite-plugin-eslint: 用于在构建过程中检查和修复代码错误。 // TODO 待使用
+vite-svg-loader: 用于加载和处理SVG文件的Vite插件。
+@commitlint/config-conventional： 用于配置Commitlint的配置文件。
+@commitlint/cli: 用于检查Commitlint配置文件。
+sass: 用于支持sass样式语法
+commitizen： 用于生成符合Angular规范的提交信息
+commitlint-config-cz： 用于配置Commitlint与commitizen的集成
+cz-conventional-changelog： 用于生成符合Angular规范的提交说明
+cz-customizable： 用于自定义commitizen的提示信息
+winston： 用于记录日志信息
+morgan： 用于记录HTTP请求日志信息
+winston-daily-rotate-file： 用于将日志信息按日期进行分割和存储（winston）
+rotating-file-stream： 用于将日志信息按日期进行分割和存储

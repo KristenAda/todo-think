@@ -1,0 +1,11 @@
+
+// 对话框底部按钮居中
+.dialog-footer-center {
+  display: flex;
+  justify-content: center;
+  padding-top: 8px;
+
+  :deep(.el-button) {
+    width: 100px;
+  }
+}

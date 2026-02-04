@@ -1,0 +1,314 @@
+@url = http://localhost:3000
+@contentType = application/json
+
+### ========================================
+### 1. 【增】创建任务 (必须先跑这个，不然列表是空的)
+### ========================================
+POST {{url}}/todos
+Content-Type: {{contentType}}
+
+{
+  "title": "测试 tsx 后端接口 🚀"
+}
+
+### ========================================
+### 2. 【查】获取任务列表 (分页)
+### ========================================
+GET {{url}}/todos?page=1&pageSize=10
+Content-Type: {{contentType}}
+
+### ========================================
+### 3. 【查】带关键字搜索
+### ========================================
+GET {{url}}/todos?keyword=tsx
+Content-Type: {{contentType}}
+
+### ========================================
+### 4. 【删】删除任务 (注意：请把 1 换成你实际生成的 ID)
+### ========================================
+DELETE {{url}}/todos/1
+Content-Type: {{contentType}}
+
+### ========================================
+### 5. 【清空】清除所有已完成任务 (扩展功能)
+### ========================================
+POST {{url}}/todos/clear
+Content-Type: {{contentType}}
+
+
+### ========================================
+### 2. 【登录】(核心步骤！)
+### 注意上面的 @name，它让我们可以引用这个请求的响应结果
+### ========================================
+# @name loginRequest
+POST {{url}}/auth/login
+Content-Type: {{contentType}}
+
+{
+  "username": "admin01",
+  "password": "123456"
+}
+
+### ========================================
+### 1. 【注册】(如果提示用户名已存在，请修改 username)
+### ========================================
+POST {{url}}/auth/register
+Content-Type: {{contentType}}
+
+{
+  "username": "admin01",
+  "password": "123456",
+  "nickname": "超级管理员"
+}
+
+
+
+### ========================================
+### ⬇️ 变量自动捕获 (Magic) ⬇️
+### 从上面的 loginRequest 响应中提取 token
+### ========================================
+@token = {{loginRequest.response.body.data.token}}
+
+
+### ========================================
+### 3. 【测试鉴权失败】(不带 Token 访问)
+### 预期结果：401 Unauthorized
+### ========================================
+GET {{url}}/auth/info
+Content-Type: {{contentType}}
+
+
+### ========================================
+### 4. 【测试鉴权成功】(获取当前用户信息)
+### 这里的 Authorization 头是自动填充的
+### ========================================
+GET {{url}}/auth/info
+Authorization: Bearer {{token}}
+Content-Type: {{contentType}}
+
+
+### ========================================
+### 5. 【业务】新增 Todo (带 Token)
+### ========================================
+POST {{url}}/todos
+Authorization: Bearer {{token}}
+Content-Type: {{contentType}}
+
+{
+  "title": "测试 JWT 鉴权通过 🔐",
+  "icon": "🛡️"
+}
+
+
+### ========================================
+### 6. 【业务】获取 Todo 列表 (带 Token)
+### ========================================
+GET {{url}}/todos?page=1&pageSize=5
+Authorization: Bearer {{token}}
+Content-Type: {{contentType}}
+
+### ========================================
+### ⬇️⬇️⬇️ 系统管理：菜单模块 ⬇️⬇️⬇️
+### ========================================
+
+### 1. 【增】创建一级菜单 "系统管理"
+POST {{url}}/sys/menu/add
+Authorization: Bearer {{token}}
+Content-Type: {{contentType}}
+
+{
+  "parentId": null,
+  "title": "系统管理",
+  "path": "/system",
+  "icon": "setting",
+  "type": 1,
+  "sort": 1
+}
+
+### 2. 【增】创建二级菜单 "菜单管理" (假设上面创建的 ID 是 1)
+### 注意：实际运行前，请把 parentId 改成上面返回的真实 ID
+POST {{url}}/sys/menu/add
+Authorization: Bearer {{token}}
+Content-Type: {{contentType}}
+
+{
+  "parentId": 1,
+  "title": "菜单权限",
+  "path": "/system/menu",
+  "component": "/system/menu/index",
+  "type": 2,
+  "sort": 1
+}
+
+### 3. 【增】创建按钮权限 "新增菜单" (假设二级菜单 ID 是 2)
+POST {{url}}/sys/menu/add
+Authorization: Bearer {{token}}
+Content-Type: {{contentType}}
+
+{
+  "parentId": 2,
+  "title": "新增",
+  "perms": "sys:menu:add",
+  "type": 3
+}
+
+### 4. 【查】获取菜单树 (看看是不是层级结构)
+GET {{url}}/sys/menu/list
+Authorization: Bearer {{token}}
+
+
+### ========================================
+### ⬇️⬇️⬇️ 系统管理：角色模块 (Java风格) ⬇️⬇️⬇️
+### ========================================
+
+### 1. 【列表】查询角色列表
+POST {{url}}/sys/role/list
+Authorization: Bearer {{token}}
+Content-Type: {{contentType}}
+
+{
+  "page": 1,
+  "pageSize": 10,
+  "name": "" 
+}
+
+### 2. 【新增】创建 "超级管理员"
+POST {{url}}/sys/role/add
+Authorization: Bearer {{token}}
+Content-Type: {{contentType}}
+
+{
+  "name": "admin",
+  "description": "拥有最高权限"
+}
+
+### 3. 【新增】创建 "普通员工"
+POST {{url}}/sys/role/add
+Authorization: Bearer {{token}}
+Content-Type: {{contentType}}
+
+{
+  "name": "staff",
+  "description": "仅查看权限"
+}
+
+### 4. 【分配权限】给 "普通员工" 分配菜单
+### 假设 "普通员工" ID=2，菜单 ID=[1, 2] (请根据实际数据库ID修改)
+POST {{url}}/sys/role/assignPerms
+Authorization: Bearer {{token}}
+Content-Type: {{contentType}}
+
+{
+  "roleId": 2,
+  "menuIds": [1, 2]
+}
+
+### 5. 【回显】查看 "普通员工" 有哪些菜单
+POST {{url}}/sys/role/getPerms
+Authorization: Bearer {{token}}
+Content-Type: {{contentType}}
+
+{
+  "roleId": 2
+}
+
+### 6. 【删除】删除角色
+POST {{url}}/sys/role/delete
+Authorization: Bearer {{token}}
+Content-Type: {{contentType}}
+
+{
+  "id": 3
+}
+
+
+### ========================================
+### ⬇️⬇️⬇️ 系统管理：用户模块 ⬇️⬇️⬇️
+### ========================================
+
+### 1. 【列表】查询所有用户 (带关联信息)
+POST {{url}}/sys/user/list
+Authorization: Bearer {{token}}
+Content-Type: {{contentType}}
+
+{
+  "page": 1,
+  "pageSize": 10
+}
+
+### 2. 【分配角色】把 "admin01" (ID=1) 设置为 "超级管理员" (ID=1)
+### 请确保你的数据库里角色 ID 是存在的
+POST {{url}}/sys/user/assignRoles
+Authorization: Bearer {{token}}
+Content-Type: {{contentType}}
+
+{
+  "userId": 1,
+  "roleIds": [1]
+}
+
+
+
+### ========================================
+### ⬇️⬇️⬇️ 系统管理：部门模块 ⬇️⬇️⬇️
+### ========================================
+
+### 1. 【新增】创建根部门 "总公司" (managerId 是用户的 ID)
+POST {{url}}/sys/dept/add
+Authorization: Bearer {{token}}
+Content-Type: {{contentType}}
+
+{
+  "parentId": null,
+  "name": "Todo-Think 总部",
+  "managerId": 1, 
+  "sort": 1
+}
+
+### 2. 【新增】创建子部门 "研发部" (parentId 是总公司的 ID，假设是 1)
+POST {{url}}/sys/dept/add
+Authorization: Bearer {{token}}
+Content-Type: {{contentType}}
+
+{
+  "parentId": 1,
+  "name": "研发中心",
+  "sort": 1
+}
+
+### 3. 【列表】查看部门树 (注意观察 manager 信息)
+POST {{url}}/sys/dept/tree
+Authorization: Bearer {{token}}
+Content-Type: {{contentType}}
+
+{}
+
+### 4. 【调动】把 ID 为 2 的用户加入到 "研发中心" (假设部门ID是 2)
+POST {{url}}/sys/dept/addEmployee
+Authorization: Bearer {{token}}
+Content-Type: {{contentType}}
+
+{
+  "deptId": 2,
+  "userIds": [2]
+}
+
+### 5. 【查询】查看 "研发中心" 有哪些人
+POST {{url}}/sys/dept/employees
+Authorization: Bearer {{token}}
+Content-Type: {{contentType}}
+
+{
+  "deptId": 2,
+  "page": 1,
+  "pageSize": 10
+}
+
+### 6. 【移除】把 ID 为 2 的用户踢出部门
+POST {{url}}/sys/dept/removeEmployee
+Authorization: Bearer {{token}}
+Content-Type: {{contentType}}
+
+{
+  "userIds": [2]
+}

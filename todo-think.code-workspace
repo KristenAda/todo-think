@@ -1,0 +1,88 @@
+{
+  "folders": [
+    {
+      "path": "server"
+    },
+    {
+      "path": "client"
+    }
+  ],
+  "settings": {},
+  "tasks": {
+    "version": "2.0.0",
+    "tasks": [
+      {
+        "label": "🚀 Start Backend",
+        "type": "shell",
+        "command": "npm run dev",
+        "options": {
+          // 这里的 path 要和你工作区里显示的文件夹名字完全一致
+          "cwd": "${workspaceFolder:server}"
+        },
+        "group": "build",
+        "presentation": {
+          "group": "todo-think-runner",
+          "panel": "shared",
+          "reveal": "always"
+        },
+        "isBackground": true,
+        // 因为改成了 shell，我们需要手动告诉 VS Code 什么时候算启动完成了
+        "problemMatcher": {
+          "pattern": [
+            {
+              "regexp": ".",
+              "file": 1,
+              "location": 2,
+              "message": 3
+            }
+          ],
+          "background": {
+            "activeOnStart": true,
+            "beginsPattern": ".*",
+            "endsPattern": ".*"
+          }
+        }
+      },
+      {
+        "label": "🎨 Start Frontend",
+        "type": "shell",
+        "command": "npm run serve-local",
+        "options": {
+          // 这里的 path 要和你工作区里显示的文件夹名字完全一致
+          "cwd": "${workspaceFolder:client}"
+        },
+        "group": "build",
+        "presentation": {
+          "group": "todo-think-runner",
+          "panel": "shared",
+          "reveal": "always"
+        },
+        "isBackground": true,
+        "problemMatcher": {
+          "pattern": [
+            {
+              "regexp": ".",
+              "file": 1,
+              "location": 2,
+              "message": 3
+            }
+          ],
+          "background": {
+            "activeOnStart": true,
+            "beginsPattern": ".*",
+            "endsPattern": ".*"
+          }
+        }
+      },
+      {
+        "label": "⚡ Run Todo-Think Fullstack",
+        "dependsOn": ["🚀 Start Backend", "🎨 Start Frontend"],
+        "problemMatcher": [],
+        "group": {
+          "kind": "build",
+          "isDefault": true
+        }
+      }
+    ]
+  }
+}
