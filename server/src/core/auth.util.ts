@@ -14,7 +14,7 @@ export class AuthUtil {
     return bcrypt.compareSync(raw, hashed);
   }
 
-  // 3. 生成 Token
+  // 3. 生成 Token1
   static signToken(payload: any) {
     // 有效期 24 小时
     return jwt.sign(payload, JWT_SECRET, { expiresIn: "24h" });
