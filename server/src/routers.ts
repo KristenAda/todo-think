@@ -1,34 +1,35 @@
 import Router from "@koa/router";
 import { glob } from "glob";
 import path from "path";
-import { pathToFileURL } from "url"; // <--- 1. 新增这个导入
+// 🚀 删除了 import { pathToFileURL } from 'url'; 我们不再需要它了
 
 const router = new Router();
 
-// 1. 定义扫描路径
+// 动态获取当前文件的后缀名 (.ts 或 .js)
+const ext = path.extname(__filename);
 const pattern = path
-  .join(__dirname, "modules", "**", "*.routes.ts")
+  .join(__dirname, "modules", "**", `*.routes${ext}`)
   .replace(/\\/g, "/");
 
-// 2. 异步加载路由
 export const loadRoutes = async () => {
-  // 查找所有匹配的文件
   const files = await glob(pattern);
+
+  if (files.length === 0) {
+    console.warn(
+      `[Route] Warning: 路由挂载失败！未找到任何匹配的文件: ${pattern}`
+    );
+  }
 
   for (const file of files) {
     try {
-      // 动态导入模块
-      // ❌ 旧代码：直接传物理路径，Windows 下会报错
-      // const routeModule = await import(file);
+      // 🚀 核心修复：直接使用原生 require 动态加载模块
+      // CommonJS 下的 require 直接接受绝对路径，完美避开 file:// 协议错误
+      const routeModule = require(file);
 
-      // ✅ 新代码：将物理路径转换为 file:// URL
-      const routeModule = await import(pathToFileURL(file).href);
-
-      // 约定：每个路由文件必须 export default 一个 Router 实例
-      const moduleRouter = routeModule.default;
+      // 兼容 ES6 的 "export default" 和 CommonJS 导出
+      const moduleRouter = routeModule.default || routeModule;
 
       if (moduleRouter && moduleRouter instanceof Router) {
-        // 挂载到主路由
         router.use(moduleRouter.routes());
         router.use(moduleRouter.allowedMethods());
         console.log(`[Route] Loaded: ${path.basename(file)}`);

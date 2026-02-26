@@ -1,120 +1,43 @@
 import { useAuthorityStore } from '@/stores/authority';
 import NProgress from '@/configs/nprogress';
 import useAxiosAbortStore from '@/stores/base/axios-abort';
-import { PREFIX_A, PREFIX_B } from '@/configs/const/basic';
+
+// 路由白名单：不需要 Token 也能访问的页面
+const whiteList = ['/login', '/404', '/401'];
 
 /**
- * 检查cookie中是否存在身份标识
+ * 路由守卫核心函数，用于在路由跳转前进行 Token 和权限校验
  */
-const checkCookieIsExistAuthInfo = () => {
-  return false;
-};
-
-/**
- * 递归为所有路由追加固定格式的别名
- * @param {Array} routes 路由配置表
- */
-export function applyCustomAliases(routes) {
-  // 防护 1：确保传入的是数组，如果不是则直接返回空数组，防止 forEach/map 报错
-  if (!Array.isArray(routes)) {
-    console.warn('applyCustomAliases: routes is not an array', routes);
-    return [];
+export const beforeEachUtil = async (to, from, next) => {
+  if (!to.meta?.notNeedProgress) {
+    NProgress.start();
   }
 
-  return routes.map((route) => {
-    // 防护 2：确保 route 对象存在且有 path 属性
-    if (!route || typeof route.path !== 'string') return route;
+  // 切换路由时，取消上一页未完成的请求
+  useAxiosAbortStore().cancelAll();
 
-    // 逻辑：拼接别名
-    const originalPath = route.path.startsWith('/')
-      ? route.path
-      : `/${route.path}`;
-    const targetAlias = `/${PREFIX_A}/${PREFIX_B}${originalPath}`.replace(
-      /\/+/g,
-      '/',
-    );
+  const authorityStore = useAuthorityStore();
+  const hasToken = authorityStore.authToken;
 
-    // 赋值别名
-    if (route.alias) {
-      const existing = Array.isArray(route.alias) ? route.alias : [route.alias];
-      // 避免重复添加同一个别名
-      if (!existing.includes(targetAlias)) {
-        route.alias = [...existing, targetAlias];
-      }
+  if (hasToken) {
+    if (to.path === '/login') {
+      // 已登录状态下访问登录页，直接跳转到首页
+      next({ path: '/' });
+      NProgress.done();
     } else {
-      route.alias = targetAlias;
+      // TODO: 这里是动态路由的切入点。
+      // 后续在这里判断 authorityStore.permissions 是否为空。
+      // 若为空，则调用后端 /sys/menu/tree 接口拉取当前用户的菜单和权限，
+      // 并通过 router.addRoute() 动态注入路由。
+
+      // 目前先把骨架搭好，直接放行
+      next();
     }
-
-    // 防护 3：递归处理子路由时，必须明确判断 children 是否为数组
-    if (
-      route.children &&
-      Array.isArray(route.children) &&
-      route.children.length > 0
-    ) {
-      route.children = applyCustomAliases(route.children);
-    }
-
-    return route;
-  });
-}
-
-/**
- * 将登录信息保存到本地存储
- *
- * @param res 响应数据
- */
-const saveLoginInfoToStore = (res) => {
-  const useAuthority = useAuthorityStore();
-  useAuthority.setLoginInfo(res.data.user);
-
-  useAuthority.setAuthToken(res.data.token);
+  } else if (whiteList.includes(to.path)) {
+    next(); // 在白名单内，直接放行
+  } else {
+    // 不在白名单，携带原来的目标路径重定向到登录页
+    next(`/login?redirect=${to.path}`);
+    NProgress.done();
+  }
 };
-
-/**
- * 判断当前页面是否需要登录布局
- *
- * @returns 返回需要登录布局的页面类型数组，包括 'admin'、'mobile'、'front'
- */
-const needLoginLayout = () => {
-  return ['admin'];
-};
-
-/**
- * 路由守卫函数，用于在路由跳转前执行一系列逻辑判断
- *
- * @param to 目标路由对象
- * @param from 起始路由对象
- * @param next 路由跳转回调函数
- * @returns 无返回值，通过调用 next 函数实现路由跳转
- */
-const beforeEachUtil = async (to, from, next) => {
-  // if (!to.meta.notNeedProgress) {
-  //   NProgress.start();
-  // }
-  useAxiosAbortStore().cancelAll(); // 取消所有请求
-  next();
-  // 存储全局参数
-  // 去登录页或不需要验证的layout，放行
-  // if (to.meta.isLogin || !needLoginLayout().some((f) => f === to.meta.layout)) {
-  //   // 携带token
-  //   if (to.meta.takeToken) {
-  //     checkCookieIsExistAuthInfo();
-  //   }
-  //   next();
-  // }
-  // // 检查登录信息
-  // next();
-};
-
-/**
- * 保存路由信息
- *
- * @param routers 路由信息数组
- * @returns 无返回值
- */
-const saveRouters = (routers) => {
-  const useAuthority = useAuthorityStore();
-  useAuthority.setRouters(routers);
-};
-
-export { beforeEachUtil, saveLoginInfoToStore, saveRouters };

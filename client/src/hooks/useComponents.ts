@@ -1,8 +1,6 @@
 // componentMap.ts
 import { markRaw, type Component } from 'vue';
 import * as ElementPlus from 'element-plus';
-import ChooseUnit from '@/components/ct-comp/ChooseUnit.vue';
-import ChooseUser from '@/components/ct-comp/ChooseUser.vue';
 
 // 解构出所有常用的表单组件
 const {
@@ -65,8 +63,6 @@ export const COMPONENT_MAP: Record<string, Component> = {
   cascader: ElCascader,
   rate: ElRate,
   slider: ElSlider,
-  'choose-user': ChooseUser,
-  'choose-unit': ChooseUnit,
 };
 
 /**

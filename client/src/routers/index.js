@@ -1,21 +1,19 @@
 import { createRouter, createWebHistory } from 'vue-router';
 import NProgress from '@/configs/nprogress';
-import { beforeEachUtil, applyCustomAliases } from './utils/router-util';
+import { beforeEachUtil } from './utils/router-util';
 
+// 引入模块路由
 import baseRouters from './modules/base';
-import personaRouters from './modules/persona';
-import digitalPerformanceRouters from './modules/digital-performance';
+import systemRouters from './modules/system';
 
-const routes = [
-  ...baseRouters,
-  ...personaRouters,
-  ...digitalPerformanceRouters,
-];
-const routesWithAliases = applyCustomAliases(routes);
+// 组合静态路由
+// 注意：在标准 RBAC 中，业务模块(persona/digitalPerformance)后续应改为由后端动态下发，
+// 只有 baseRouters(如 Login, 404) 会在这里静态注册。目前过渡期暂时保留拼接。
+const routes = [...baseRouters, ...systemRouters];
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
-  routes: routesWithAliases,
+  routes, // 直接使用 routes，不再套用 applyCustomAliases
   scrollBehavior() {
     return {
       el: '#app',
@@ -33,12 +31,10 @@ router.beforeEach(async (to, from, next) => {
 // 监听错误
 router.onError((handler) => {
   NProgress.done();
-  console.log('router.onError', handler);
+  console.error('路由跳转异常:', handler);
 });
 
-/**
- * @description 路由跳转结束
- * */
+// 路由跳转结束
 router.afterEach(() => {
   NProgress.done();
 });
