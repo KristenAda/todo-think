@@ -6,12 +6,15 @@ const systemRouters = [
     path: '/',
     component: Layout,
     redirect: '/home',
+    meta: {
+      hidden: true,
+    },
     children: [
       {
         path: '/home',
         name: 'Home',
         component: () => import('@/views/home/Index.vue'),
-        meta: { title: '指挥中心', icon: 'House' },
+        meta: { title: '首页', icon: 'House' },
       },
     ],
   },
