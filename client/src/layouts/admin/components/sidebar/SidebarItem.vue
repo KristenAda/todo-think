@@ -50,16 +50,29 @@ const isExternal = (path: string) => {
   return /^(https?:|mailto:|tel:)/.test(path);
 };
 
-// 核心逻辑：替代 path.resolve
+/**
+ * 核心修复：更健壮的路径拼接逻辑
+ */
 const resolvePath = (routePath: string) => {
-  if (isExternal(routePath)) return routePath;
-  if (isExternal(props.basePath)) return props.basePath;
+  // 1. 如果是外部链接 (http/https)，直接返回
+  if (/^(https?:|mailto:|tel:)/.test(routePath)) return routePath;
 
-  // 拼接逻辑：去除重复的斜杠
-  const base = props.basePath.replace(/\/+$/, ''); // 去掉结尾斜杠
-  const sub = routePath.replace(/^\/+/, ''); // 去掉开头斜杠
+  // 2. 如果子路径本身就是绝对路径 (以 / 开头)，直接返回
+  if (routePath.startsWith('/')) return routePath;
 
-  return base ? `${base}/${sub}` : `/${sub}`;
+  // 3. 拼接父路径和子路径
+  // 确保 basePath 以 / 开头
+  let base = props.basePath.startsWith('/')
+    ? props.basePath
+    : `/${props.basePath}`;
+
+  // 移除 base 结尾的斜杠，移除 sub 开头的斜杠
+  base = base.replace(/\/+$/, '');
+  const sub = routePath.replace(/^\/+/, '');
+
+  // 4. 合并并过滤掉多余的重复斜杠 (例如把 // 变成 /)
+  const finalPath = base ? `${base}/${sub}` : `/${sub}`;
+  return finalPath.replace(/\/+/g, '/');
 };
 
 // eslint-disable-next-line default-param-last
