@@ -2,7 +2,7 @@
   <dh-dialog
     :title="title"
     :model-value="modelValue"
-    width="800px"
+    width="500px"
     @update:model-value="handleCancel"
     @opened="onOpened"
     @closed="onClosed"
@@ -12,8 +12,8 @@
         ref="formRef"
         v-model="formData"
         :schema="formSchema"
-        :cols="2"
-        label-width="110px"
+        :cols="1"
+        label-width="90px"
       />
     </div>
 
@@ -28,14 +28,13 @@
 </template>
 
 <script setup>
-import { ref, reactive } from 'vue';
 import { cloneDeep } from 'lodash-es';
-import { ElMessage } from 'element-plus';
-// import { saveApi } from '@/apis/modules/example';
+// 【重点修改】不使用统一导出，直接导入 add 和 update 的方法
+import { addUserApi, updateUserApi } from '@/apis/modules/system/user';
 
 const props = defineProps({
   modelValue: Boolean,
-  title: { type: String, default: '编辑信息' },
+  title: { type: String, default: '编辑用户信息' },
   detailData: { type: Object, default: () => null },
 });
 
@@ -43,58 +42,40 @@ const emit = defineEmits(['update:modelValue', 'success']);
 
 // #region 1. 表单初始化与 Schema 配置
 const getInitialForm = () => ({
-  name: '',
-  type: '',
-  count: 0,
-  status: true,
-  tags: [],
-  targetUnit: '',
-  manager: '',
-  remark: '',
+  id: undefined,
+  username: '',
+  password: '',
+  deptId: undefined,
 });
 
 const formData = reactive(getInitialForm());
 
-const formSchema = [
-  { type: 'section', label: '核心信息', subLabel: '基础配置项' },
+const isEdit = computed(() => !!formData.id);
+
+const formSchema = computed(() => [
   {
-    label: '名称',
-    prop: 'name',
+    label: '用户名',
+    prop: 'username',
     type: 'input',
-    rules: [{ required: true, message: '必填' }],
+    rules: [{ required: true, message: '请输入用户名', trigger: 'blur' }],
   },
   {
-    label: '分类',
-    prop: 'type',
-    type: 'select',
-    options: [
-      { label: '选项A', value: 'A' },
-      { label: '选项B', value: 'B' },
-    ],
+    label: '密码',
+    prop: 'password',
+    type: 'input',
+    props: {
+      type: 'password',
+      showPassword: true,
+      placeholder: isEdit.value ? '留空则不修改密码' : '默认初始密码: 123456',
+    },
   },
-  { label: '数量', prop: 'count', type: 'number', props: { min: 0 } },
-  { label: '启用', prop: 'status', type: 'switch' },
-
-  { type: 'section', label: '业务关联', subLabel: '关联组织与人员' },
-  { label: '所属单位', prop: 'targetUnit', type: 'choose-unit', span: 24 },
-  { label: '负责人', prop: 'manager', type: 'choose-user', span: 24 },
   {
-    label: '标签',
-    prop: 'tags',
-    type: 'select',
-    props: { multiple: true },
-    options: [{ label: '标签1', value: '1' }],
+    label: '部门ID',
+    prop: 'deptId',
+    type: 'number',
+    props: { min: 1, placeholder: '请输入部门ID' },
   },
-
-  { type: 'section', label: '其他' },
-  {
-    label: '备注',
-    prop: 'remark',
-    type: 'textarea',
-    span: 24,
-    props: { rows: 3 },
-  },
-];
+]);
 // #endregion
 
 // #region 2. 核心逻辑
@@ -109,16 +90,25 @@ const handleSubmit = async () => {
     await formRef.value.validate();
     submitting.value = true;
 
-    // const res = await saveApi(formData);
-    // 模拟接口响应
-    setTimeout(() => {
-      ElMessage.success('保存成功');
-      emit('success');
-      handleCancel();
-      submitting.value = false;
-    }, 500);
+    const payload = { ...formData };
+    if (!payload.password) {
+      delete payload.password;
+    }
+
+    // 【重点修改】通过判断 isEdit 状态，分别调用引入的对应 API 函数
+    if (isEdit.value) {
+      await updateUserApi(payload);
+    } else {
+      await addUserApi(payload);
+    }
+
+    ElMessage.success('保存成功');
+    emit('success');
+    handleCancel();
   } catch (err) {
-    console.error('Validate Failed:', err);
+    console.error('保存失败:', err);
+  } finally {
+    submitting.value = false;
   }
 };
 
@@ -126,6 +116,7 @@ const handleSubmit = async () => {
 const onOpened = () => {
   if (props.detailData) {
     Object.assign(formData, cloneDeep(props.detailData));
+    formData.password = ''; // 安全起见，修改时不回显密码
   }
 };
 
@@ -136,7 +127,16 @@ const onClosed = () => {
 };
 
 const handleCancel = () => emit('update:modelValue', false);
-const handleReset = () => formRef.value?.resetFields();
+
+const handleReset = () => {
+  formRef.value?.resetFields();
+  if (props.detailData) {
+    Object.assign(formData, cloneDeep(props.detailData));
+    formData.password = '';
+  } else {
+    Object.assign(formData, getInitialForm());
+  }
+};
 // #endregion
 </script>
 
