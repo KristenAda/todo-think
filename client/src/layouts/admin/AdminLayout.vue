@@ -6,27 +6,26 @@
       <div class="fixed-header">
         <Header />
       </div>
-
       <AppMain />
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { useAppStore } from '@/stores/modules/app';
+import { computed } from 'vue';
+import { useGlobalStore } from '@/stores/modules/global';
 import { Sidebar, Header, AppMain } from './components';
 
-const appStore = useAppStore();
+const globalStore = useGlobalStore();
 
+// 通过 globalStore 统一控制侧边栏折叠
 const classObj = computed(() => ({
-  hideSidebar: !appStore.sidebar.opened,
-  openSidebar: appStore.sidebar.opened,
-  withoutAnimation: appStore.sidebar.withoutAnimation,
+  hideSidebar: globalStore.isCollapse,
+  openSidebar: !globalStore.isCollapse,
 }));
 </script>
 
 <style lang="scss" scoped>
-// 定义 CSS 变量方便维护
 $sideBarWidth: 210px;
 $hideSideBarWidth: 64px;
 
@@ -66,23 +65,16 @@ $hideSideBarWidth: 64px;
     z-index: 9;
     width: 100%;
     transition: width 0.28s;
+    background-color: #fff;
+    box-shadow: 0 1px 4px rgba(0, 21, 41, 0.08);
   }
 
-  // 折叠后的样式覆盖
   &.hideSidebar {
     .sidebar-container {
       width: $hideSideBarWidth !important;
     }
     .main-container {
       margin-left: $hideSideBarWidth;
-    }
-  }
-
-  // 适配移动端或取消动画（可选）
-  &.withoutAnimation {
-    .sidebar-container,
-    .main-container {
-      transition: none;
     }
   }
 }

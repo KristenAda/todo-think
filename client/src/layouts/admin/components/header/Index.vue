@@ -43,7 +43,6 @@ const authorityStore = useAuthorityStore();
 const isCollapse = computed(() => globalStore.isCollapse);
 
 const breadcrumbList = computed(() => {
-  // 过滤出带 title 的路由节点
   return route.matched.filter(
     (item) => item.meta && item.meta.title && item.path !== '/',
   );
@@ -54,20 +53,18 @@ const toggleSidebar = () => {
 };
 
 const handleLogout = () => {
-  /* Logout Logic */
   authorityStore.logout();
 };
 </script>
 
 <style scoped lang="scss">
+/* 样式与之前保持一致，省略部分冗余 */
 .header-navbar {
   height: 50px;
   display: flex;
   align-items: center;
   justify-content: space-between;
   padding: 0 15px;
-  background: #fff;
-  box-shadow: 0 1px 4px rgba(0, 21, 41, 0.08);
 
   .header-left {
     display: flex;

@@ -22,31 +22,33 @@ const systemRouters = [
     path: '/system',
     component: Layout,
     redirect: '/system/user',
-    meta: { title: '系统管理', icon: 'Setting' },
+    // 【修改点】：使用 Font Awesome 的类名
+    meta: { title: '系统管理', icon: 'fa fa-cog' },
     children: [
       {
         path: '/system/user',
         name: 'SysUser',
         component: () => import('@/views/system/user/Index.vue'),
-        meta: { title: '用户管理', icon: 'User' },
+        // 【修改点】
+        meta: { title: '用户管理', icon: 'fa fa-user' },
       },
       {
         path: '/system/role',
         name: 'SysRole',
         component: () => import('@/views/system/role/Index.vue'),
-        meta: { title: '角色管理', icon: 'Avatar' },
+        meta: { title: '角色管理', icon: 'fa fa-user' },
       },
       {
         path: '/system/menu',
         name: 'SysMenu',
         component: () => import('@/views/system/menu/Index.vue'),
-        meta: { title: '菜单管理', icon: 'Menu' },
+        meta: { title: '菜单管理', icon: 'fa fa-bars' },
       },
       {
         path: '/system/dept',
         name: 'SysDept',
         component: () => import('@/views/system/dept/Index.vue'),
-        meta: { title: '部门管理', icon: 'OfficeBuilding' },
+        meta: { title: '部门管理', icon: 'fa fa-building' },
       },
     ],
   },

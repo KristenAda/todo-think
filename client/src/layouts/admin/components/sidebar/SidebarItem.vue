@@ -1,32 +1,31 @@
 <template>
-  <div v-if="!item.meta?.hidden">
-    <template v-if="hasOneShowingChild(item.children, item)">
-      <component
-        :is="isExternal(resolvePath(onlyOneChild.path)) ? 'a' : 'el-menu-item'"
-        :index="resolvePath(onlyOneChild.path)"
-        :href="
-          isExternal(resolvePath(onlyOneChild.path))
-            ? resolvePath(onlyOneChild.path)
-            : undefined
-        "
-        :target="
-          isExternal(resolvePath(onlyOneChild.path)) ? '_blank' : undefined
-        "
-      >
-        <el-icon v-if="onlyOneChild.meta?.icon || item.meta?.icon">
-          <component :is="onlyOneChild.meta?.icon || item.meta?.icon" />
-        </el-icon>
-        <template #title>{{ onlyOneChild.meta?.title }}</template>
-      </component>
-    </template>
+  <template v-if="!item.meta?.hidden">
+    <el-menu-item
+      v-if="theOnlyOneChild"
+      :index="resolvePath(theOnlyOneChild.path)"
+      @click="handleLinkClick(theOnlyOneChild)"
+    >
+      <i
+        v-if="theOnlyOneChild.meta?.icon || item.meta?.icon"
+        :class="theOnlyOneChild.meta?.icon || item.meta?.icon"
+        class="menu-icon"
+      ></i>
 
-    <el-sub-menu v-else :index="item.path" teleported>
       <template #title>
-        <el-icon v-if="item.meta?.icon">
-          <component :is="item.meta?.icon" />
-        </el-icon>
+        <span>{{ theOnlyOneChild.meta?.title }}</span>
+      </template>
+    </el-menu-item>
+
+    <el-sub-menu v-else :index="resolvePath(item.path)" teleported>
+      <template #title>
+        <i
+          v-if="item.meta?.icon || showingChildren[0]?.meta?.icon"
+          :class="item.meta?.icon || showingChildren[0]?.meta?.icon"
+          class="menu-icon"
+        ></i>
         <span>{{ item.meta?.title }}</span>
       </template>
+
       <sidebar-item
         v-for="child in item.children"
         :key="child.path"
@@ -34,59 +33,62 @@
         :base-path="resolvePath(child.path)"
       />
     </el-sub-menu>
-  </div>
+  </template>
 </template>
 
 <script setup lang="ts">
+// ...（Script 逻辑无需任何修改，完全保持上一版的完美重构代码即可）...
 const props = defineProps({
   item: { type: Object, required: true },
   basePath: { type: String, default: '' },
 });
 
-const onlyOneChild = ref<any>(null);
+const router = useRouter();
 
-// 判断是否是外部链接 (http/https/mailto/tel)
-const isExternal = (path: string) => {
-  return /^(https?:|mailto:|tel:)/.test(path);
-};
+const showingChildren = computed(() => {
+  if (!props.item.children) return [];
+  return props.item.children.filter((child: any) => !child.meta?.hidden);
+});
 
-/**
- * 核心修复：更健壮的路径拼接逻辑
- */
+const theOnlyOneChild = computed(() => {
+  if (showingChildren.value.length > 1) return null;
+  if (showingChildren.value.length === 1) return showingChildren.value[0];
+  if (showingChildren.value.length === 0) {
+    return { ...props.item, path: '', noShowingChildren: true };
+  }
+  return null;
+});
+
+const isExternal = (path: string) => /^(https?:|mailto:|tel:)/.test(path);
+
 const resolvePath = (routePath: string) => {
-  // 1. 如果是外部链接 (http/https)，直接返回
-  if (/^(https?:|mailto:|tel:)/.test(routePath)) return routePath;
-
-  // 2. 如果子路径本身就是绝对路径 (以 / 开头)，直接返回
+  if (isExternal(routePath)) return routePath;
   if (routePath.startsWith('/')) return routePath;
-
-  // 3. 拼接父路径和子路径
-  // 确保 basePath 以 / 开头
-  let base = props.basePath.startsWith('/')
+  const base = props.basePath.startsWith('/')
     ? props.basePath
     : `/${props.basePath}`;
-
-  // 移除 base 结尾的斜杠，移除 sub 开头的斜杠
-  base = base.replace(/\/+$/, '');
   const sub = routePath.replace(/^\/+/, '');
-
-  // 4. 合并并过滤掉多余的重复斜杠 (例如把 // 变成 /)
-  const finalPath = base ? `${base}/${sub}` : `/${sub}`;
-  return finalPath.replace(/\/+/g, '/');
+  return (base ? `${base}/${sub}` : `/${sub}`).replace(/\/+/g, '/');
 };
 
-// eslint-disable-next-line default-param-last
-const hasOneShowingChild = (children = [], parent: any) => {
-  const showingChildren = children.filter((item: any) => !item.meta?.hidden);
-  if (showingChildren.length === 1) {
-    // eslint-disable-next-line prefer-destructuring
-    onlyOneChild.value = showingChildren[0];
-    return true;
+const handleLinkClick = (child: any) => {
+  const finalPath = resolvePath(child.path);
+  if (isExternal(finalPath)) {
+    window.open(finalPath, '_blank');
+  } else {
+    router.push(finalPath);
   }
-  if (showingChildren.length === 0) {
-    onlyOneChild.value = { ...parent, noShowingChildren: true };
-    return true;
-  }
-  return false;
 };
 </script>
+
+<style scoped lang="scss">
+/* 【修改点 3】：添加字体图标的基础样式，让其与文字对齐，并保持和原生 el-icon 类似的间距 */
+.menu-icon {
+  width: 24px;
+  text-align: center;
+  font-size: 16px;
+  margin-right: 5px; /* 距离右侧文字的间距 */
+  vertical-align: middle;
+  color: inherit; /* 继承外层 el-menu 自动处理的激活/普通颜色 */
+}
+</style>
