@@ -9,7 +9,7 @@ class AuthService extends BaseService {
     super("user"); // 操作 User 表
   }
 
-  // 注册
+  // 注册1
   async register(data: any) {
     // 检查用户名是否存在
     const exist = await this.model.findUnique({
