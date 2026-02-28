@@ -42,6 +42,26 @@ class RoleService extends BaseService {
     const menuIds = role?.menus.map((m: any) => m.id) || [];
     return Result.success(menuIds);
   }
+
+  // ★ 新增：分配数据权限 (企业级核心)
+  async updateDataScope(
+    roleId: number,
+    dataScope: number,
+    deptIds: number[] = []
+  ) {
+    // 如果是“自定数据权限 (2)”，则建立与 Department 的多对多关系
+    const deptsUpdate =
+      dataScope === 2 ? { set: deptIds.map((id) => ({ id })) } : { set: [] };
+
+    await this.model.update({
+      where: { id: roleId },
+      data: {
+        dataScope,
+        depts: deptsUpdate,
+      },
+    });
+    return Result.success(null, "数据权限分配成功");
+  }
 }
 
 export default new RoleService();

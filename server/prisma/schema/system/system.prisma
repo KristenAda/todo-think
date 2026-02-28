@@ -3,37 +3,46 @@
 // ==========================================
 model Menu {
   id        Int     @id @default(autoincrement())
-  parentId  Int? // 父菜单ID (顶级为null)
-  title     String // 菜单名称
-  path      String? // 路由路径
-  component String? // 前端组件路径
-  perms     String? // 权限标识 (如 todo:list, todo:add)
+  parentId  Int?
+  title     String
+  path      String?
+  component String?
+  perms     String?
   icon      String?
   type      Int // 1:目录 2:菜单 3:按钮
   sort      Int     @default(0)
 
-  // 关联：拥有该菜单的角色
+  // ★★★ 新增：前端路由所需的元数据 (Meta) ★★★
+  visible Boolean @default(true) // 状态：是否显示 (false表示隐藏，但在路由表中存在，可通过地址栏访问)
+  isCache Boolean @default(true) // 状态：是否缓存 (配合前端 KeepAlive)
+  isFrame Boolean @default(false) // 状态：是否为外链 (打开新窗口)
+
   roles Role[]
 
   createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 // ==========================================
 // 4. 部门表 (Department) - 更新版
 // ==========================================
 model Department {
-  id       Int    @id @default(autoincrement())
-  parentId Int? // 父部门ID
-  name     String // 部门名称
-  sort     Int    @default(0)
+  id        Int     @id @default(autoincrement())
+  parentId  Int?
+  ancestors String? // ★ 新增：祖级列表 (如 "0,1,5")。这是部门树的精髓，查子孙部门时直接 `ancestors LIKE '0,1,5%'`，极大提升性能
+  name      String
+  sort      Int     @default(0)
+  leader    String? // 新增：部门负责人(填名字，或者关联userId)
+  phone     String? // 新增：联系电话
+  email     String? // 新增：邮箱
+  status    Int     @default(1) // 新增：部门状态 (1:正常 0:停用)
 
-  // 新增：部门负责人 (Manager)
-  managerId Int?
-  manager   User? @relation("DeptManager", fields: [managerId], references: [id])
-
-  // 关联：部门下的所有员工
   users User[] @relation("DeptUsers")
+  roles Role[] @relation("RoleDepts") // 反向关联角色的自定数据权限
 
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime? // 软删除
+  user      User?     @relation(fields: [userId], references: [id])
+  userId    Int?
 }
