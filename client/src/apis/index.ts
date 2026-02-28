@@ -1,11 +1,12 @@
 import axios, {
   type AxiosInstance,
   type AxiosResponse,
-  type AxiosRequestConfig, // 使用通用类型，兼容性最好
+  type AxiosRequestConfig,
 } from 'axios';
 import { ElMessage } from 'element-plus';
+// 1. 引入权限 Store
+import { useAuthorityStore } from '@/stores/authority';
 
-// 1. 定义通用返回接口
 export interface Result<T = any> {
   code: number;
   message: string;
@@ -20,17 +21,10 @@ const TIMEOUT = 20000;
 // ==========================================
 const pendingMap = new Map<string, AbortController>();
 
-/**
- * 生成唯一的 Key
- */
 function getPendingKey(config: AxiosRequestConfig) {
-  // 确保 method 和 url 存在，若不存在给个默认值
   return [config.method || 'GET', config.url || ''].join('&');
 }
 
-/**
- * 添加请求到队列
- */
 function addPending(config: AxiosRequestConfig) {
   removePending(config);
   const url = getPendingKey(config);
@@ -39,9 +33,6 @@ function addPending(config: AxiosRequestConfig) {
   pendingMap.set(url, controller);
 }
 
-/**
- * 移除请求
- */
 function removePending(config: AxiosRequestConfig) {
   const url = getPendingKey(config);
   if (pendingMap.has(url)) {
@@ -51,10 +42,6 @@ function removePending(config: AxiosRequestConfig) {
   }
 }
 
-/**
- * 强行清空所有请求 (用于路由切换时)
- * 🔥 修复 ESLint 报错：只遍历 values，不再解构 [_, controller]
- */
 export function cancelAllRequest() {
   for (const controller of pendingMap.values()) {
     controller.abort();
@@ -78,10 +65,12 @@ const service: AxiosInstance = axios.create({
 // ==========================================
 service.interceptors.request.use(
   (config) => {
-    // 强制类型转换，避开版本差异导致的类型检查问题
     addPending(config);
 
-    const token = localStorage.getItem('token');
+    // 2. 从 Pinia 动态获取 Token
+    const authorityStore = useAuthorityStore();
+    const token = authorityStore.authToken;
+
     if (token && config.headers) {
       config.headers.Authorization = `Bearer ${token}`;
     }
@@ -96,12 +85,11 @@ service.interceptors.request.use(
 service.interceptors.response.use(
   (response: AxiosResponse) => {
     const { config, data } = response;
-    // 移除 pending
     removePending(config as AxiosRequestConfig);
 
     // 1. 成功 (Code === 200)
     if (data.code === 200) {
-      return data.data;
+      return data.data; // 注意这里：你直接把 data.data return 出去了
     }
 
     // 2. 业务错误
@@ -111,34 +99,31 @@ service.interceptors.response.use(
       ElMessage.error(data.message || '业务逻辑异常');
     }
 
-    // Reject 完整数据，让 catch 能拿到 code
     return Promise.reject(data);
   },
   (error) => {
-    // 移除 pending
     if (error.config) {
       removePending(error.config as AxiosRequestConfig);
     }
 
-    // 处理被取消的请求
     if (axios.isCancel(error)) {
-      return new Promise(() => {}); // 中断链条
+      return new Promise(() => {});
     }
 
-    // 构造统一错误对象
     const errRes = {
       code: error.response?.status || 500,
       message: error.message || '网络连接异常',
       data: null,
     };
 
-    // 处理 HTTP 状态码
     if (error.response) {
+      const authorityStore = useAuthorityStore();
       switch (error.response.status) {
         case 401:
           errRes.message = '登录状态已过期，请重新登录';
-          localStorage.removeItem('token');
-          // window.location.href = '/login';
+          // 3. 调用 Pinia 的方法规范清理登录状态
+          authorityStore.clearAuthorityInfo();
+          window.location.href = '/login'; // 建议直接踢回登录页
           break;
         case 403:
           errRes.message = '拒绝访问 (无权限)';
@@ -159,9 +144,5 @@ service.interceptors.response.use(
     return Promise.reject(errRes);
   },
 );
-
-// ==========================================
-// 导出封装方法
-// ==========================================
 
 export default service;
