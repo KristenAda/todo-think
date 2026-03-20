@@ -9,5 +9,6 @@ router.post("/add", userController.add);
 router.post("/update", userController.update);
 router.post("/delete", userController.delete);
 router.post("/assignRoles", userController.assignRoles);
+router.post("/roles", userController.getRoles);
 
 export default router;

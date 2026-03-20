@@ -13,13 +13,13 @@ class DeptService extends BaseService {
   // 1. 获取部门树 (包含负责人信息)
   async getTree(params: any) {
     const where: any = {};
-    if (params.name) where.name = { contains: params.name };
+    if (params?.name) where.name = { contains: params.name };
 
     const list = await this.model.findMany({
       where,
       orderBy: { sort: "asc" },
       include: {
-        manager: { select: { id: true, nickname: true, username: true } }, // 查出负责人的名字
+        user: { select: { id: true, nickname: true, username: true } }, // 查出负责人的名字（修正：manager → user）
         _count: { select: { users: true } }, // 顺便查出部门有多少人
       },
     });

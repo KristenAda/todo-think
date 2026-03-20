@@ -1,0 +1,57 @@
+# todo-think 项目 Cursor 规则
+
+## 项目概览
+- **类型**: 前后端分离的 Todo 管理系统（含后台管理）
+- **后端**: `server/` — Koa3 + TypeScript + Prisma + MySQL
+- **前端**: `client/` — Vue3 + TypeScript + Element Plus + Pinia + SCSS
+- **架构**: 后端按模块拆分（auth / system / todo），前端采用 layouts + views + stores 结构
+
+---
+
+## 扫描与索引规则（防卡死）
+- **严禁**读取或索引 `node_modules/` 目录。
+- **严禁**读取 `dist/`、`build/`、`.turbo/`、`.cache/` 等编译输出目录。
+- **严禁**一次性读取超过 **10 个**大文件；需要批量了解时，先读目录结构，按需精读。
+- `package-lock.json`、`yarn.lock`、`pnpm-lock.yaml` 只读版本号，不全文加载。
+- 忽略文件：`**/*.map`、`**/*.min.js`、`**/*.min.css`、`**/coverage/**`。
+
+---
+
+## 后端开发规范（server/）
+- 运行时: **Node.js + tsx**，开发命令 `npm run dev`，构建 `npm run build`。
+- 框架: **Koa3**，路由使用 `@koa/router`，body 解析用 `@koa/bodyparser`。
+- ORM: **Prisma**，Schema 分拆在 `prisma/schema/` 下，修改 Schema 后需执行 `prisma generate`。
+- 数据库: **MySQL**，连接串通过环境变量 `DATABASE_URL` 注入。
+- 鉴权: **JWT**（`koa-jwt` + `jsonwebtoken`），密钥通过 `AuthUtil.getSecret()` 获取，白名单路径在 `src/app.ts` 的 `unless` 中维护。
+- 参数校验: 使用 **Zod** 进行 DTO 校验。
+- 模块结构: 每个模块包含 `controller` / `routes` / `service` 三层，新增模块须遵循此结构。
+- 基础服务: 继承 `BaseService`（`src/core/base.service.ts`），传入 Prisma 模型名即可复用 CRUD。
+- 响应格式: 统一使用 `src/core/result.ts` 中的工具函数包装返回值。
+- 密码加密: 使用 **bcryptjs**。
+
+---
+
+## 前端开发规范（client/）
+- 框架: **Vue 3** Composition API + `<script setup>` 语法。
+- UI 库: **Element Plus**，按需引入，避免全量导入。
+- 状态管理: **Pinia**，store 文件位于 `src/stores/modules/`。
+- 样式: **SCSS**，布局变量（侧边栏宽度等）在各 layout 组件内用 SCSS 变量定义，保持一致。
+- 路由: Vue Router，管理后台入口在 `AdminLayout`，侧边栏折叠状态由 `useGlobalStore` 统一管理。
+- 安全: HTML 动态渲染必须使用 `vue-dompurify-html`，禁止直接 `v-html` 插入未消毒内容。
+- 全局指令 / Element Plus 在 `src/utils/app-install/` 中统一注册，不要在组件内重复注册。
+
+---
+
+## 重构与修改规则
+- **大规模重构**（影响 3 个以上文件）必须先列出变更计划，经用户确认后再逐文件修改。
+- 修改 Prisma Schema 时，同步检查对应 Service / Controller 是否需要更新。
+- 新增后端接口时，同步在 `test.http` 中补充测试用例。
+- 修改鉴权白名单时，需同时评估安全影响。
+
+---
+
+## 代码风格
+- 语言: 后端 **TypeScript**（严格模式），前端 **TypeScript + Vue SFC**。
+- 注释语言: 中文注释优先，与现有代码保持一致。
+- 导入别名: 后端使用 `@/` 映射 `src/`，前端同样使用 `@/` 映射 `src/`。
+- 禁止在代码中硬编码敏感信息（密钥、数据库密码等），一律使用环境变量。

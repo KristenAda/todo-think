@@ -25,11 +25,15 @@ class AuthController {
     }
   }
 
-  // 获取当前用户信息 (需要鉴权)
+  // 获取当前用户信息（含角色、权限），需要鉴权
   async info(ctx: Context) {
-    // koa-jwt 会把解析后的 token 数据挂载在 ctx.state.user 上
-    const user = ctx.state.user;
-    ctx.body = Result.success(user);
+    const { id } = ctx.state.user;
+    try {
+      const data = await authService.getUserInfo(id);
+      ctx.body = Result.success(data);
+    } catch (err: any) {
+      ctx.body = Result.error(err.message, 401);
+    }
   }
 }
 

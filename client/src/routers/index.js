@@ -25,7 +25,7 @@ const router = createRouter({
 
 // 注册前置路由守卫
 router.beforeEach(async (to, from, next) => {
-  await beforeEachUtil(to, from, next);
+  await beforeEachUtil(to, from, next, router);
 });
 
 // 监听错误

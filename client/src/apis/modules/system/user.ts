@@ -26,6 +26,12 @@ export const deleteUserApi = (data: { id: number | string }) =>
   request.post(`${BASE_URL}/delete`, data);
 
 /**
+ * 获取用户已分配的角色ID列表（回显用）
+ */
+export const getUserRolesApi = (data: { userId: number | string }) =>
+  request.post(`${BASE_URL}/roles`, data);
+
+/**
  * 给用户分配角色
  */
 export const assignUserRolesApi = (data: {

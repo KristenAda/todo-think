@@ -22,14 +22,12 @@ const systemRouters = [
     path: '/system',
     component: Layout,
     redirect: '/system/user',
-    // 【修改点】：使用 Font Awesome 的类名
     meta: { title: '系统管理', icon: 'fa fa-cog' },
     children: [
       {
         path: '/system/user',
         name: 'SysUser',
         component: () => import('@/views/system/user/Index.vue'),
-        // 【修改点】
         meta: { title: '用户管理', icon: 'fa fa-user' },
       },
       {
@@ -49,6 +47,26 @@ const systemRouters = [
         name: 'SysDept',
         component: () => import('@/views/system/dept/Index.vue'),
         meta: { title: '部门管理', icon: 'fa fa-building' },
+      },
+    ],
+  },
+  {
+    path: '/profile',
+    component: Layout,
+    redirect: '/profile/info',
+    meta: { title: '个人中心', icon: 'User', hidden: true },
+    children: [
+      {
+        path: '/profile/info',
+        name: 'ProfileInfo',
+        component: () => import('@/views/profile/info/Index.vue'),
+        meta: { title: '个人信息', icon: 'User', hidden: true },
+      },
+      {
+        path: '/profile/password',
+        name: 'ProfilePassword',
+        component: () => import('@/views/profile/password/Index.vue'),
+        meta: { title: '修改密码', icon: 'Lock', hidden: true },
       },
     ],
   },

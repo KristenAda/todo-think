@@ -38,3 +38,12 @@ export const assignRolePermsApi = (data: {
  */
 export const getRolePermsApi = (data: { id: number | string }) =>
   request.post(`${BASE_URL}/getPerms`, data);
+
+/**
+ * 分配数据权限
+ */
+export const updateDataScopeApi = (data: {
+  roleId: number | string;
+  dataScope: number;
+  deptIds?: Array<number | string>;
+}) => request.post(`${BASE_URL}/updateDataScope`, data);

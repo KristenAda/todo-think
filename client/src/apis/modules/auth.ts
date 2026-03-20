@@ -9,6 +9,14 @@ export interface LoginReqParams {
   password?: string;
 }
 
+// 注册请求参数
+export interface RegisterReqParams {
+  username: string;
+  password: string;
+  email?: string;
+  nickname?: string;
+}
+
 // 登录成功后的响应数据结构 (根据你后端的实际结构微调)
 export interface LoginResData {
   token: string;
@@ -32,6 +40,19 @@ export interface LoginResData {
 export function loginApi(data: LoginReqParams): Promise<LoginResData> {
   return http({
     url: '/auth/login', // 对应 Koa2 后端路由的登录接口
+    method: 'post',
+    data,
+  });
+}
+
+/**
+ * @description 系统注册
+ * @param data {RegisterReqParams} 注册信息
+ * @returns {Promise<any>} 返回新创建的用户信息
+ */
+export function registerApi(data: RegisterReqParams): Promise<any> {
+  return http({
+    url: '/auth/register',
     method: 'post',
     data,
   });

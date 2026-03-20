@@ -24,7 +24,6 @@ class AuthService extends BaseService {
 
   // 登录
   async login(username: string, password: string) {
-    // <-- 修正：这里参数是 string
     // 1. 找用户
     const user = await this.model.findUnique({ where: { username } });
     if (!user) throw new Error("用户不存在");
@@ -34,12 +33,12 @@ class AuthService extends BaseService {
       throw new Error("密码错误");
     }
 
-    // 3. 生成 Token (不把密码放进去)
+    // 3. 生成 Token
     const token = AuthUtil.signToken({ id: user.id, username: user.username });
-    return {
-      token,
-      user: { id: user.id, username: user.username, nickname: user.nickname },
-    };
+
+    // 4. 获取完整用户信息（含角色、权限），一并返回给前端
+    const userInfo = await this.getUserInfo(user.id);
+    return { token, ...userInfo };
   }
 
   /**

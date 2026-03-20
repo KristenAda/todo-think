@@ -18,7 +18,6 @@ import { Sidebar, Header, AppMain } from './components';
 
 const globalStore = useGlobalStore();
 
-// 通过 globalStore 统一控制侧边栏折叠
 const classObj = computed(() => ({
   hideSidebar: globalStore.isCollapse,
   openSidebar: !globalStore.isCollapse,
@@ -34,9 +33,11 @@ $hideSideBarWidth: 64px;
   height: 100%;
   width: 100%;
   display: flex;
+  background-color: var(--bg-primary);
+  overflow: hidden;
 
   .sidebar-container {
-    transition: width 0.28s;
+    transition: width var(--transition-normal);
     width: $sideBarWidth !important;
     height: 100%;
     position: fixed;
@@ -45,17 +46,21 @@ $hideSideBarWidth: 64px;
     left: 0;
     z-index: 1001;
     overflow: hidden;
-    background-color: #304156;
+    background: linear-gradient(135deg, var(--sidebar-bg-start) 0%, var(--sidebar-bg-end) 100%);
+    box-shadow: var(--shadow-md);
+    flex-shrink: 0;
   }
 
   .main-container {
     flex: 1;
     min-height: 100%;
-    transition: margin-left 0.28s;
     margin-left: $sideBarWidth;
     position: relative;
     display: flex;
     flex-direction: column;
+    overflow: hidden;
+    transition: margin-left var(--transition-normal);
+    width: calc(100% - #{$sideBarWidth});
   }
 
   .fixed-header {
@@ -64,9 +69,9 @@ $hideSideBarWidth: 64px;
     right: 0;
     z-index: 9;
     width: 100%;
-    transition: width 0.28s;
-    background-color: #fff;
-    box-shadow: 0 1px 4px rgba(0, 21, 41, 0.08);
+    background-color: var(--bg-white);
+    box-shadow: var(--shadow-sm);
+    flex-shrink: 0;
   }
 
   &.hideSidebar {
@@ -75,6 +80,7 @@ $hideSideBarWidth: 64px;
     }
     .main-container {
       margin-left: $hideSideBarWidth;
+      width: calc(100% - #{$hideSideBarWidth});
     }
   }
 }

@@ -7,6 +7,10 @@ class DeptController {
   // POST /sys/dept/tree (获取树)
   async tree(ctx: Context) {
     const { name } = ctx.request.body as any;
+    // 参数校验：name 可选，但若传则应是字符串
+    if (name && typeof name !== 'string') {
+      return (ctx.body = Result.error("name 参数格式错误"));
+    }
     const res = await deptService.getTree({ name });
     ctx.body = res;
   }

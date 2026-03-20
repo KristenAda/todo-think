@@ -55,6 +55,15 @@ class UserService extends BaseService {
     return { list, total };
   }
 
+  // 获取用户已分配的角色ID列表（分配弹窗回显用）
+  async getUserRoles(userId: number) {
+    const user = await this.model.findUnique({
+      where: { id: userId },
+      include: { roles: { select: { id: true } } },
+    });
+    return (user?.roles ?? []).map((r: any) => r.id);
+  }
+
   // ★★★ 核心：给用户分配角色 ★★★
   async assignRoles(userId: number, roleIds: number[]) {
     await this.model.update({

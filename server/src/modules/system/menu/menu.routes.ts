@@ -6,6 +6,7 @@ const router = new Router({ prefix: "/sys/menu" });
 
 // 统一为 POST + 动词
 router.post("/list", menuController.list);
+router.post("/tree", menuController.tree); // 当前用户的导航菜单树（动态路由）
 router.post("/add", menuController.add); // <--- 这里定义的是 /add
 router.post("/update", menuController.update);
 router.post("/delete", menuController.delete);

@@ -4,120 +4,227 @@
       <div class="grid-layer"></div>
       <div class="light-beam"></div>
       <div class="light-beam beam-2"></div>
-      <div class="floating-node node-1"></div>
-      <div class="floating-node node-2"></div>
-      <div class="floating-node node-3"></div>
     </div>
-
     <div class="login-box">
       <div class="login-header">
-        <div class="logo-icon">
-          <div class="hexagon">
-            <span class="inner-t">T</span>
-          </div>
-        </div>
         <h1 class="gradient-text">Todo-Think</h1>
         <p class="subtitle">任务调度指挥中心</p>
       </div>
-
-      <el-form
-        ref="loginFormRef"
-        :model="loginForm"
-        :rules="loginRules"
-        class="login-form"
-        @keyup.enter="handleLogin"
-      >
-        <el-form-item prop="username">
-          <el-input
-            v-model="loginForm.username"
-            placeholder="用户名"
-            :prefix-icon="User"
-            clearable
-            class="tech-input"
-          />
-        </el-form-item>
-
-        <el-form-item prop="password">
-          <el-input
-            v-model="loginForm.password"
-            type="password"
-            placeholder="访问密码"
-            :prefix-icon="Lock"
-            show-password
-            class="tech-input"
-          />
-        </el-form-item>
-
-        <el-form-item>
-          <el-button
-            type="primary"
-            class="login-btn"
-            :loading="loading"
-            @click="handleLogin"
+      <el-tabs v-model="activeTab" class="auth-tabs">
+        <el-tab-pane label="登 录" name="login">
+          <el-form
+            v-if="activeTab === 'login'"
+            ref="loginFormRef"
+            :model="loginForm"
+            :rules="loginRules"
+            class="login-form"
+            @keyup.enter="handleLogin"
           >
-            <span class="btn-text">{{ loading ? '登录中...' : '登录' }}</span>
-          </el-button>
-        </el-form-item>
-      </el-form>
+            <el-form-item prop="username">
+              <el-input
+                v-model="loginForm.username"
+                placeholder="用户名"
+                :prefix-icon="User"
+                clearable
+              />
+            </el-form-item>
+            <el-form-item prop="password">
+              <el-input
+                v-model="loginForm.password"
+                type="password"
+                placeholder="密码"
+                :prefix-icon="Lock"
+                show-password
+              />
+            </el-form-item>
+            <el-button
+              type="primary"
+              class="login-btn"
+              :loading="loginLoading"
+              block
+              @click="handleLogin"
+            >
+              {{ loginLoading ? '登录中...' : '登 录' }}
+            </el-button>
+          </el-form>
+        </el-tab-pane>
+        <el-tab-pane label="注 册" name="register">
+          <el-form
+            v-if="activeTab === 'register'"
+            ref="registerFormRef"
+            :model="registerForm"
+            :rules="registerRules"
+            class="login-form"
+            @keyup.enter="handleRegister"
+          >
+            <el-form-item prop="username">
+              <el-input
+                v-model="registerForm.username"
+                placeholder="用户名（3-20字符）"
+                :prefix-icon="User"
+                clearable
+              />
+            </el-form-item>
+            <el-form-item prop="password">
+              <el-input
+                v-model="registerForm.password"
+                type="password"
+                placeholder="密码（6+字符）"
+                :prefix-icon="Lock"
+                show-password
+              />
+            </el-form-item>
+            <el-form-item prop="confirmPassword">
+              <el-input
+                v-model="registerForm.confirmPassword"
+                type="password"
+                placeholder="确认密码"
+                :prefix-icon="Lock"
+                show-password
+              />
+            </el-form-item>
+            <el-form-item prop="email">
+              <el-input
+                v-model="registerForm.email"
+                placeholder="邮箱（可选）"
+                clearable
+              />
+            </el-form-item>
+            <el-form-item prop="nickname">
+              <el-input
+                v-model="registerForm.nickname"
+                placeholder="昵称（可选）"
+                clearable
+              />
+            </el-form-item>
+            <el-button
+              type="primary"
+              class="login-btn"
+              :loading="registerLoading"
+              block
+              @click="handleRegister"
+            >
+              {{ registerLoading ? '注册中...' : '注 册' }}
+            </el-button>
+          </el-form>
+        </el-tab-pane>
+      </el-tabs>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
+import { ref, reactive } from 'vue';
+import { useRouter } from 'vue-router';
 import { User, Lock } from '@element-plus/icons-vue';
+import { ElMessage } from 'element-plus';
 import { useAuthorityStore } from '@/stores/authority';
-// 假设你有一个封装好的 api 请求方法，这里模拟引入
-import { loginApi } from '@/apis/modules/auth';
+import { loginApi, registerApi } from '@/apis/modules/auth';
 
 const router = useRouter();
 const authorityStore = useAuthorityStore();
+const activeTab = ref('login');
 
+// 登录
 const loginFormRef = ref();
-const loading = ref(false);
-
-const loginForm = reactive({
-  username: '',
-  password: '',
-});
-
+const loginLoading = ref(false);
+const loginForm = reactive({ username: '', password: '' });
 const loginRules = {
-  username: [{ required: true, message: '请输入系统账号', trigger: 'blur' }],
-  password: [{ required: true, message: '请输入访问密码', trigger: 'blur' }],
+  username: [{ required: true, message: '请输入用户名', trigger: 'blur' }],
+  password: [{ required: true, message: '请输入密码', trigger: 'blur' }],
 };
 
 const handleLogin = async () => {
   if (!loginFormRef.value) return;
-
   await loginFormRef.value.validate(async (valid: boolean) => {
     if (valid) {
-      loading.value = true;
+      loginLoading.value = true;
       try {
-        // 调用真实的登录接口
         const res = await loginApi({
           username: loginForm.username,
           password: loginForm.password,
         });
-
-        // request-util.js 拦截器已经帮你把后端的 Result.data 解构出来了
-        // 直接将返回的数据存入 Pinia 状态管理
         authorityStore.authToken = res.token;
         authorityStore.loginInfo = res.user;
         authorityStore.permissions = res.permissions;
-
-        ElMessage.success({
-          message: '系统验证通过，欢迎回来。',
-          grouping: true,
-        });
-
-        // 跳转到系统主页
+        ElMessage.success('登录成功');
         router.push('/');
       } catch (error: any) {
-        // 请求失败已经在 request-util.js 统一处理拦截并弹出 ElMessage 提示，
-        // 这里只需在控制台打印排查，或执行特定的失败交互。
         console.error('Login Failed:', error);
       } finally {
-        // 无论成功失败，重置 Loading 状态
-        loading.value = false;
+        loginLoading.value = false;
+      }
+    }
+  });
+};
+
+// 注册
+const registerFormRef = ref();
+const registerLoading = ref(false);
+const registerForm = reactive({
+  username: '',
+  password: '',
+  confirmPassword: '',
+  email: '',
+  nickname: '',
+});
+
+const validateConfirmPassword = (rule: any, value: any, callback: any) => {
+  if (value === '') {
+    callback(new Error('请确认密码'));
+  } else if (value !== registerForm.password) {
+    callback(new Error('两次输入密码不一致'));
+  } else {
+    callback();
+  }
+};
+
+const registerRules = {
+  username: [
+    { required: true, message: '请输入用户名', trigger: 'blur' },
+    { min: 3, max: 20, message: '用户名长度 3-20 个字符', trigger: 'blur' },
+  ],
+  password: [
+    { required: true, message: '请输入密码', trigger: 'blur' },
+    { min: 6, message: '密码长度至少 6 个字符', trigger: 'blur' },
+  ],
+  confirmPassword: [
+    { required: true, message: '请确认密码', trigger: 'blur' },
+    { validator: validateConfirmPassword, trigger: 'blur' },
+  ],
+  email: [
+    {
+      pattern: /^[\w.-]+@[\w.-]+\.[a-zA-Z]{2,}$/,
+      message: '请输入有效的邮箱地址',
+      trigger: 'blur',
+    },
+  ],
+};
+
+const handleRegister = async () => {
+  if (!registerFormRef.value) return;
+  await registerFormRef.value.validate(async (valid: boolean) => {
+    if (valid) {
+      registerLoading.value = true;
+      try {
+        await registerApi({
+          username: registerForm.username,
+          password: registerForm.password,
+          email: registerForm.email || undefined,
+          nickname: registerForm.nickname || undefined,
+        });
+        ElMessage.success('注册成功！请使用新账号登录');
+        registerForm.username = '';
+        registerForm.password = '';
+        registerForm.confirmPassword = '';
+        registerForm.email = '';
+        registerForm.nickname = '';
+        // 不再需要 clearValidate，因为 v-if 切走时表单会自动销毁并重置
+        activeTab.value = 'login';
+      } catch (error: any) {
+        console.error('Register Failed:', error);
+      } finally {
+        registerLoading.value = false;
       }
     }
   });
@@ -125,7 +232,6 @@ const handleLogin = async () => {
 </script>
 
 <style scoped lang="scss">
-/* --- 核心主题色变量 --- */
 $bg-color: #0b0f19;
 $primary-cyan: #00f0ff;
 $primary-blue: #0057ff;
@@ -141,12 +247,8 @@ $glass-border: rgba(0, 240, 255, 0.2);
   display: flex;
   justify-content: center;
   align-items: center;
-  font-family:
-    'Helvetica Neue', Helvetica, 'PingFang SC', 'Hiragino Sans GB',
-    'Microsoft YaHei', Arial, sans-serif;
 }
 
-/* --- 背景与环境特效 --- */
 .tech-background {
   position: absolute;
   top: 0;
@@ -155,7 +257,6 @@ $glass-border: rgba(0, 240, 255, 0.2);
   height: 100%;
   z-index: 0;
 
-  /* 赛博朋克网格底纹 */
   .grid-layer {
     position: absolute;
     width: 200%;
@@ -171,7 +272,6 @@ $glass-border: rgba(0, 240, 255, 0.2);
     animation: gridMove 20s linear infinite;
   }
 
-  /* 扫描光束 */
   .light-beam {
     position: absolute;
     top: -50%;
@@ -199,41 +299,8 @@ $glass-border: rgba(0, 240, 255, 0.2);
       animation: beamSweep 12s ease-in-out infinite alternate-reverse;
     }
   }
-
-  /* 悬浮的任务节点特效 */
-  .floating-node {
-    position: absolute;
-    width: 8px;
-    height: 8px;
-    background-color: $primary-cyan;
-    border-radius: 50%;
-    box-shadow: 0 0 15px 3px rgba($primary-cyan, 0.8);
-    opacity: 0.6;
-    animation: floatNode 6s ease-in-out infinite;
-
-    &.node-1 {
-      top: 20%;
-      left: 15%;
-      animation-delay: 0s;
-    }
-    &.node-2 {
-      top: 70%;
-      left: 85%;
-      animation-delay: -2s;
-      width: 5px;
-      height: 5px;
-    }
-    &.node-3 {
-      top: 80%;
-      left: 25%;
-      animation-delay: -4s;
-      width: 12px;
-      height: 12px;
-    }
-  }
 }
 
-/* --- 登录面板 (毛玻璃科技风) --- */
 .login-box {
   position: relative;
   z-index: 1;
@@ -247,63 +314,12 @@ $glass-border: rgba(0, 240, 255, 0.2);
   box-shadow:
     0 0 40px rgba(0, 0, 0, 0.5),
     inset 0 0 20px rgba($primary-cyan, 0.05);
-  transform: translateY(0);
   animation: boxEntrance 1s cubic-bezier(0.1, 0.8, 0.2, 1) forwards;
 }
 
 .login-header {
   text-align: center;
   margin-bottom: 40px;
-
-  /* 纯 CSS 科技感 Logo */
-  .logo-icon {
-    display: flex;
-    justify-content: center;
-    margin-bottom: 20px;
-
-    .hexagon {
-      position: relative;
-      width: 60px;
-      height: 34.64px;
-      background-color: rgba($primary-cyan, 0.1);
-      border-left: 2px solid $primary-cyan;
-      border-right: 2px solid $primary-cyan;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      box-shadow: 0 0 15px rgba($primary-cyan, 0.3);
-
-      &::before,
-      &::after {
-        content: '';
-        position: absolute;
-        z-index: -1;
-        width: 42.43px;
-        height: 42.43px;
-        transform: scaleY(0.5774) rotate(-45deg);
-        background-color: inherit;
-        left: 6.79px;
-      }
-      &::before {
-        top: -21.21px;
-        border-top: 2.83px solid $primary-cyan;
-        border-right: 2.83px solid $primary-cyan;
-      }
-      &::after {
-        bottom: -21.21px;
-        border-bottom: 2.83px solid $primary-cyan;
-        border-left: 2.83px solid $primary-cyan;
-      }
-
-      .inner-t {
-        color: #fff;
-        font-size: 28px;
-        font-weight: 900;
-        text-shadow: 0 0 10px $primary-cyan;
-        z-index: 2;
-      }
-    }
-  }
 
   .gradient-text {
     font-size: 32px;
@@ -323,66 +339,115 @@ $glass-border: rgba(0, 240, 255, 0.2);
   }
 }
 
-/* --- Element Plus 深度样式覆盖 (适配科技风) --- */
+.auth-tabs {
+  :deep(.el-tabs__header) {
+    margin-bottom: 20px;
+    border-bottom: 2px solid rgba(0, 240, 255, 0.15);
+    background: rgba(0, 0, 0, 0.2);
+    border-radius: 8px 8px 0 0;
+    padding: 0 8px;
+  }
+
+  :deep(.el-tabs__nav-wrap) {
+    &::after {
+      background-color: transparent;
+    }
+  }
+
+  :deep(.el-tabs__nav) {
+    display: flex;
+    justify-content: center;
+  }
+
+  :deep(.el-tabs__item) {
+    color: rgba(255, 255, 255, 0.5);
+    font-weight: 600;
+    letter-spacing: 1px;
+    transition: all 0.3s ease;
+    padding: 12px 24px !important;
+    margin: 4px 4px 0 4px;
+    border-radius: 6px 6px 0 0;
+    position: relative;
+
+    &:hover {
+      color: rgba(255, 255, 255, 0.8);
+      background-color: rgba(0, 240, 255, 0.1);
+    }
+
+    &.is-active {
+      color: #fff;
+      background: linear-gradient(
+        135deg,
+        rgba(0, 240, 255, 0.2) 0%,
+        rgba(0, 87, 255, 0.1) 100%
+      );
+      box-shadow: 0 0 15px rgba(0, 240, 255, 0.3) inset;
+      font-weight: 700;
+    }
+  }
+
+  :deep(.el-tabs__active-bar) {
+    background: linear-gradient(90deg, #0057ff, #00f0ff);
+    height: 3px;
+    border-radius: 2px;
+    box-shadow: 0 0 10px rgba(0, 240, 255, 0.6);
+  }
+}
+
 .login-form {
   :deep(.el-input__wrapper) {
-    background-color: rgba(0, 0, 0, 0.3);
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    box-shadow: none;
-    border-radius: 4px;
-    transition: all 0.3s ease;
-    padding: 2px 15px;
+    background-color: rgba(0, 0, 0, 0.4) !important;
+    border: 1px solid rgba(0, 240, 255, 0.15) !important;
+    box-shadow: none !important;
+    border-radius: 6px !important;
+    transition: all 0.3s ease !important;
+    padding: 2px 15px !important;
 
-    &:hover,
+    &:hover {
+      background-color: rgba(0, 0, 0, 0.5) !important;
+      border-color: rgba(0, 240, 255, 0.3) !important;
+      box-shadow: 0 0 8px rgba(0, 240, 255, 0.2) !important;
+    }
+
     &.is-focus {
-      border-color: $primary-cyan;
-      box-shadow: 0 0 10px rgba($primary-cyan, 0.3);
-      background-color: rgba(0, 0, 0, 0.5);
+      background-color: rgba(0, 0, 0, 0.6) !important;
+      border-color: $primary-cyan !important;
+      box-shadow: 0 0 15px rgba($primary-cyan, 0.4) !important;
     }
   }
 
   :deep(.el-input__inner) {
-    color: #e0e0e0;
-    height: 45px;
-    font-size: 15px;
-    letter-spacing: 1px;
+    color: #e0e0e0 !important;
+    height: 45px !important;
+    font-size: 15px !important;
+    background-color: transparent !important;
 
     &::placeholder {
-      color: rgba(255, 255, 255, 0.3);
+      color: rgba(255, 255, 255, 0.35) !important;
     }
-  }
 
-  :deep(.el-input__inner) {
-    // 针对自动填充状态进行强制覆盖
     &:-webkit-autofill,
     &:-webkit-autofill:hover,
     &:-webkit-autofill:focus,
     &:-webkit-autofill:active {
-      // 1. 使用内阴影覆盖掉 Chrome 的白色背景。这里使用深色 #0d1117 或 #0b0f19
-      -webkit-box-shadow: 0 0 0px 1000px #0d1117 inset !important;
-
-      // 2. 强制设置文字颜色为你的 $primary-cyan 或白色
       -webkit-text-fill-color: #e0e0e0 !important;
-
-      // 3. 这里的动画技巧是为了防止 Chrome 瞬间切回原始样式
-      transition: background-color 5000s ease-in-out 0s;
-
-      // 4. 保持光标可见
-      caret-color: #fff;
-    }
-  }
-
-  // 确保容器背景在自动填充时也不会变白
-  :deep(.el-input__wrapper) {
-    &.is-focus,
-    &:hover {
-      background-color: rgba(0, 0, 0, 0.5) !important;
+      caret-color: #fff !important;
+      /* 核心修复点 2：兜底色修改，万一极其极端的浏览器强制填充，这个颜色也刚好和你背景的高级灰暗色完美融合，绝不会有白底 */
+      -webkit-box-shadow: 0 0 0px 1000px #0e1522 inset !important;
+      transition:
+        background-color 50000s ease-in-out 0s,
+        color 50000s ease-in-out 0s !important;
+      background-color: transparent !important;
+      background-image: none !important;
     }
   }
 
   :deep(.el-input__prefix) {
-    color: $primary-cyan;
-    font-size: 18px;
+    color: $primary-cyan !important;
+  }
+
+  :deep(.el-input__suffix) {
+    color: rgba(255, 255, 255, 0.5) !important;
   }
 
   .login-btn {
@@ -394,24 +459,13 @@ $glass-border: rgba(0, 240, 255, 0.2);
     border-radius: 4px;
     position: relative;
     overflow: hidden;
-    transition:
-      transform 0.2s,
-      box-shadow 0.2s;
-
-    .btn-text {
-      font-size: 16px;
-      font-weight: 600;
-      letter-spacing: 2px;
-      color: #fff;
-      z-index: 1;
-    }
+    transition: all 0.2s;
 
     &:hover {
       transform: translateY(-2px);
       box-shadow: 0 5px 20px rgba($primary-cyan, 0.5);
     }
 
-    /* 按钮扫描高光动画 */
     &::before {
       content: '';
       position: absolute;
@@ -431,7 +485,6 @@ $glass-border: rgba(0, 240, 255, 0.2);
   }
 }
 
-/* --- 关键帧动画 --- */
 @keyframes gridMove {
   0% {
     transform: perspective(500px) rotateX(60deg) translateY(0)
@@ -449,18 +502,6 @@ $glass-border: rgba(0, 240, 255, 0.2);
   }
   100% {
     transform: rotate(35deg) translateX(300px);
-  }
-}
-
-@keyframes floatNode {
-  0%,
-  100% {
-    transform: translateY(0) scale(1);
-    opacity: 0.6;
-  }
-  50% {
-    transform: translateY(-20px) scale(1.2);
-    opacity: 1;
   }
 }
 

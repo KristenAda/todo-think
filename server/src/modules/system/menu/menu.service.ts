@@ -1,26 +1,68 @@
 import { BaseService } from "@/core/base.service";
 import { Result } from "@/core/result";
+import { PrismaClient } from "@prisma/client";
+
+const prisma = new PrismaClient();
 
 class MenuService extends BaseService {
   constructor() {
-    super("menu"); // 操作 prisma.menu
+    super("menu");
   }
 
-  // 覆写基类的 list，因为菜单管理通常不需要分页，而是查全部
-  async listAll() {
+  // 获取所有菜单（管理端列表），支持 title 模糊筛选
+  async listAll(title?: string) {
+    const where: any = {};
+    if (title) where.title = { contains: title };
+
     const list = await this.model.findMany({
-      orderBy: { sort: "asc" }, // 按 sort 字段排序
+      where,
+      orderBy: { sort: "asc" },
     });
     return Result.success(this.listToTree(list));
   }
 
-  // 获取当前用户的菜单树 (留个坑，后面做角色关联时用)
+  // 获取当前登录用户的导航菜单树（动态路由专用）
+  // - 超级管理员 (roleKey=admin)：返回全部目录+菜单
+  // - 普通用户：根据角色关联，只返回有权限的目录+菜单
   async getUserMenus(userId: number) {
-    // 目前先返回所有，后面会改成根据 Role 过滤
-    return this.listAll();
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      include: {
+        roles: {
+          where: { status: 1, deletedAt: null },
+        },
+      },
+    });
+
+    if (!user) return Result.success([]);
+
+    const isAdmin = user.roles.some((r: any) => r.roleKey === "admin");
+
+    let list: any[];
+    if (isAdmin) {
+      // 超级管理员：全部导航菜单（排除按钮 type=3）
+      list = await this.model.findMany({
+        where: { type: { in: [1, 2] } },
+        orderBy: { sort: "asc" },
+      });
+    } else if (user.roles.length > 0) {
+      const roleIds = user.roles.map((r: any) => r.id);
+      // 普通用户：通过角色关联过滤
+      list = await this.model.findMany({
+        where: {
+          type: { in: [1, 2] },
+          roles: { some: { id: { in: roleIds } } },
+        },
+        orderBy: { sort: "asc" },
+      });
+    } else {
+      list = [];
+    }
+
+    return Result.success(this.listToTree(list));
   }
 
-  // === 工具方法：把扁平数组转成树形结构 ===
+  // === 工具方法：扁平数组 → 树形结构 ===
   private listToTree(list: any[], parentId: number | null = null): any[] {
     const tree: any[] = [];
     for (const item of list) {

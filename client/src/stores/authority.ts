@@ -16,6 +16,12 @@ export const useAuthorityStore = defineStore({
 
     // 3. 用户按钮权限标识集合 (例如: ['sys:user:add', '*'])
     permissions: [] as string[],
+
+    // 4. 动态加载的菜单路由
+    menuRoutes: [] as any[],
+
+    // 5. 路由是否已加载标志
+    routesLoaded: false,
   }),
 
   getters: {
@@ -30,6 +36,20 @@ export const useAuthorityStore = defineStore({
      */
     setAuthorityState(...args: [string, any]) {
       this.$patch({ [args[0]]: args[1] });
+    },
+
+    /**
+     * 设置菜单路由
+     */
+    setMenuRoutes(routes: any[]) {
+      this.menuRoutes = routes;
+    },
+
+    /**
+     * 设置路由加载状态
+     */
+    setRoutesLoaded(loaded: boolean) {
+      this.routesLoaded = loaded;
     },
 
     /**
@@ -49,6 +69,8 @@ export const useAuthorityStore = defineStore({
         loginInfo: {},
         authToken: '',
         permissions: [],
+        menuRoutes: [],
+        routesLoaded: false,
       });
       // 这里的持久化插件会自动处理 localStorage/sessionStorage 的清理
     },

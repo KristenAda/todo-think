@@ -13,15 +13,19 @@ class RoleController {
   // 接口：/sys/role/add
   async add(ctx: Context) {
     const data = ctx.request.body as any;
-    if (!data.name) return (ctx.body = Result.error("角色编码不能为空"));
+    if (!data.roleName) return (ctx.body = Result.error("角色名称不能为空"));
+    if (!data.roleKey) return (ctx.body = Result.error("角色标识不能为空"));
 
     try {
       const res = await roleService.add(data);
       ctx.body = Result.success(res);
     } catch (e: any) {
       // 处理唯一索引冲突
-      if (e.code === "P2002")
-        return (ctx.body = Result.error("角色编码已存在"));
+      if (e.code === "P2002") {
+        const field = e.meta?.target?.[0];
+        if (field === "roleKey") return (ctx.body = Result.error("角色标识已存在"));
+        return (ctx.body = Result.error("角色信息已存在"));
+      }
       throw e;
     }
   }
@@ -29,23 +33,20 @@ class RoleController {
   // 接口：/sys/role/update
   async update(ctx: Context) {
     const data = ctx.request.body as any;
-    // ID 必须传
     if (!data.id) return (ctx.body = Result.error("ID不能为空"));
-
     const res = await roleService.update(data.id, data);
     ctx.body = Result.success(res);
   }
 
   // 接口：/sys/role/delete
   async delete(ctx: Context) {
-    const { id } = ctx.request.body as any; // ID 从 body 拿
+    const { id } = ctx.request.body as any;
     if (!id) return (ctx.body = Result.error("ID不能为空"));
-
     await roleService.delete(id);
     ctx.body = Result.success(null, "删除成功");
   }
 
-  // 接口：/sys/role/assignPerms (分配权限)
+  // 接口：/sys/role/assignPerms (分配菜单权限)
   async assignPerms(ctx: Context) {
     const { roleId, menuIds } = ctx.request.body as any;
     if (!roleId || !Array.isArray(menuIds)) {
@@ -55,10 +56,20 @@ class RoleController {
     ctx.body = res;
   }
 
-  // 接口：/sys/role/getPerms (获取权限回显)
+  // 接口：/sys/role/getPerms (获取菜单权限回显)
   async getPerms(ctx: Context) {
     const { roleId } = ctx.request.body as any;
+    if (!roleId) return (ctx.body = Result.error("roleId不能为空"));
     const res = await roleService.getMenuIdsByRoleId(roleId);
+    ctx.body = res;
+  }
+
+  // 接口：/sys/role/updateDataScope (分配数据权限)
+  async updateDataScope(ctx: Context) {
+    const { roleId, dataScope, deptIds = [] } = ctx.request.body as any;
+    if (!roleId) return (ctx.body = Result.error("roleId不能为空"));
+    if (dataScope === undefined) return (ctx.body = Result.error("dataScope不能为空"));
+    const res = await roleService.updateDataScope(roleId, dataScope, deptIds);
     ctx.body = res;
   }
 }

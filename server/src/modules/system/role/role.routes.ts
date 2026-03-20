@@ -10,7 +10,8 @@ router.post("/update", roleController.update);
 router.post("/delete", roleController.delete);
 
 // 权限分配相关
-router.post("/assignPerms", roleController.assignPerms); // 分配
-router.post("/getPerms", roleController.getPerms); // 回显
+router.post("/assignPerms", roleController.assignPerms); // 分配菜单权限
+router.post("/getPerms", roleController.getPerms); // 获取菜单权限回显
+router.post("/updateDataScope", roleController.updateDataScope); // 分配数据权限
 
 export default router;

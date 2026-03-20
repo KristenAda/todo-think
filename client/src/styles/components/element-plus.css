@@ -1,183 +1,223 @@
 :root {
-  /* 字体单位 12px为基准点 */
   --el-font-size-extra-small: 10px !important;
-
-  /* 10px */
   --el-font-size-small: 11px !important;
-
-  /* 11px */
   --el-font-size-base: 14px !important;
-
-  /* 12px */
   --el-font-size-medium: 16px !important;
-
-  /* 14px */
   --el-font-size-large: 18px !important;
-
-  /* 16px */
   --el-font-size-extra-large: 20px !important;
 
-  /* 18px */
-  --el-color-grey: #686868;
-  --el-color-grey-8: rgb(104 104 104 / 80%);
-  --el-color-grey-dark: #383838;
-  --el-color-grey-f2: #f2f2f2;
-  --el-color-grey-f7: #f7f7f7;
-  --el-color-grey-f9: #f9f9f9;
-  --el-color-grey-default: #686868;
-  --el-color-grey-light: #989898;
-  --el-color-grey-light-1: rgb(152 152 152 / 10%);
-  --el-color-grey-light-1-by-code: #f4f4f4;
-  --el-color-grey-light-16: rgb(152 152 152 / 16%);
-  --el-color-grey-light-2: rgb(152 152 152 / 20%);
-  --el-color-grey-light-26: rgb(152 152 152 / 26%);
-  --el-color-grey-light-3: rgb(152 152 152 / 30%);
-  --el-color-grey-light-45: rgb(152 152 152 / 45%);
-  --el-color-grey-light-5: rgb(152 152 152 / 50%);
-  --el-color-grey-light-54: rgb(152 152 152 / 54%);
-  --el-color-grey-light-7: rgb(152 152 152 / 70%);
+  --el-color-primary: #5B8DEE !important;
+  --el-color-primary-light-3: #E8F0FF !important;
+  --el-color-primary-light-5: #D4E3FF !important;
+  --el-color-primary-light-7: #B8D0FF !important;
+  --el-color-primary-light-9: #E8F0FF !important;
+  --el-color-primary-dark-2: #4A7FDD !important;
 
-  /* --el-color-grey-light-9: rgb(152 152 152 / 90%); */
-  --el-color-grey-light-9-238: rgb(238 238 238 / 90%);
+  --el-color-success: #00D4AA !important;
+  --el-color-warning: #FFB84D !important;
+  --el-color-danger: #FF6B6B !important;
+  --el-color-error: #FF6B6B !important;
+  --el-color-info: #5B8DEE !important;
 
-  /****  白色  ****/
-  --el-color-white-1: rgb(255 255 255 / 10%);
-  --el-color-white-2: rgb(255 255 255 / 20%);
-  --el-color-white-4: rgb(255 255 255 / 40%);
-  --el-color-white-5: rgb(255 255 255 / 50%);
-  --el-color-white-7: rgb(255 255 255 / 70%);
+  --el-fill-color-blank: #FAFBFC !important;
+  --el-fill-color-light: #F5F7FA !important;
+  --el-fill-color-lighter: #EEF2F8 !important;
+  --el-fill-color-extra-light: #F9FAFB !important;
 
-  /****  黑色  ****/
-  --el-color-black-light-0: rgb(0 0 0 / 0%);
-  --el-color-black-light-3: rgb(0 0 0 / 30%);
-  --el-color-black-light-4: rgb(0 0 0 / 40%);
-  --el-color-black-light-7: rgb(0 0 0 / 70%);
+  --el-text-color-primary: #2C3E50 !important;
+  --el-text-color-regular: #5A6C7D !important;
+  --el-text-color-secondary: #8B95A5 !important;
+  --el-text-color-placeholder: #BDBDBD !important;
+  --el-text-color-disabled: #BDBDBD !important;
 
-  /****  彩色  ****/
-  --el-color-red: #f33;
+  --el-border-color: #E8EAED !important;
+  --el-border-color-light: #F0F0F0 !important;
+  --el-border-color-lighter: #F5F5F5 !important;
+  --el-border-color-extra-light: #FAFAFA !important;
+  --el-border-color-dark: #D9DCE0 !important;
+  --el-border-color-darker: #C5C8CC !important;
 
-  /* 红色 */
-  --el-color-red-9: rgb(255 51 51 / 90%);
+  --el-box-shadow: 0 2px 4px rgba(0, 0, 0, 0.08) !important;
+  --el-box-shadow-light: 0 1px 2px rgba(0, 0, 0, 0.04) !important;
+  --el-box-shadow-md: 0 4px 12px rgba(0, 0, 0, 0.12) !important;
+  --el-box-shadow-dark: 0 8px 24px rgba(0, 0, 0, 0.15) !important;
 
-  /* 红色-透明度90 */
+  --el-border-radius-base: 8px !important;
+  --el-border-radius-small: 4px !important;
+  --el-border-radius-round: 12px !important;
+  --el-border-radius-circle: 50% !important;
 
-  --el-color-orange: #f63;
-  --el-color-orange-light-3: rgb(255 102 51 / 30%);
-
-  /* 橘色 */
-  --el-color-yellow: #fc3;
-
-  /* 黄色 */
-  --el-color-yellow-light-3: rgb(255 204 51 / 30%);
-
-  /* 黄色-透明度30 */
-
-  --el-color-green: #02b05c;
-  --el-color-green-light-3: rgb(2 176 92 / 30%);
-
-  /* 绿色 */
-  --el-color-blue: #2481f0;
-
-  --el-border-color: #c6e2ff !important;
+  --el-color-grey: #5A6C7D;
+  --el-color-grey-dark: #2C3E50;
+  --el-color-grey-light: #8B95A5;
 }
 
-html.dark {
-  /* wangEditor */
-  --w-e-toolbar-color: #eee;
-  --w-e-toolbar-bg-color: #141414;
-  --w-e-textarea-bg-color: #141414;
-  --w-e-textarea-color: #eee;
-  --w-e-toolbar-active-bg-color: #464646;
-  --w-e-toolbar-border-color: var(--el-border-color-darker);
-
-  .w-e-bar-item button:hover,
-  .w-e-menu-tooltip-v5::before {
-    color: #eee;
-  }
+.el-button {
+  border-radius: var(--el-border-radius-base) !important;
+  transition: all 0.3s ease !important;
+  font-weight: 500;
 }
 
-#nprogress .bar {
-  background-color: var(--el-color-primary) !important;
+.el-button:hover {
+  box-shadow: var(--el-box-shadow-md) !important;
 }
 
-#nprogress .spinner-icon {
-  border-top-color: var(--el-color-primary) !important;
-  border-left-color: var(--el-color-primary) !important;
+.el-button.is-plain:hover {
+  background-color: var(--el-fill-color-light) !important;
+  border-color: var(--el-color-primary) !important;
+  color: var(--el-color-primary) !important;
 }
 
-/* #region 6.1 input */
-.el-input {
-  --el-input-focus-border: var(--el-color-primary);
-  --el-input-focus-border-color: var(--el-color-primary);
+.el-button--primary:hover {
+  background-color: var(--el-color-primary-dark-2) !important;
+  border-color: var(--el-color-primary-dark-2) !important;
 }
 
-.el-textarea {
-  --el-input-focus-border-color: var(--el-color-primary);
+.el-button--success:hover {
+  background-color: #00B896 !important;
+  border-color: #00B896 !important;
+}
+
+.el-button--warning:hover {
+  background-color: #E6A23C !important;
+  border-color: #E6A23C !important;
+}
+
+.el-button--danger:hover {
+  background-color: #F56C6C !important;
+  border-color: #F56C6C !important;
+}
+
+.el-button--info:hover {
+  background-color: #4A7FDD !important;
+  border-color: #4A7FDD !important;
+}
+
+.el-button--text:hover {
+  color: var(--el-color-primary-dark-2) !important;
+}
+
+.el-input__wrapper {
+  border-radius: var(--el-border-radius-base) !important;
+  background-color: var(--el-fill-color-blank) !important;
+  border: 1px solid var(--el-border-color) !important;
+  transition: all 0.3s ease !important;
+}
+
+.el-input__wrapper:hover {
+  border-color: var(--el-color-primary-light-5) !important;
+}
+
+.el-input__wrapper.is-focus {
+  border-color: var(--el-color-primary) !important;
+  box-shadow: 0 0 0 2px var(--el-color-primary-light-9) !important;
 }
 
 .el-input__inner {
-  /* color: var(--el-color-black) !important; */
-  color: var(--el-input-text-color, var(--el-text-color-regular));
+  color: var(--el-text-color-primary) !important;
 }
 
-/* #endregion */
+.el-table {
+  background-color: var(--el-fill-color-blank) !important;
+  border-radius: var(--el-border-radius-base) !important;
+  overflow: hidden;
+  box-shadow: var(--el-box-shadow) !important;
+}
 
-/* #region 6.2 select */
-.el-select {
-  --el-select-input-focus-border-color: var(--el-color-primary);
+.el-table__header {
+  background-color: var(--el-fill-color-light) !important;
+}
+
+.el-table__header th {
+  background-color: var(--el-fill-color-light) !important;
+  color: var(--el-text-color-primary) !important;
+  font-weight: 600;
+  border-bottom: 1px solid var(--el-border-color) !important;
+}
+
+.el-table__body tr:hover > td {
+  background-color: var(--el-fill-color-lighter) !important;
+}
+
+.el-table__body tr:nth-child(even) {
+  background-color: var(--el-fill-color-extra-light) !important;
+}
+
+.el-table__body td {
+  border-bottom: 1px solid var(--el-border-color-light) !important;
+}
+
+.el-card {
+  border: 1px solid var(--el-border-color) !important;
+  border-radius: var(--el-border-radius-base) !important;
+  box-shadow: var(--el-box-shadow) !important;
+  transition: all 0.3s ease !important;
+  background-color: var(--el-fill-color-blank) !important;
+}
+
+.el-card:hover {
+  box-shadow: var(--el-box-shadow-md) !important;
+}
+
+.el-card__header {
+  border-bottom: 1px solid var(--el-border-color) !important;
+  background-color: var(--el-fill-color-light) !important;
+}
+
+.el-tabs__header {
+  border-bottom: 2px solid var(--el-border-color) !important;
+}
+
+.el-tabs__item {
+  color: var(--el-text-color-secondary) !important;
+  font-weight: 500;
+  transition: all 0.3s ease !important;
+}
+
+.el-tabs__item:hover {
+  color: var(--el-color-primary) !important;
+}
+
+.el-tabs__item.is-active {
+  color: var(--el-color-primary) !important;
+}
+
+.el-tabs__active-bar {
+  background-color: var(--el-color-primary) !important;
+  height: 3px !important;
+}
+
+.el-dialog {
+  border-radius: 12px !important;
+  box-shadow: var(--el-box-shadow-dark) !important;
+}
+
+.el-dialog__header {
+  border-bottom: 1px solid var(--el-border-color) !important;
+  background-color: var(--el-fill-color-light) !important;
+}
+
+.el-dialog__title {
+  color: var(--el-text-color-primary) !important;
+  font-weight: 600;
+}
+
+.el-select-dropdown {
+  border-radius: var(--el-border-radius-base) !important;
+  box-shadow: var(--el-box-shadow) !important;
+  border: 1px solid var(--el-border-color) !important;
+}
+
+.el-select-dropdown__item:hover {
+  background-color: var(--el-fill-color-light) !important;
+  color: var(--el-color-primary) !important;
 }
 
 .el-select-dropdown__item.selected {
   color: var(--el-color-primary) !important;
+  background-color: var(--el-color-primary-light-9) !important;
 }
 
-/* #endregion */
-
-/* #region 6.3 date */
-.el-date-picker {
-  --el-datepicker-active-color: var(--el-color-primary);
-  --el-datepicker-hover-text-color: var(--el-color-primary);
-}
-
-.el-date-editor {
-  --el-input-focus-border: var(--el-color-primary);
-  --el-input-focus-border-color: var(--el-color-primary);
-}
-
-.el-date-range-picker {
-  --el-datepicker-active-color: var(--el-color-primary);
-  --el-datepicker-hover-text-color: var(--el-color-primary);
-}
-
-.el-time-panel__btn.confirm {
-  color: var(--el-timepicker-active-color, var(--el-color-primary)) !important;
-}
-
-/* #endregion */
-
-/* #region 6.5 链接 */
-.el-link {
-  font-size: var(--el-font-size-base) !important;
-}
-
-.el-link::after {
-  display: none !important;
-}
-
-.el-link.el-link--primary {
-  --el-link-text-color: var(--el-color-primary) !important;
-  --el-link-hover-text-color: var(--el-color-primary-light-3) !important;
-  --el-link-disabled-text-color: var(--el-color-primary-disabled) !important;
-}
-
-.el-link.is-disabled {
-  color: var(--el-color-grey-light) !important;
-  cursor: not-allowed !important;
-}
-
-/* #endregion */
-
-/* #region 6.6 checkbox & radio */
 .el-checkbox {
   --el-checkbox-checked-text-color: var(--el-color-primary);
   --el-checkbox-checked-input-border-color: var(--el-color-primary);
@@ -194,149 +234,92 @@ html.dark {
   border-color: var(--el-color-primary) !important;
 }
 
-.el-radio__input.is-checked:not(.is-disabled) + .el-radio__label {
-  color: var(--el-color-primary) !important;
+.el-switch {
+  --el-switch-on-color: var(--el-color-primary) !important;
+  --el-switch-off-color: var(--el-border-color) !important;
 }
 
-.el-radio.is-disabled.is-bordered.is-checked {
-  border-color: var(--el-border-color-darker) !important;
+.el-tag {
+  border-radius: var(--el-border-radius-base) !important;
+  transition: all 0.3s ease !important;
 }
 
-/* #endregion */
-
-/* #region 6.7 dropdown-menu */
-
-.el-dropdown-menu__item:not(.is-disabled):focus {
-  color: var(--el-color-primary) !important;
-  background-color: var(--el-color-primary-light-9) !important;
-}
-
-/* #endregion */
-
-/* #region 6.9 气泡卡片 */
-.el-popper.is-light.bottom-start {
-  box-shadow: 0 2px 5px var(--el-color-grey-light-5) !important;
-}
-
-/* #endregion */
-
-/* #region 6.11 详细-descriptions */
-.el-descriptions__body .el-descriptions__table .el-descriptions__cell {
-  font-size: var(--el-font-size-base) !important;
-}
-
-.el-descriptions__label:not(.is-bordered-label) {
-  margin-right: 0 !important;
-  color: var(--el-color-grey) !important;
-}
-
-.el-descriptions__content:not(.is-bordered-label) {
-  color: var(--el-color-black) !important;
-}
-
-/* #endregion */
-
-/* #region 6.12 表单 */
-.el-form-item {
-  font-size: var(--el-font-size-base) !important;
+.el-tag:hover {
+  opacity: 0.8;
 }
 
 .el-form-item__label {
-  font-size: var(--el-font-size-base) !important;
-  color: var(--el-color-grey-dark) !important;
+  color: var(--el-text-color-primary) !important;
+  font-weight: 500;
 }
 
-.el-form-item__content {
-  font-size: var(--el-font-size-base) !important;
+.el-link {
+  transition: all 0.3s ease !important;
 }
 
-.el-checkbox__label {
-  font-size: var(--el-font-size-base) !important;
+.el-link.el-link--primary {
+  --el-link-text-color: var(--el-color-primary) !important;
+  --el-link-hover-text-color: var(--el-color-primary-dark-2) !important;
 }
 
-/* #endregion */
-
-/* #region 6.14 标签页 */
-.el-tabs--card .el-tabs__item.is-top.is-active {
-  /* font-size: var(--el-font-size-medium); */
-  color: var(--el-color-white) !important;
-  background-color: var(--el-color-primary-light-3);
-
-  /* color: var(--el-color-primary) !important; */
+.el-empty {
+  padding: 40px 20px !important;
 }
 
-.el-tabs--card .el-tabs__item.is-top:not(.is-active):hover {
-  color: var(--el-color-primary) !important;
-}
-
-.el-tabs--border-card .el-tabs__item.is-top.is-active {
-  color: var(--el-color-primary) !important;
-}
-
-.el-tabs--border-card .el-tabs__item.is-top:not(.is-active):hover {
-  color: var(--el-color-primary) !important;
-}
-
-/* #endregion */
-
-/* #region 6.16 无数据提示 */
 .el-empty__description {
-  margin-top: 0 !important;
-  line-height: 30px !important;
+  color: var(--el-text-color-secondary) !important;
+  margin-top: 8px !important;
 }
 
-/* #endregion */
-
-/* #region 6.17 switch */
-.el-switch {
-  --el-switch-on-color: var(--el-color-primary) !important;
+.el-tree-node__content:hover {
+  background-color: var(--el-fill-color-light) !important;
 }
 
-.el-switch--large {
-  height: 32px !important;
+.el-tree-node__content {
+  border-radius: var(--el-border-radius-base) !important;
+  transition: all 0.3s ease !important;
 }
 
-/* #endregion */
-
-/* #region 6.15 级联 */
-.el-cascader-panel {
-  --el-cascader-menu-selected-text-color: var(--el-color-primary);
+.el-breadcrumb__item {
+  color: var(--el-text-color-secondary) !important;
 }
 
-.el-cascader-menu__wrap.el-scrollbar__wrap {
-  height: 350px !important;
+.el-breadcrumb__item:last-child {
+  color: var(--el-text-color-primary) !important;
 }
 
-.el-cascader .el-input .el-input__suffix-inner .el-icon {
-  width: 18px !important;
-  font-size: var(--el-font-size-medium);
+.el-breadcrumb__separator {
+  color: var(--el-text-color-tertiary) !important;
 }
 
-/* #endregion */
-
-/* #region 6.18 checked */
-.el-radio.is-bordered.is-checked {
-  border-color: var(--el-color-primary);
+.el-picker-panel {
+  border-radius: var(--el-border-radius-base) !important;
+  box-shadow: var(--el-box-shadow-dark) !important;
+  border: 1px solid var(--el-border-color) !important;
 }
 
-/* #endregion */
-
-/* #endregion */
-
-/* #region 6.13 时间选择器 */
-.el-date-editor .el-range-separator {
-  font-size: var(--el-font-size-base) !important;
+.el-popper {
+  border-radius: var(--el-border-radius-base) !important;
+  box-shadow: var(--el-box-shadow) !important;
+  border: 1px solid var(--el-border-color) !important;
 }
 
-.el-picker-panel__footer .el-button.is-plain {
-  --el-button-hover-text-color: var(--el-color-primary);
-  --el-button-hover-border-color: var(--el-color-primary);
+.el-message {
+  border-radius: var(--el-border-radius-base) !important;
+  box-shadow: var(--el-box-shadow) !important;
 }
 
-.el-year-table td.current:not(.disabled) .cell {
-  width: 36px;
-  color: var(--el-color-white);
-  background-color: var(--el-color-primary);
+.el-message-box {
+  border-radius: 12px !important;
+  box-shadow: var(--el-box-shadow-dark) !important;
 }
 
-/* #endregion */
+.el-loading-mask {
+  background-color: rgba(255, 255, 255, 0.9) !important;
+}
+
+* {
+  transition-property: background-color, border-color, color, box-shadow;
+  transition-duration: 0.3s;
+  transition-timing-function: ease;
+}

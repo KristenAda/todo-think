@@ -52,8 +52,18 @@ class UserController {
   // POST /sys/user/assignRoles
   async assignRoles(ctx: Context) {
     const { userId, roleIds } = ctx.request.body as any;
+    if (!userId) return (ctx.body = Result.error("userId不能为空"));
+    if (!Array.isArray(roleIds)) return (ctx.body = Result.error("roleIds格式错误"));
     const res = await userService.assignRoles(userId, roleIds);
     ctx.body = res;
+  }
+
+  // POST /sys/user/roles — 获取用户已分配的角色ID列表（回显用）
+  async getRoles(ctx: Context) {
+    const { userId } = ctx.request.body as any;
+    if (!userId) return (ctx.body = Result.error("userId不能为空"));
+    const res = await userService.getUserRoles(Number(userId));
+    ctx.body = Result.success(res);
   }
 }
 
