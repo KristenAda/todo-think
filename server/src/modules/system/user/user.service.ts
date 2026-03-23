@@ -18,12 +18,30 @@ class UserService extends BaseService {
 
   // 覆写 update：如果没传密码，去掉密码字段防止被置空
   async update(id: number, data: any) {
+    // 验证头像大小（base64 字符串）
+    if (data.avatar) {
+      // base64 字符串大小约为原文件的 1.33 倍
+      // 限制 base64 字符串不超过 10MB（约 7.5MB 的原文件）
+      if (data.avatar.length > 10 * 1024 * 1024) {
+        throw new Error("头像文件过大，请上传小于 5MB 的图片");
+      }
+    }
+
     if (data.password) {
       data.password = AuthUtil.hashPassword(data.password);
     } else {
       delete data.password; // 不更新密码
     }
-    return super.update(id, data);
+
+    try {
+      return await super.update(id, data);
+    } catch (error: any) {
+      console.error("用户更新失败:", error);
+      if (error.code === "P2025") {
+        throw new Error("用户不存在");
+      }
+      throw error;
+    }
   }
 
   // 分页查询：需要显示用户所属部门、拥有角色

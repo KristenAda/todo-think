@@ -37,7 +37,9 @@
 </template>
 
 <script setup lang="ts">
-// ...（Script 逻辑无需任何修改，完全保持上一版的完美重构代码即可）...
+import { computed } from 'vue';
+import { useRouter } from 'vue-router';
+
 const props = defineProps({
   item: { type: Object, required: true },
   basePath: { type: String, default: '' },
@@ -63,12 +65,29 @@ const isExternal = (path: string) => /^(https?:|mailto:|tel:)/.test(path);
 
 const resolvePath = (routePath: string) => {
   if (isExternal(routePath)) return routePath;
-  if (routePath.startsWith('/')) return routePath;
-  const base = props.basePath.startsWith('/')
-    ? props.basePath
-    : `/${props.basePath}`;
-  const sub = routePath.replace(/^\/+/, '');
-  return (base ? `${base}/${sub}` : `/${sub}`).replace(/\/+/g, '/');
+
+  let result = '';
+  // 如果路径已经是绝对路径（以 / 开头），直接使用
+  if (routePath.startsWith('/')) {
+    result = routePath;
+  } else {
+    // 相对路径处理
+    const base = props.basePath.startsWith('/')
+      ? props.basePath
+      : `/${props.basePath}`;
+    const sub = routePath.replace(/^\/+/, '');
+    result = base ? `${base}/${sub}` : `/${sub}`;
+  }
+
+  // 规范化路径：移除多余的连续 /
+  result = result.replace(/\/+/g, '/');
+
+  // 【修复核心】：如果最终结果不是仅仅一个 '/'，且末尾以 '/' 结尾，则去掉末尾的 '/'
+  if (result.length > 1 && result.endsWith('/')) {
+    result = result.slice(0, -1);
+  }
+
+  return result;
 };
 
 const handleLinkClick = (child: any) => {
@@ -82,7 +101,7 @@ const handleLinkClick = (child: any) => {
 </script>
 
 <style scoped lang="scss">
-/* 【修改点 3】：添加字体图标的基础样式，让其与文字对齐，并保持和原生 el-icon 类似的间距 */
+/* 添加字体图标的基础样式，让其与文字对齐，并保持和原生 el-icon 类似的间距 */
 .menu-icon {
   width: 24px;
   text-align: center;

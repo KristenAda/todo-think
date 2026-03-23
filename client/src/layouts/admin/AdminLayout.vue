@@ -61,6 +61,7 @@ $hideSideBarWidth: 64px;
     overflow: hidden;
     transition: margin-left var(--transition-normal);
     width: calc(100% - #{$sideBarWidth});
+    background-color: #ffffff;
   }
 
   .fixed-header {

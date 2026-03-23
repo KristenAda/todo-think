@@ -8,7 +8,7 @@ model User {
   nickname String?
   phone    String? // 新增：手机号 (企业级常见)
   email    String?
-  avatar   String?
+  avatar   String? @db.LongText // 使用 LongText 支持大型 base64 图片
   status   Int     @default(1) // 1:正常 0:停用
   remark   String? // 新增：备注
 

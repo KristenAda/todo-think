@@ -31,6 +31,7 @@ export const beforeEachUtil = async (to, from, next, router) => {
       NProgress.done();
     } else {
       // ★★★ 动态路由加载逻辑 ★★★
+      // eslint-disable-next-line no-lonely-if
       if (!authorityStore.routesLoaded) {
         try {
           // 1. 调用后端 /sys/menu/tree 获取用户菜单树
@@ -55,8 +56,8 @@ export const beforeEachUtil = async (to, from, next, router) => {
           // 5. 标记路由已加载
           authorityStore.setRoutesLoaded(true);
 
-          // 6. 重新导航到目标路由（因为新路由刚添加，需要重新匹配）
-          next(to);
+          // 6. 重新导航到目标路由（加上 replace: true）
+          next({ ...to, replace: true });
         } catch (err) {
           console.error('加载动态路由失败:', err);
           // 加载失败时清空登录状态，重定向到登录页

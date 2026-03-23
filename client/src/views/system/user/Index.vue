@@ -1,189 +1,164 @@
 <template>
-  <div class="user-container">
-    <!-- 搜索区 -->
-    <el-card shadow="never" class="search-card">
-      <el-form :inline="true" :model="searchForm">
-        <el-form-item label="用户名">
-          <el-input
-            v-model="searchForm.username"
-            placeholder="请输入用户名"
-            clearable
-            style="width: 200px"
-            @keyup.enter="handleSearch"
-          />
-        </el-form-item>
-        <el-form-item label="所属部门">
-          <el-tree-select
-            v-model="searchForm.deptId"
-            :data="deptTree"
-            :props="{ label: 'name', value: 'id', children: 'children' }"
-            value-key="id"
-            placeholder="请选择部门"
-            clearable
-            check-strictly
-            style="width: 200px"
-          />
-        </el-form-item>
-        <el-form-item>
-          <el-button type="primary" :icon="Search" @click="handleSearch"
-            >查 询</el-button
-          >
-          <el-button :icon="Refresh" @click="resetSearch">重 置</el-button>
-        </el-form-item>
-      </el-form>
-    </el-card>
-
-    <!-- 数据表格 -->
-    <el-card shadow="never" class="table-card">
-      <div class="toolbar">
-        <el-button type="primary" :icon="Plus" @click="handleAdd"
-          >新增用户</el-button
-        >
-      </div>
-
-      <el-table
-        v-loading="loading"
-        :data="tableData"
-        border
-        stripe
-        style="width: 100%"
-      >
-        <el-table-column prop="id" label="ID" width="70" align="center" />
-        <el-table-column
-          prop="username"
-          label="用户名"
-          min-width="120"
-          show-overflow-tooltip
-        />
-        <el-table-column label="昵称" min-width="120" show-overflow-tooltip>
-          <template #default="{ row }">
-            {{ row.nickname || '-' }}
-          </template>
-        </el-table-column>
-        <el-table-column label="所属部门" min-width="130" show-overflow-tooltip>
-          <template #default="{ row }">
-            {{ row.dept?.name || '-' }}
-          </template>
-        </el-table-column>
-        <el-table-column label="拥有角色" min-width="180">
-          <template #default="{ row }">
-            <template v-if="row.roles && row.roles.length">
-              <el-tag
-                v-for="role in row.roles"
-                :key="role.id"
-                type="primary"
-                size="small"
-                style="margin: 2px"
-              >
-                {{ role.roleName }}
-              </el-tag>
-            </template>
-            <span v-else class="text-placeholder">暂无角色</span>
-          </template>
-        </el-table-column>
-        <el-table-column label="状态" width="90" align="center">
-          <template #default="{ row }">
-            <el-tag
-              :type="row.status === 1 ? 'success' : 'danger'"
-              size="small"
+  <DhFixedHeaderTableFrame>
+    <template #search>
+      <div class="search-container">
+        <div class="search-header">
+          <span class="search-title">筛选条件</span>
+        </div>
+        <el-form :inline="true" :model="searchForm" class="search-form">
+          <el-form-item label="用户名" class="search-item">
+            <el-input
+              v-model="searchForm.username"
+              placeholder="请输入用户名"
+              clearable
+              class="search-input"
+              @keyup.enter="handleSearch"
+            />
+          </el-form-item>
+          <el-form-item label="所属部门" class="search-item">
+            <el-tree-select
+              v-model="searchForm.deptId"
+              :data="deptTree"
+              :props="{ label: 'name', value: 'id', children: 'children' }"
+              value-key="id"
+              placeholder="请选择部门"
+              clearable
+              check-strictly
+              class="search-input"
+            />
+          </el-form-item>
+          <el-form-item class="search-buttons">
+            <el-button type="primary" :icon="Search" @click="handleSearch"
+              >查 询</el-button
             >
-              {{ row.status === 1 ? '正常' : '停用' }}
-            </el-tag>
-          </template>
-        </el-table-column>
-        <el-table-column label="创建时间" min-width="170" align="center">
-          <template #default="{ row }">
-            {{ formatDate(row.createdAt) }}
-          </template>
-        </el-table-column>
-        <el-table-column label="操作" width="200" align="center" fixed="right">
-          <template #default="{ row }">
-            <el-space>
-              <el-link type="primary" @click="handleEdit(row)">编辑</el-link>
-              <el-link type="success" @click="handleAssignRoles(row)"
-                >分配角色</el-link
-              >
-              <el-link
-                type="danger"
-                :disabled="row.id === 1"
-                @click="handleDelete(row)"
-                >删除</el-link
-              >
-            </el-space>
-          </template>
-        </el-table-column>
-      </el-table>
-
-      <div class="pagination-wrap">
-        <el-pagination
-          v-model:current-page="page"
-          v-model:page-size="pageSize"
-          :total="total"
-          :page-sizes="[10, 20, 50, 100]"
-          layout="total, sizes, prev, pager, next, jumper"
-          background
-          @size-change="getList"
-          @current-change="getList"
-        />
+            <el-button :icon="Refresh" @click="resetSearch">重 置</el-button>
+          </el-form-item>
+        </el-form>
       </div>
-    </el-card>
+    </template>
 
-    <!-- 新增/编辑用户弹窗 -->
-    <Edit
-      v-model="editVisible"
-      :title="editTitle"
-      :detail-data="currentRow"
-      @success="getList"
-    />
+    <template #operate>
+      <el-button type="primary" :icon="Plus" @click="handleAdd"
+        >新增用户</el-button
+      >
+    </template>
 
-    <!-- 分配角色弹窗 -->
-    <el-dialog
-      v-model="roleDialogVisible"
-      :title="`分配角色 — ${currentRow?.username || ''}`"
-      width="500px"
-      :close-on-click-modal="false"
-      @closed="onRoleDialogClosed"
+    <CTable
+      :loading="loading"
+      :table-options="{ data: tableData, stripe: true }"
+      :headers="tableHeaders"
+      :page-data="{ pageNo: page, pageSize: pageSize, total: total }"
+      :show-excel="false"
+      @page-change="handlePageChange"
     >
-      <div v-loading="roleLoading" class="role-dialog-body">
-        <el-checkbox-group
-          v-model="selectedRoleIds"
-          class="role-checkbox-group"
-        >
-          <el-checkbox
-            v-for="role in allRoles"
-            :key="role.id"
-            :label="role.id"
-            border
-            class="role-checkbox-item"
-          >
-            <div class="role-item-content">
-              <span class="role-name">{{ role.roleName }}</span>
-              <span class="role-key">{{ role.roleKey }}</span>
-            </div>
-          </el-checkbox>
-        </el-checkbox-group>
-        <el-empty
-          v-if="!roleLoading && !allRoles.length"
-          description="暂无可分配角色"
-          :image-size="80"
-        />
-      </div>
-      <template #footer>
-        <el-button @click="roleDialogVisible = false">取 消</el-button>
-        <el-button
-          type="primary"
-          :loading="roleSubmitting"
-          @click="confirmAssignRoles"
-        >
-          确 定
-        </el-button>
+      <template #avatar="{ data: { row } }">
+        <el-avatar :size="40" :src="row.avatar" icon="UserFilled" fit="cover" />
       </template>
-    </el-dialog>
-  </div>
+
+      <template #nickname="{ data: { row } }">
+        {{ row.nickname || '-' }}
+      </template>
+
+      <template #dept="{ data: { row } }">
+        {{ row.dept?.name || '-' }}
+      </template>
+
+      <template #roles="{ data: { row } }">
+        <template v-if="row.roles && row.roles.length">
+          <el-tag
+            v-for="role in row.roles"
+            :key="role.id"
+            type="primary"
+            size="small"
+            style="margin: 2px"
+          >
+            {{ role.roleName }}
+          </el-tag>
+        </template>
+        <span v-else class="text-placeholder">暂无角色</span>
+      </template>
+
+      <template #status="{ data: { row } }">
+        <el-tag :type="row.status === 1 ? 'success' : 'danger'" size="small">
+          {{ row.status === 1 ? '正常' : '停用' }}
+        </el-tag>
+      </template>
+
+      <template #createdAt="{ data: { row } }">
+        {{ formatDate(row.createdAt) }}
+      </template>
+
+      <template #operate="{ data: { row } }">
+        <el-space>
+          <el-link type="primary" @click="handleEdit(row)">编辑</el-link>
+          <el-link type="success" @click="handleAssignRoles(row)"
+            >分配角色</el-link
+          >
+          <el-link
+            type="danger"
+            :disabled="row.id === 1"
+            @click="handleDelete(row)"
+            >删除</el-link
+          >
+        </el-space>
+      </template>
+    </CTable>
+  </DhFixedHeaderTableFrame>
+
+  <Edit
+    v-model="editVisible"
+    :title="editTitle"
+    :detail-data="currentRow"
+    @success="getList"
+  />
+
+  <el-dialog
+    v-model="roleDialogVisible"
+    :title="`分配角色 — ${currentRow?.username || ''}`"
+    width="500px"
+    :close-on-click-modal="false"
+    @closed="onRoleDialogClosed"
+  >
+    <div v-loading="roleLoading" class="role-dialog-body">
+      <el-checkbox-group v-model="selectedRoleIds" class="role-checkbox-group">
+        <el-checkbox
+          v-for="role in allRoles"
+          :key="role.id"
+          :label="role.id"
+          border
+          class="role-checkbox-item"
+        >
+          <div class="role-item-content">
+            <span class="role-name">{{ role.roleName }}</span>
+            <span class="role-key">{{ role.roleKey }}</span>
+          </div>
+        </el-checkbox>
+      </el-checkbox-group>
+      <el-empty
+        v-if="!roleLoading && !allRoles.length"
+        description="暂无可分配角色"
+        :image-size="80"
+      />
+    </div>
+    <template #footer>
+      <el-button @click="roleDialogVisible = false">取 消</el-button>
+      <el-button
+        type="primary"
+        :loading="roleSubmitting"
+        @click="confirmAssignRoles"
+      >
+        确 定
+      </el-button>
+    </template>
+  </el-dialog>
 </template>
 
 <script setup>
+import { reactive, ref, onMounted } from 'vue';
 import { Search, Refresh, Plus } from '@element-plus/icons-vue';
+import { ElMessage, ElMessageBox } from 'element-plus';
+import DhFixedHeaderTableFrame from '@/components/container/DhFixedHeaderTableFrame.vue';
+import CTable from '@/components/ct-comp/CTable.vue'; // 引入 CTable
 import { getDeptTreeApi } from '@/apis/modules/system/dept';
 import { getRoleListApi } from '@/apis/modules/system/role';
 import {
@@ -193,6 +168,40 @@ import {
   assignUserRolesApi,
 } from '@/apis/modules/system/user';
 import Edit from './components/Edit.vue';
+
+// ==================== 表头配置 ====================
+const tableHeaders = ref([
+  { prop: 'id', label: 'ID', width: '70', align: 'center' },
+  { prop: 'avatar', label: '头像', width: '80', align: 'center' },
+  {
+    prop: 'username',
+    label: '用户名',
+    minWidth: '120',
+    showOverflowTooltip: true,
+  },
+  {
+    prop: 'nickname',
+    label: '昵称',
+    minWidth: '120',
+    showOverflowTooltip: true,
+  },
+  {
+    prop: 'dept',
+    label: '所属部门',
+    minWidth: '130',
+    showOverflowTooltip: true,
+  },
+  { prop: 'roles', label: '拥有角色', minWidth: '180' },
+  { prop: 'status', label: '状态', width: '90', align: 'center' },
+  { prop: 'createdAt', label: '创建时间', minWidth: '170', align: 'center' },
+  {
+    prop: 'operate',
+    label: '操作',
+    width: '200',
+    align: 'center',
+    fixed: 'right',
+  },
+]);
 
 // ==================== 工具函数 ====================
 const formatDate = (dateStr) => {
@@ -241,6 +250,17 @@ const resetSearch = () => {
   searchForm.username = '';
   searchForm.deptId = null;
   handleSearch();
+};
+
+// ==================== 分页事件处理 ====================
+const handlePageChange = (val) => {
+  if (val.pageSize) {
+    pageSize.value = val.pageSize;
+  }
+  if (val.pageNum) {
+    page.value = val.pageNum;
+  }
+  getList();
 };
 
 // ==================== 部门树（搜索筛选用） ====================
@@ -306,7 +326,6 @@ const handleAssignRoles = async (row) => {
   roleDialogVisible.value = true;
   roleLoading.value = true;
   try {
-    // 并行拉取：全部角色 + 当前用户已有角色
     const [rolesRes, userRoleIds] = await Promise.all([
       getRoleListApi({ page: 1, pageSize: 999 }),
       getUserRolesApi({ userId: row.id }),
@@ -331,7 +350,7 @@ const confirmAssignRoles = async () => {
     });
     ElMessage.success('角色分配成功');
     roleDialogVisible.value = false;
-    getList(); // 刷新列表，更新角色列显示
+    getList();
   } catch (e) {
     console.error('分配角色失败:', e);
   } finally {
@@ -351,26 +370,70 @@ onMounted(() => {
 });
 </script>
 
-<style scoped>
-.user-container {
-  padding: 16px;
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-}
+<style scoped lang="scss">
+/* 搜索容器样式 */
+.search-container {
+  background: linear-gradient(135deg, #ffffff 0%, #f9fafb 100%);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  padding: 16px 20px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+  transition: all 0.3s ease;
 
-.search-card :deep(.el-card__body) {
-  padding: 16px 16px 0;
-}
+  &:hover {
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  }
 
-.toolbar {
-  margin-bottom: 12px;
-}
+  .search-header {
+    display: flex;
+    align-items: center;
+    margin-bottom: 12px;
 
-.pagination-wrap {
-  margin-top: 16px;
-  display: flex;
-  justify-content: flex-end;
+    .search-title {
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--text-color-primary);
+      padding-left: 8px;
+      border-left: 3px solid var(--color-primary);
+    }
+  }
+
+  .search-form {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    flex-wrap: wrap;
+
+    :deep(.el-form-item) {
+      margin-bottom: 0;
+      gap: 8px;
+
+      .el-form-item__label {
+        font-weight: 500;
+        color: var(--text-color-primary);
+        font-size: 14px;
+      }
+    }
+
+    .search-item {
+      flex: 0 1 auto;
+      min-width: 220px;
+    }
+
+    .search-input {
+      width: 100%;
+    }
+
+    .search-buttons {
+      display: flex;
+      gap: 8px;
+      margin-left: auto;
+
+      :deep(.el-button) {
+        min-width: 80px;
+      }
+    }
+  }
 }
 
 .text-placeholder {

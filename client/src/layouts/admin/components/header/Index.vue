@@ -1,7 +1,11 @@
 <template>
   <div class="header-navbar">
     <div class="header-left">
-      <el-icon class="fold-btn" :title="isCollapse ? '展开菜单' : '收起菜单'" @click="toggleSidebar">
+      <el-icon
+        class="fold-btn"
+        :title="isCollapse ? '展开菜单' : '收起菜单'"
+        @click="toggleSidebar"
+      >
         <component :is="isCollapse ? 'Expand' : 'Fold'" />
       </el-icon>
 
@@ -19,7 +23,7 @@
           <el-avatar :size="40" :src="userAvatar" icon="UserFilled" />
           <div class="user-info-text">
             <div class="nickname">{{ userNickname }}</div>
-            <div class="role">{{ userRole }}</div>
+            <div class="role">{{ userRole?.roleName }}</div>
           </div>
           <el-icon class="dropdown-icon"><ArrowDown /></el-icon>
         </div>
@@ -45,7 +49,14 @@
 </template>
 
 <script setup lang="ts">
-import { User, Lock, SwitchButton, ArrowDown, Fold, Expand } from '@element-plus/icons-vue';
+import {
+  User,
+  Lock,
+  SwitchButton,
+  ArrowDown,
+  Fold,
+  Expand,
+} from '@element-plus/icons-vue';
 import { useGlobalStore } from '@/stores/modules/global';
 import { useAuthorityStore } from '@/stores/authority';
 
@@ -62,7 +73,9 @@ const breadcrumbList = computed(() => {
   );
 });
 
-const userNickname = computed(() => authorityStore.loginInfo?.nickname || '用户');
+const userNickname = computed(
+  () => authorityStore.loginInfo?.nickname || '用户',
+);
 const userRole = computed(() => {
   const roles = authorityStore.loginInfo?.roles || [];
   return roles.length > 0 ? roles[0] : '普通用户';

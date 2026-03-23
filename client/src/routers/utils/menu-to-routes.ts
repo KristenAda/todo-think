@@ -3,6 +3,7 @@
  * 将后端返回的菜单树结构转换为前端 Vue Router 可用的路由配置
  */
 
+const modules = import.meta.glob('@/views/**/*.vue');
 const Layout = () => import('@/layouts/admin/AdminLayout.vue');
 
 /**
@@ -16,9 +17,11 @@ function buildRoutes(menuList: any[], parentId: number | null = null): any[] {
 
   for (const menu of menuList) {
     // 只处理当前层级的菜单
+    // eslint-disable-next-line no-continue
     if (menu.parentId !== parentId) continue;
 
     // 按钮（type=3）不生成路由
+    // eslint-disable-next-line no-continue
     if (menu.type === 3) continue;
 
     const route: any = {
@@ -44,9 +47,25 @@ function buildRoutes(menuList: any[], parentId: number | null = null): any[] {
     } else if (menu.type === 2) {
       // 菜单：动态导入组件
       if (menu.component) {
-        // 组件路径：system/user/Index → @/views/system/user/Index.vue
-        route.component = () =>
-          import(`@/views/${menu.component}.vue`);
+        const componentPath = `/src/views/${menu.component}.vue`;
+        const asyncLoader = modules[componentPath];
+
+        if (asyncLoader) {
+          // 【核心魔法 ✨】：使用高阶组件动态注入 Name
+          route.component = async () => {
+            const mod: any = await asyncLoader();
+            const InnerComp = mod.default;
+
+            // 动态创建一个新组件包裹原组件，并强制命名为当前 route.name
+            return defineComponent({
+              name: route.name, // 例如：Menu_12
+              setup(props, { attrs, slots }) {
+                // 渲染内部实际的页面组件，状态完美保留
+                return () => h(InnerComp, attrs, slots);
+              },
+            });
+          };
+        }
       }
     }
 
