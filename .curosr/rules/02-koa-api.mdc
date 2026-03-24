@@ -1,0 +1,26 @@
+---
+description: 技能：生成 Koa2 规范的后端 API (Controller, Service, Routes)
+globs: server/src/modules/**/*.ts, server/src/routers.ts
+---
+【技能：生成 Koa2 规范的后端 API】
+
+当你需要为新模块生成后端接口时，必须严格按照以下三层架构生成代码，存放在 `server/src/modules/[模块名]/` 目录下：
+
+1. **Service 层 (`[模块名].service.ts`)**:
+   - 负责核心业务逻辑。
+   - 引入全局的 `PrismaClient` 实例进行数据库增删改查。
+   - 如果是分页列表查询，必须同时返回 `list` 和 `total`。
+
+2. **Controller 层 (`[模块名].controller.ts`)**:
+   - 负责解析 `ctx.request.body`、`ctx.query` 或 `ctx.params`。
+   - **核心约束**：必须引入 `server/src/core/result.ts`，并使用统一规范返回数据结构：
+     - 成功：`ctx.body = Result.success(data)`
+     - 成功（分页）：`ctx.body = Result.page(list, total, page, pageSize)`
+     - 失败：`ctx.body = Result.error(msg)`
+
+3. **Routes 层 (`[模块名].routes.ts`)**:
+   - 使用 `@koa/router` 定义标准的 RESTful 路由（如 GET `/`, POST `/`, PUT `/:id`, DELETE `/:id`）。
+   - 导出 router 实例。
+
+4. **路由挂载**:
+   - 提示或自动在 `server/src/routers.ts` 的 `loadRoutes` 方法中挂载新写好的路由。

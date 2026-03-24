@@ -18,25 +18,26 @@ class MenuService extends BaseService {
       where,
       orderBy: { sort: "asc" },
     });
-    return Result.success(this.listToTree(list));
+    // 转换为前端期望的 meta 嵌套格式，与管理端表格和弹窗对齐
+    return Result.success(this.transformToFrontendFormat(this.listToTree(list)));
   }
 
   // 获取当前登录用户的导航菜单树（动态路由专用）
-  // - 超级管理员 (roleKey=admin)：返回全部目录+菜单
+  // - 超级管理员 (roleCode=admin)：返回全部目录+菜单
   // - 普通用户：根据角色关联，只返回有权限的目录+菜单
   async getUserMenus(userId: number) {
     const user = await prisma.user.findUnique({
       where: { id: userId },
       include: {
         roles: {
-          where: { status: 1, deletedAt: null },
+          where: { enabled: true, deletedAt: null },
         },
       },
     });
 
     if (!user) return Result.success([]);
 
-    const isAdmin = user.roles.some((r: any) => r.roleKey === "admin");
+    const isAdmin = user.roles.some((r: any) => r.roleCode === "admin");
 
     let list: any[];
     if (isAdmin) {
@@ -51,7 +52,7 @@ class MenuService extends BaseService {
       list = await this.model.findMany({
         where: {
           type: { in: [1, 2] },
-          roles: { some: { id: { in: roleIds } } },
+          roleMenus: { some: { id: { in: roleIds } } },
         },
         orderBy: { sort: "asc" },
       });
@@ -59,7 +60,62 @@ class MenuService extends BaseService {
       list = [];
     }
 
-    return Result.success(this.listToTree(list));
+    // 转换为前端期望的格式（包含 meta 对象）
+    return Result.success(this.transformToFrontendFormat(this.listToTree(list)));
+  }
+
+  // 转换菜单数据为前端期望的格式
+  private transformToFrontendFormat(menus: any[]): any[] {
+    return menus.map((menu) => {
+      const meta: any = {
+        title: menu.title,
+        icon: menu.icon,
+        sort: menu.sort,
+        isEnable: menu.isEnable,
+        keepAlive: menu.keepAlive,
+        isIframe: menu.isIframe,
+        isHide: menu.isHide,
+        isHideTab: menu.isHideTab,
+        link: menu.link,
+        showBadge: menu.showBadge,
+        showTextBadge: menu.showTextBadge,
+        fixedTab: menu.fixedTab,
+        activePath: menu.activePath,
+        isFullPage: menu.isFullPage,
+      };
+
+      // 解析 roles 和 authList
+      if (menu.roles) {
+        try {
+          meta.roles = JSON.parse(menu.roles);
+        } catch {
+          meta.roles = [];
+        }
+      }
+
+      if (menu.authList) {
+        try {
+          meta.authList = JSON.parse(menu.authList);
+        } catch {
+          meta.authList = [];
+        }
+      }
+
+      const result: any = {
+        id: menu.id,
+        name: menu.name,
+        path: menu.path,
+        component: menu.component,
+        meta,
+      };
+
+      // 递归处理子菜单
+      if (menu.children && menu.children.length > 0) {
+        result.children = this.transformToFrontendFormat(menu.children);
+      }
+
+      return result;
+    });
   }
 
   // === 工具方法：扁平数组 → 树形结构 ===

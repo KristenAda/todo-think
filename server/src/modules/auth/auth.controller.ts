@@ -5,9 +5,9 @@ import { Result } from "@/core/result";
 class AuthController {
   // 登录
   async login(ctx: Context) {
-    const { username, password } = ctx.request.body as any;
+    const { userName, password } = ctx.request.body as any;
     try {
-      const data = await authService.login(username, password);
+      const data = await authService.login(userName, password);
       ctx.body = Result.success(data, "登录成功");
     } catch (err: any) {
       ctx.body = Result.error(err.message, 401);

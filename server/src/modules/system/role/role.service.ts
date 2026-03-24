@@ -12,10 +12,32 @@ class RoleService extends BaseService {
   // Java风格：通常查询会带分页，且可能带查询条件
   async pageList(page: number, pageSize: number, params: any) {
     const where: any = {};
-    if (params.name) {
-      where.name = { contains: params.name }; // 模糊搜索角色名
+    if (params.roleName) {
+      where.roleName = { contains: params.roleName }; // 模糊搜索角色名
     }
-    return this.page(page, pageSize, where);
+    if (params.roleCode) {
+      where.roleCode = { contains: params.roleCode };
+    }
+    if (params.description) {
+      where.description = { contains: params.description };
+    }
+    if (params.enabled !== undefined) {
+      where.enabled = params.enabled;
+    }
+    
+    const skip = (page - 1) * pageSize;
+    
+    const [list, total] = await Promise.all([
+      this.model.findMany({
+        skip,
+        take: pageSize,
+        where,
+        orderBy: { createTime: "desc" },
+      }),
+      this.model.count({ where }),
+    ]);
+
+    return { list, total };
   }
 
   // ★★★ 核心功能：给角色分配菜单权限 ★★★

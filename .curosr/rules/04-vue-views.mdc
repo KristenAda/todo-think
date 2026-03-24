@@ -1,0 +1,24 @@
+---
+description: 技能：生成 Vue3 标准化中后台 CRUD 页面 (Element Plus)
+globs: client/src/views/**/*.vue, client/src/components/**/*.vue
+---
+【技能：生成标准化中后台 CRUD 页面】
+
+当你需要编写 Vue 3 前端页面（如 `client/src/views/[模块名]/index.vue`）时，必须遵循以下 Art Design Pro 的开发规范：
+
+1. **基础语法**: 
+   - 强制使用 `<script setup lang="ts">`。
+   - 引入上一步生成的 `client/src/api/[模块名].ts` 中的 fetch 函数。
+
+2. **页面布局与组件**:
+   - **搜索区**：优先使用 Element Plus 的 `el-form` (配置为 inline) 或项目原有的 `art-search-bar` 编写搜索条件。
+   - **表格区**：使用 `el-table` 展示数据。数据源绑定响应式变量（如 `const tableData = ref([])`）。必须结合 `el-pagination` 实现分页逻辑，分页变化时自动触发查询接口。
+   - **弹窗区**：新增/编辑表单**必须**抽离成独立的子组件（例如 `modules/[模块名]-dialog.vue`）。子组件通过 `defineExpose({ open })` 暴露方法给父组件调用，父组件通过 `ref` 获取实例并调用 `open(row)`。
+
+3. **样式与美化**:
+   - 优先使用 TailwindCSS 实用类进行布局（如 `flex`, `justify-between`, `mt-4`, `p-4`）。
+   - 必须避免全局样式污染，如果需要手写 CSS，必须使用 `<style scoped lang="scss">`。
+
+4. **交互体验**:
+   - 涉及网络请求的操作，必须添加 `loading` 状态（利用 Element Plus 的 `v-loading`）。
+   - 删除操作前必须使用 `ElMessageBox.confirm` 进行二次确认。

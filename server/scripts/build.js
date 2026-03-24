@@ -50,14 +50,16 @@ copyFiles.forEach((file) => {
     fs.copyFileSync(src, path.join(RELEASE_DIR, file));
   } else {
     console.warn(
-      `\x1b[33m[警告] 找不到文件: ${file}，请确保根目录下有此文件\x1b[0m`
+      `\x1b[33m[警告] 找不到文件: ${file}，请确保根目录下有此文件\x1b[0m`,
     );
   }
 });
 
-// 6. ★ 动态生成一键部署批处理脚本 (强制使用 dotenv-cli 注入环境变量)
-console.log("正在动态生成 deploy.bat 部署脚本...");
-const batLines = [
+// 6. ★ 动态生成批处理脚本 (部署、重启、停止)
+console.log("正在动态生成 bat 运维脚本...");
+
+// 6.1 生成 deploy.bat (完整部署)
+const deployBatLines = [
   "@echo off",
   "chcp 65001 >nul",
   "",
@@ -94,8 +96,54 @@ const batLines = [
   "echo.",
   "pause",
 ];
+fs.writeFileSync(
+  path.join(RELEASE_DIR, "deploy.bat"),
+  deployBatLines.join("\r\n"),
+);
 
-fs.writeFileSync(path.join(RELEASE_DIR, "deploy.bat"), batLines.join("\r\n"));
+// 6.2 生成 relaunch.bat (快速重启)
+const relaunchBatLines = [
+  "@echo off",
+  "chcp 65001 >nul",
+  "",
+  'cd /d "%~dp0"',
+  "",
+  "echo ========================================",
+  "echo   正在快速重启 Todo-Think 后端服务",
+  "echo ========================================",
+  "",
+  'call pm2 restart "todo-think-api"',
+  "call pm2 save",
+  "",
+  "echo.",
+  "echo 服务已成功重启！",
+  "echo.",
+  "pause",
+];
+fs.writeFileSync(
+  path.join(RELEASE_DIR, "relaunch.bat"),
+  relaunchBatLines.join("\r\n"),
+);
+
+// 6.3 生成 stop.bat (停止服务)
+const stopBatLines = [
+  "@echo off",
+  "chcp 65001 >nul",
+  "",
+  'cd /d "%~dp0"',
+  "",
+  "echo ========================================",
+  "echo   正在停止 Todo-Think 后端服务",
+  "echo ========================================",
+  "",
+  'call pm2 stop "todo-think-api"',
+  "",
+  "echo.",
+  "echo 服务已停止！(可通过 deploy.bat 或 relaunch.bat 重新启动)",
+  "echo.",
+  "pause",
+];
+fs.writeFileSync(path.join(RELEASE_DIR, "stop.bat"), stopBatLines.join("\r\n"));
 
 // 7. 动态处理 package.json
 console.log("正在优化生产环境 package.json...");
@@ -111,13 +159,23 @@ pkg.scripts = {
 
 fs.writeFileSync(
   path.join(RELEASE_DIR, "package.json"),
-  JSON.stringify(pkg, null, 2)
+  JSON.stringify(pkg, null, 2),
 );
+
+// 8. 在 release 目录下创建 logs 文件夹占位（运行时写日志用）
+const releaseLogsDir = path.join(RELEASE_DIR, "logs");
+if (!fs.existsSync(releaseLogsDir)) {
+  fs.mkdirSync(releaseLogsDir, { recursive: true });
+  // 写一个 .gitkeep 让目录存在但不纳入 git
+  fs.writeFileSync(path.join(releaseLogsDir, ".gitkeep"), "");
+}
+console.log("已创建 logs 目录（运行时日志存放位置）");
 
 console.log("=========================================");
 console.log("  🎉 终极纯净版打包完成！");
 console.log("  发布包路径: server/dist/release");
-console.log(
-  "  使用方法: 将 release 文件夹丢到服务器，双击 deploy.bat 即可全自动上线！"
-);
+console.log("  生成脚本:");
+console.log("   - deploy.bat   (首次上线/全量更新部署)");
+console.log("   - relaunch.bat (仅替换文件后快速重启)");
+console.log("   - stop.bat     (停止当前运行的后端服务)");
 console.log("=========================================");

@@ -1,0 +1,25 @@
+---
+description: 技能：设计 Prisma 数据库模型与对应的后端 DTO
+globs: server/prisma/schema/**/*.prisma, server/src/modules/**/*.dto.ts
+---
+【技能：设计 Prisma 模型与 DTO】
+
+当收到“开发新模块的数据库”、“新增表”或类似指令时，必须严格遵守以下步骤：
+
+1. **分析需求与定义模型**:
+   - 在 `server/prisma/schema/` 下对应的业务文件夹（例如 `system/` 或新建文件夹）中创建或更新 `.prisma` 文件。
+   - 每个新模型必须包含基础字段规范：
+     ```prisma
+     id        Int      @id @default(autoincrement())
+     createdAt DateTime @default(now()) @map("created_at")
+     updatedAt DateTime @updatedAt @map("updated_at")
+     ```
+   - 命名规范：模型名大驼峰（如 `Task`），表名小写加下划线（如 `@@map("sys_task")`）。
+
+2. **生成 TypeScript DTO**:
+   - 根据模型，在 `server/src/modules/[模块名]/` 目录下生成 `[模块名].dto.ts`。
+   - 必须导出创建(Create)、更新(Update)和查询(Query/Page)的 Interface 或 Type，用于 Controller 的入参校验，严禁使用 `any`。
+
+3. **用户确认与执行**:
+   - 代码生成后，**必须**在对话中提示用户执行以下命令，并在用户确认成功前暂停后续步骤：
+     `cd server && npx prisma db push && npx prisma generate`

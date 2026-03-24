@@ -1,7 +1,7 @@
 export class Result {
   // 成功响应
-  static success(data: any = null, msg: string = "success") {
-    return { code: 200, message: msg, data };
+  static success(data: any = null, message: string = "success") {
+    return { code: 200, message: message, data };
   }
 
   // 分页响应
@@ -20,7 +20,7 @@ export class Result {
   }
 
   // 错误响应
-  static error(msg: string = "error", code: number = 500) {
-    return { code, message: msg };
+  static error(message: string = "error", code: number = 500) {
+    return { code, message: message };
   }
 }

@@ -9,11 +9,11 @@ class AuthService extends BaseService {
     super("user"); // 操作 User 表
   }
 
-  // 注册1
+  // 注册
   async register(data: any) {
     // 检查用户名是否存在
     const exist = await this.model.findUnique({
-      where: { username: data.username },
+      where: { userName: data.userName },
     });
     if (exist) throw new Error("用户名已存在");
 
@@ -23,9 +23,9 @@ class AuthService extends BaseService {
   }
 
   // 登录
-  async login(username: string, password: string) {
+  async login(userName: string, password: string) {
     // 1. 找用户
-    const user = await this.model.findUnique({ where: { username } });
+    const user = await this.model.findUnique({ where: { userName } });
     if (!user) throw new Error("用户不存在");
 
     // 2. 比对密码
@@ -34,7 +34,7 @@ class AuthService extends BaseService {
     }
 
     // 3. 生成 Token
-    const token = AuthUtil.signToken({ id: user.id, username: user.username });
+    const token = AuthUtil.signToken({ id: user.id, userName: user.userName });
 
     // 4. 获取完整用户信息（含角色、权限），一并返回给前端
     const userInfo = await this.getUserInfo(user.id);
@@ -51,12 +51,12 @@ class AuthService extends BaseService {
       where: {
         id: userId,
         deletedAt: null, // 过滤已软删除的用户
-        status: 1, // 用户必须是启用状态
+        status: "1", // 用户必须是启用状态（字符串类型）
       },
       include: {
         roles: {
           where: {
-            status: 1, // 角色必须是启用状态
+            enabled: true, // 角色必须是启用状态
             deletedAt: null, // 过滤已软删除的角色
           },
         },
@@ -67,11 +67,11 @@ class AuthService extends BaseService {
       throw new Error("用户不存在或已被停用");
     }
 
-    // 2. 提取角色标识集合 (roleKey)
-    const roles = user.roles.map((r) => r.roleKey);
+    // 2. 提取角色标识集合 (roleCode)
+    const roles = user.roles.map((r) => r.roleCode);
     const isAdmin = roles.includes("admin");
 
-    // 3. 提取操作权限标识集合 (perms)
+    // 3. 提取操作权限标识集合
     let permissions: string[] = [];
 
     if (isAdmin) {
@@ -83,44 +83,46 @@ class AuthService extends BaseService {
 
       const menus = await prisma.menu.findMany({
         where: {
-          roles: {
+          roleMenus: {
             some: {
-              id: { in: roleIds }, // 只要菜单关联的角色ID在这个用户的角色列表里就行
+              id: { in: roleIds },
             },
           },
-          perms: {
-            not: null, // 必须配置了权限标识
-          },
-          // 只有菜单(2)和按钮(3)通常需要收集 perms 进行鉴权，目录(1)不需要
-          type: {
-            in: [2, 3],
-          },
+          type: { in: [2, 3] },
         },
         select: {
-          perms: true, // 只查 perms 字段，减少网络传输和内存占用
+          authList: true, // 查询 authList 字段
         },
       });
 
-      // 提取 perms、过滤空字符串并去重 (不同角色可能拥有相同的菜单权限)
+      // 从 authList JSON 中提取权限标识并去重
       const permsSet = new Set<string>();
       menus.forEach((menu) => {
-        if (menu.perms && menu.perms.trim() !== "") {
-          // 处理有些框架用逗号分割多个权限的情况（比如 "system:user:add,system:user:edit"）
-          const permArray = menu.perms.split(",");
-          permArray.forEach((p) => permsSet.add(p.trim()));
+        if (menu.authList) {
+          try {
+            const authList = JSON.parse(menu.authList);
+            if (Array.isArray(authList)) {
+              authList.forEach((auth: { authMark: string }) => {
+                if (auth.authMark) permsSet.add(auth.authMark);
+              });
+            }
+          } catch {}
         }
       });
       permissions = Array.from(permsSet);
     }
 
     // 4. 清除敏感数据，防止密码等字段泄漏到前端
-    const { password, deletedAt, ...safeUserInfo } = user;
+    const { password, deletedAt, ...safeUserInfo } = user as any;
 
-    // 5. 返回前端成熟框架 (如 Vben/RuoYi) 所需的标准结构
+    // 5. 返回前端所需的标准结构
     return {
-      user: safeUserInfo,
+      userId: user.id,
+      userName: user.userName,
+      email: user.userEmail,
+      avatar: user.avatar,
       roles,
-      permissions,
+      buttons: permissions,
     };
   }
 }

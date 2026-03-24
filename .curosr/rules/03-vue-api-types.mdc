@@ -1,0 +1,18 @@
+---
+description: 技能：生成前端 API 请求函数与 TypeScript 类型声明
+globs: client/src/api/**/*.ts, client/src/types/api/**/*.d.ts
+---
+【技能：生成前端 API 与类型对齐】
+
+当后端接口写完，需要对接前端时，必须按照以下规范生成代码：
+
+1. **类型对齐 (`client/src/types/api/[模块名].d.ts`)**:
+   - 严格根据后端的 DTO 和 Prisma 模型，定义请求参数 (Req) 和响应结果 (Res) 的 Interface。
+   - 所有接口必须放在 `declare namespace Api { namespace [大驼峰模块名] { ... } }` 中。
+   - 绝不允许使用 `any`。
+
+2. **API 封装 (`client/src/api/[模块名].ts`)**:
+   - 必须引入项目统一的 request 工具：`import request from '@/utils/http'`。
+   - 封装的 fetch 函数命名规范：`fetchGet[Name]List`, `fetchCreate[Name]`, `fetchUpdate[Name]`, `fetchDelete[Name]`。
+   - **核心约束**：因为 `client/src/utils/http/index.ts` 已经在响应拦截器中解构了 `BaseResponse` 并直接返回了 `data`，因此 API 函数的返回值类型必须直接声明为 `Promise<T>`，**不要**包裹 `BaseResponse`。
+     - 正确示例：`return request.get<Api.Task.TaskInfo[]>({ url: '/api/task/list', params })`

@@ -19,7 +19,7 @@ export class BaseService {
         skip,
         take: pageSize,
         where,
-        orderBy: { createdAt: "desc" },
+        orderBy: { id: "desc" }, // 使用 id 排序，避免依赖特定时间字段名
       }),
       this.model.count({ where }),
     ]);
@@ -33,7 +33,9 @@ export class BaseService {
 
   // 通用新增
   async add(data: any) {
-    return await this.model.create({ data });
+    const insertData = { ...data };
+    delete insertData.id;
+    return await this.model.create({ data: insertData });
   }
 
   // 通用更新

@@ -1,13 +1,25 @@
 {
-  "folders": [
+ "folders": [
     {
+      "name": "💻 Client (前端)",
+      "path": "client"
+    },
+    {
+      "name": "⚙️ Server (后端)",
       "path": "server"
     },
     {
-      "path": "client"
+      "name": "📁 Root (全局配置)",
+      "path": "."
     }
   ],
-  "settings": {},
+  "settings": {
+    // 在 Root 文件夹视图中隐藏 client 和 server，防止你看到两份重复的文件
+    "files.exclude": {
+      "client": true,
+      "server": true
+    }
+  },
   "tasks": {
     "version": "2.0.0",
     "tasks": [
@@ -16,8 +28,7 @@
         "type": "shell",
         "command": "npm run dev",
         "options": {
-          // 这里的 path 要和你工作区里显示的文件夹名字完全一致
-          "cwd": "${workspaceFolder:server}"
+          "cwd": "${workspaceFolder}/server"
         },
         "group": "build",
         "presentation": {
@@ -26,7 +37,6 @@
           "reveal": "always"
         },
         "isBackground": true,
-        // 因为改成了 shell，我们需要手动告诉 VS Code 什么时候算启动完成了
         "problemMatcher": {
           "pattern": [
             {
@@ -48,8 +58,7 @@
         "type": "shell",
         "command": "npm run serve-local",
         "options": {
-          // 这里的 path 要和你工作区里显示的文件夹名字完全一致
-          "cwd": "${workspaceFolder:client}"
+          "cwd": "${workspaceFolder}/client"
         },
         "group": "build",
         "presentation": {
@@ -76,7 +85,10 @@
       },
       {
         "label": "⚡ Run Todo-Think Fullstack",
-        "dependsOn": ["🚀 Start Backend", "🎨 Start Frontend"],
+        "dependsOn": [
+          "🚀 Start Backend",
+          "🎨 Start Frontend"
+        ],
         "problemMatcher": [],
         "group": {
           "kind": "build",

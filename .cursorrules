@@ -55,3 +55,83 @@
 - 注释语言: 中文注释优先，与现有代码保持一致。
 - 导入别名: 后端使用 `@/` 映射 `src/`，前端同样使用 `@/` 映射 `src/`。
 - 禁止在代码中硬编码敏感信息（密钥、数据库密码等），一律使用环境变量。
+
+
+# 全栈项目 Cursor 开发指南 (Vue 3 + Koa2 + Prisma)
+
+## 1. 角色与项目概述
+你是一个顶级的全栈工程师，精通 Vue 3 (Composition API)、TypeScript、Node.js、Koa2 和 Prisma。
+本项目是一个前后端分离的 Monorepo 风格应用 (Todo-Think)。
+- **前端 (client目录)**: Vue 3.5 + Vite + TypeScript + Pinia + Vue Router + Element Plus + TailwindCSS。
+- **后端 (server目录)**: Koa2 + TypeScript + Prisma ORM + MySQL。
+
+在开发新功能（如任务管理系统）时，必须严格遵循现有的代码架构和规范，确保前后端数据格式完全对齐。
+
+## 2. 全局开发原则
+- **TypeScript 优先**: 所有新建的文件必须是 `.ts` 或 `.vue`，严格定义 Interface 或 Type，杜绝使用 `any`。
+- **前后端对齐**: 
+  - 前端请求体和后端 DTO 必须一致。
+  - 前端期望的响应格式为 `{ code: number, message: string, data: any }`。
+  - 涉及到 Token 鉴权，前端在 Header 中携带 `Authorization: Bearer <token>`。
+- **无破坏性修改**: 在修改现有核心代码（如 `utils/http` 或 `core/result.ts`）前，必须先询问用户。
+
+## 3. 后端开发规范 (Server)
+当要求开发后端接口时，按以下顺序和规范执行：
+
+1. **数据库层 (Prisma)**:
+   - 在 `server/prisma/schema/` 中对应的模块下定义模型（如 `task.prisma`）。
+   - 定义完成后，提示用户执行 `npx prisma db push` 和 `npx prisma generate`。
+2. **路由层 (*.routes.ts)**:
+   - 在 `server/src/modules/` 下创建业务文件夹（如 `task`）。
+   - 使用 `@koa/router` 定义路由，确保 RESTful 风格，如 `GET /tasks`, `POST /tasks`。
+   - 挂载路由到主路由文件。
+3. **控制器层 (*.controller.ts)**:
+   - 只负责解析 ctx.request.body / query / params，并调用 Service 层。
+   - 必须使用 `server/src/core/result.ts` 中的统一响应类，例如：`ctx.body = Result.success(data)` 或 `Result.fail(msg)`。
+4. **服务层 (*.service.ts)**:
+   - 处理所有核心业务逻辑。
+   - 使用 Prisma Client 进行数据库交互。
+5. **DTO 与校验 (*.dto.ts)**:
+   - 为 Create 和 Update 操作定义 TypeScript Interface 或 Class。
+
+## 4. 前端开发规范 (Client)
+当要求开发前端页面时，按以下顺序和规范执行：
+
+1. **类型定义 (types/)**:
+   - 在 `client/src/types/api/` 下定义与后端 Prisma 模型对齐的 Interface。
+2. **API 封装 (api/)**:
+   - 在 `client/src/api/` 创建对应的 api 文件（如 `task.ts`）。
+   - 必须导入并使用封装好的 `http` 工具 (axios 实例)。
+   - 方法返回值类型必须是 `Promise<BaseResponse<T>>`。
+3. **状态管理 (store/ - 可选)**:
+   - 如果数据需要全局共享，在 `client/src/store/modules/` 下使用 Pinia defineStore 创建。
+4. **视图与组件 (views/ & components/)**:
+   - 页面级代码放在 `client/src/views/`（如 `views/task/list/index.vue`）。
+   - 必须使用 `<script setup lang="ts">` 语法糖。
+   - UI 必须优先使用 Element Plus 组件（如 `el-table`, `el-form`, `el-dialog`）。
+   - 样式优先使用 TailwindCSS 实用类。如果必须写 CSS，使用 `<style scoped lang="scss">`。
+5. **路由注册 (router/)**:
+   - 将新页面注册到 `client/src/router/routes/asyncRoutes.ts` 或对应模块中。
+
+## 5. 新功能开发工作流 (Standard Operating Procedure)
+当用户要求“开发一个新模块（例如：任务管理系统）”时，AI 应按照以下步骤逐步推进，并在每一步完成后向用户确认：
+
+**Step 1: 数据库设计**
+- 思考业务需求，生成 Prisma schema 代码。
+- 等待用户确认并执行数据库迁移。
+
+**Step 2: 后端 CRUD 实现**
+- 生成完整的 Controller, Service, Routes 代码。
+- 处理好分页、条件查询等基础逻辑。
+
+**Step 3: 前端 API 与类型定义**
+- 根据后端的实现，在 `client/src/types` 和 `client/src/api` 中生成对应的请求函数。
+
+**Step 4: 前端界面开发**
+- 搭建列表页（包含搜索栏 `art-search-bar`、表格 `el-table`、分页）。
+- 搭建新增/编辑弹窗（`el-dialog` + `el-form`）。
+- 确保表单校验逻辑完整。
+
+## 6. 避坑指南 (Critical Fixes Context)
+- **前端代理拦截**: 前端 Vite proxy 默认拦截 `/api`，发给后端时**必须确认**是否需要 rewrite 去掉 `/api`，或者后端路由自带了 `/api` 前缀。
+- **响应体字段**: 前端统一解构的提示信息字段是 `message` 而非 `msg`，后端 `core/result.ts` 返回的结构是 `{ code, message, data }`，必须严格匹配，否则前端拦截器会报错。

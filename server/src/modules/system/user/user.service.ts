@@ -47,7 +47,10 @@ class UserService extends BaseService {
   // 分页查询：需要显示用户所属部门、拥有角色
   async pageList(page: number, pageSize: number, params: any) {
     const where: any = {};
-    if (params.username) where.username = { contains: params.username };
+    if (params.userName) where.userName = { contains: params.userName };
+    if (params.userPhone) where.userPhone = { contains: params.userPhone };
+    if (params.userEmail) where.userEmail = { contains: params.userEmail };
+    if (params.status) where.status = params.status;
     if (params.deptId) where.deptId = Number(params.deptId);
 
     const skip = (page - 1) * pageSize;
@@ -58,19 +61,27 @@ class UserService extends BaseService {
         skip,
         take: pageSize,
         where,
-        orderBy: { createdAt: "desc" },
+        orderBy: { createTime: "desc" },
         include: {
           dept: true, // 显示部门信息
-          roles: true, // 显示角色信息
+          roles: {
+            select: { roleCode: true } // 只返回角色编码
+          }
         },
       }),
       this.model.count({ where }),
     ]);
 
-    // 可以在这里把 password 字段剔除，防止泄露
-    list.forEach((u: any) => delete u.password);
+    // 转换数据格式：删除密码，映射 userRoles
+    const transformedList = list.map((u: any) => {
+      const { password, roles, ...rest } = u;
+      return {
+        ...rest,
+        userRoles: roles.map((r: any) => r.roleCode) // 映射为角色编码数组
+      };
+    });
 
-    return { list, total };
+    return { list: transformedList, total };
   }
 
   // 获取用户已分配的角色ID列表（分配弹窗回显用）
