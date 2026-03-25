@@ -118,9 +118,13 @@
             return h('div', { class: 'user flex-c' }, [
               h(ElImage, {
                 class: 'size-9.5 rounded-md',
-                src: row.avatar,
-                previewSrcList: [row.avatar],
-                previewTeleported: true
+                src: row.avatar || undefined,
+                previewSrcList: row.avatar ? [row.avatar] : [],
+                previewTeleported: true,
+                fit: 'cover',
+                style: !row.avatar ? 'background:#f0f2f5;display:flex;align-items:center;justify-content:center;' : ''
+              }, {
+                error: () => h('span', { style: 'font-size:20px;color:#c0c4cc;line-height:38px;' }, '👤')
               }),
               h('div', { class: 'ml-2' }, [
                 h('p', { class: 'user-name' }, row.userName),

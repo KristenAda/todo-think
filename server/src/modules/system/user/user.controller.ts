@@ -1,10 +1,9 @@
-// src/modules/system/user/user.controller.ts
 import { Context } from "koa";
 import userService from "./user.service";
 import { Result } from "@/core/result";
 
 class UserController {
-  // GET /api/user/list
+  // GET /user/list
   async list(ctx: Context) {
     const {
       current = 1,
@@ -30,38 +29,40 @@ class UserController {
   // POST /user/add
   async add(ctx: Context) {
     const body = ctx.request.body as any;
-    try {
-      // 只保留合法字段
-      const data: any = {}
-      const allowedFields = ['userName', 'password', 'nickName', 'userPhone', 'userEmail', 'userGender', 'avatar', 'status', 'remark', 'deptId']
-      allowedFields.forEach(f => { if (body[f] !== undefined) data[f] = body[f] })
-      // 默认密码
-      if (!data.password) data.password = "123456";
-      const res = await userService.add(data);
+    const data: any = {};
+    const allowedFields = [
+      "userName", "password", "nickName", "userPhone",
+      "userEmail", "userGender", "avatar", "status", "remark", "deptId",
+    ];
+    allowedFields.forEach((f) => {
+      if (body[f] !== undefined) data[f] = body[f];
+    });
+    if (!data.password) data.password = "123456";
 
-      // 新增后立即绑定角色
-      if (Array.isArray(body.roleIds) && body.roleIds.length > 0) {
-        await userService.assignRoles(res.id, body.roleIds);
-      }
+    const res = await userService.add(data);
 
-      ctx.body = Result.success(res);
-    } catch (e: any) {
-      if (e.code === "P2002") return (ctx.body = Result.error("用户名已存在"));
-      throw e;
+    if (Array.isArray(body.roleIds) && body.roleIds.length > 0) {
+      await userService.assignRoles(res.id, body.roleIds);
     }
+
+    ctx.body = Result.success(res);
   }
 
   // POST /user/update
   async update(ctx: Context) {
     const body = ctx.request.body as any;
-    const id = body.id
-    // 只保留合法字段
-    const data: any = {}
-    const allowedFields = ['userName', 'password', 'nickName', 'userPhone', 'userEmail', 'userGender', 'avatar', 'status', 'remark', 'deptId']
-    allowedFields.forEach(f => { if (body[f] !== undefined) data[f] = body[f] })
+    const id = body.id;
+    const data: any = {};
+    const allowedFields = [
+      "userName", "password", "nickName", "userPhone",
+      "userEmail", "userGender", "avatar", "status", "remark", "deptId",
+    ];
+    allowedFields.forEach((f) => {
+      if (body[f] !== undefined) data[f] = body[f];
+    });
+
     const res = await userService.update(id, data);
 
-    // 同步更新角色绑定（传空数组则清空所有角色）
     if (Array.isArray(body.roleIds)) {
       await userService.assignRoles(id, body.roleIds);
     }
@@ -69,16 +70,15 @@ class UserController {
     ctx.body = Result.success(res);
   }
 
-  // POST /api/user/delete
+  // POST /user/delete
   async delete(ctx: Context) {
     const { id } = ctx.request.body as any;
-    // 保护一下 admin 不能删
     if (id === 1) return (ctx.body = Result.error("超级管理员无法删除"));
     await userService.delete(id);
     ctx.body = Result.success();
   }
 
-  // POST /api/user/assignRoles
+  // POST /user/assignRoles
   async assignRoles(ctx: Context) {
     const { userId, roleIds } = ctx.request.body as any;
     if (!userId) return (ctx.body = Result.error("userId不能为空"));
@@ -87,7 +87,7 @@ class UserController {
     ctx.body = res;
   }
 
-  // POST /api/user/roles — 获取用户已分配的角色ID列表（回显用）
+  // POST /user/roles
   async getRoles(ctx: Context) {
     const { userId } = ctx.request.body as any;
     if (!userId) return (ctx.body = Result.error("userId不能为空"));

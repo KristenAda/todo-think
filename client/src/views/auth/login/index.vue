@@ -113,6 +113,7 @@
   import { useI18n } from 'vue-i18n';
   import { HttpError } from '@/utils/http/error';
   import { fetchLogin } from '@/api/auth';
+  import { hashPassword } from '@/utils/crypto';
   import { ElNotification, type FormInstance, type FormRules } from 'element-plus';
   import { useSettingStore } from '@/store/modules/setting';
 
@@ -216,12 +217,12 @@
 
       loading.value = true;
 
-      // 登录请求
+      // 登录请求（密码 SHA-256 哈希后传输，避免明文）
       const { username, password } = formData;
 
       const { token, refreshToken } = await fetchLogin({
         userName: username,
-        password
+        password: hashPassword(password)
       });
 
       // 验证token

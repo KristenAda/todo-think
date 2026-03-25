@@ -2,10 +2,34 @@
   <ElDialog
     v-model="dialogVisible"
     :title="dialogType === 'add' ? '添加用户' : '编辑用户'"
-    width="30%"
+    width="460px"
     align-center
   >
     <ElForm ref="formRef" :model="formData" :rules="rules" label-width="80px">
+      <!-- 头像上传 -->
+      <ElFormItem label="头像">
+        <div class="avatar-upload-wrap">
+          <ElUpload
+            class="avatar-uploader"
+            :show-file-list="false"
+            :before-upload="beforeAvatarUpload"
+            accept="image/jpeg,image/png,image/gif,image/webp"
+          >
+            <div class="avatar-preview">
+              <img v-if="formData.avatar" :src="formData.avatar" class="avatar-img" />
+              <div v-else class="avatar-placeholder">
+                <el-icon :size="28" color="#c0c4cc"><Plus /></el-icon>
+                <span class="placeholder-text">上传头像</span>
+              </div>
+              <div class="avatar-mask">
+                <el-icon :size="20" color="#fff"><Camera /></el-icon>
+              </div>
+            </div>
+          </ElUpload>
+          <div class="avatar-tip">支持 JPG / PNG / GIF / WebP，不超过 2MB</div>
+        </div>
+      </ElFormItem>
+
       <ElFormItem label="用户名" prop="userName">
         <ElInput v-model="formData.userName" placeholder="请输入用户名" />
       </ElFormItem>
@@ -46,7 +70,8 @@
 
 <script setup lang="ts">
   import { fetchGetRoleList, fetchAddUser, fetchUpdateUser } from '@/api/system-manage';
-  import type { FormInstance, FormRules } from 'element-plus';
+  import type { FormInstance, FormRules, UploadRawFile } from 'element-plus';
+  import { Plus, Camera } from '@element-plus/icons-vue';
 
   interface Props {
     visible: boolean;
@@ -87,7 +112,8 @@
     userEmail: '',
     userGender: '男',
     nickName: '',
-    userRoles: [] as string[]
+    userRoles: [] as string[],
+    avatar: '' as string
   });
 
   // 表单验证规则
@@ -106,6 +132,29 @@
   };
 
   /**
+   * 头像上传前校验并转 base64
+   */
+  const beforeAvatarUpload = (rawFile: UploadRawFile): boolean => {
+    const allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+    if (!allowedTypes.includes(rawFile.type)) {
+      ElMessage.error('头像只能上传 JPG / PNG / GIF / WebP 格式！');
+      return false;
+    }
+    if (rawFile.size / 1024 / 1024 > 2) {
+      ElMessage.error('头像大小不能超过 2MB！');
+      return false;
+    }
+    // 读取为 base64
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      formData.avatar = e.target?.result as string;
+    };
+    reader.readAsDataURL(rawFile);
+    // 返回 false 阻止默认上传行为（我们用 base64 自行处理）
+    return false;
+  };
+
+  /**
    * 初始化表单数据
    * 根据对话框类型（新增/编辑）填充表单
    */
@@ -120,7 +169,8 @@
       userEmail: isEdit && row ? row.userEmail || '' : '',
       userGender: isEdit && row ? row.userGender || '男' : '男',
       nickName: isEdit && row ? row.nickName || '' : '',
-      userRoles: isEdit && row ? (Array.isArray(row.userRoles) ? row.userRoles : []) : []
+      userRoles: isEdit && row ? (Array.isArray(row.userRoles) ? row.userRoles : []) : [],
+      avatar: isEdit && row ? row.avatar || '' : ''
     });
   };
 
@@ -130,8 +180,6 @@
   const loadRoleList = async () => {
     try {
       const res = await fetchGetRoleList({ current: 1, size: 1000 });
-      // request.get 解包后直接返回 data 字段
-      // 后端 Result.page 返回 { list, total, ... }，所以 res 就是该对象
       if (res && (res as any).list) {
         roleList.value = (res as any).list;
       } else if (Array.isArray(res)) {
@@ -183,7 +231,8 @@
         userEmail: formData.userEmail,
         userGender: formData.userGender,
         nickName: formData.nickName,
-        roleIds: selectedRoleIds // 传递角色ID数组给后端
+        avatar: formData.avatar || undefined,
+        roleIds: selectedRoleIds
       };
 
       if (props.type === 'add') {
@@ -204,3 +253,79 @@
     }
   };
 </script>
+
+<style scoped lang="scss">
+  .avatar-upload-wrap {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 6px;
+
+    .avatar-uploader {
+      :deep(.el-upload) {
+        cursor: pointer;
+        border-radius: 8px;
+        overflow: hidden;
+      }
+    }
+
+    .avatar-preview {
+      position: relative;
+      width: 88px;
+      height: 88px;
+      border-radius: 8px;
+      border: 1px dashed var(--el-border-color);
+      overflow: hidden;
+      transition: border-color 0.2s;
+
+      &:hover {
+        border-color: var(--el-color-primary);
+
+        .avatar-mask {
+          opacity: 1;
+        }
+      }
+
+      .avatar-img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        display: block;
+      }
+
+      .avatar-placeholder {
+        width: 100%;
+        height: 100%;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        background: var(--el-fill-color-lighter);
+        gap: 4px;
+
+        .placeholder-text {
+          font-size: 12px;
+          color: var(--el-text-color-placeholder);
+          line-height: 1;
+        }
+      }
+
+      .avatar-mask {
+        position: absolute;
+        inset: 0;
+        background: rgba(0, 0, 0, 0.45);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        opacity: 0;
+        transition: opacity 0.2s;
+      }
+    }
+
+    .avatar-tip {
+      font-size: 12px;
+      color: var(--el-text-color-secondary);
+      line-height: 1.4;
+    }
+  }
+</style>

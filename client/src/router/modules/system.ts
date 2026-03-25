@@ -61,6 +61,17 @@ export const systemRoutes: AppRouteRecord = {
       }
     },
     {
+      path: 'organization',
+      name: 'Organization',
+      component: '/system/organization',
+      meta: {
+        title: 'menus.system.organization',
+        icon: 'ri:organization-chart',
+        keepAlive: true,
+        roles: ['R_SUPER', 'R_ADMIN']
+      }
+    },
+    {
       path: 'nested',
       name: 'Nested',
       component: '',

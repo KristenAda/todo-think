@@ -1,8 +1,6 @@
 import { BaseService } from "@/core/base.service";
 import { Result } from "@/core/result";
-import { PrismaClient } from "@prisma/client";
-
-const prisma = new PrismaClient();
+import prisma from "@/core/prisma";
 
 class MenuService extends BaseService {
   constructor() {

@@ -17,10 +17,12 @@
     "@koa/cors": "^5.0.0",
     "@koa/router": "^15.3.0",
     "bcryptjs": "^3.0.3",
+    "dotenv": "^17.3.1",
     "glob": "^13.0.1",
     "jsonwebtoken": "^9.0.3",
     "koa": "^3.1.1",
     "koa-jwt": "^4.0.4",
+    "koa-ratelimit": "^6.0.0",
     "winston": "^3.19.0",
     "winston-daily-rotate-file": "^5.0.0",
     "zod": "^4.3.6"
