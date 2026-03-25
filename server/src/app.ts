@@ -1,5 +1,6 @@
 // 最优先加载环境变量，确保后续所有模块都能读到
 import "dotenv/config";
+// dashboard module loaded
 
 import Koa from "koa";
 import bodyParser from "@koa/bodyparser";

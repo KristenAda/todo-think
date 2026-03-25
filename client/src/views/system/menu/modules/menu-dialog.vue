@@ -25,6 +25,43 @@
           <ElRadioButton value="button" label="button">按钮</ElRadioButton>
         </ElRadioGroup>
       </template>
+
+      <template #authList>
+        <div class="auth-list-editor">
+          <TransitionGroup name="list" tag="div" class="auth-tags" v-if="form.authList.length">
+            <div v-for="(item, index) in form.authList" :key="item.authMark" class="auth-tag-item">
+              <span class="auth-tag-title">{{ item.title }}</span>
+              <div class="auth-divider"></div>
+              <span class="auth-tag-mark">{{ item.authMark }}</span>
+              <span class="auth-tag-delete" @click="removeAuthItem(index)">
+                <ElIcon><Close /></ElIcon>
+              </span>
+            </div>
+          </TransitionGroup>
+
+          <div v-else class="auth-empty">
+            <span>暂无权限标识，请在下方添加</span>
+          </div>
+
+          <div class="auth-add-row">
+            <ElInput
+              v-model="newAuthItem.title"
+              placeholder="权限名称，如：新增"
+              size="small"
+              class="auth-input"
+              @keyup.enter="addAuthItem"
+            />
+            <ElInput
+              v-model="newAuthItem.authMark"
+              placeholder="标识，如：add"
+              size="small"
+              class="auth-input"
+              @keyup.enter="addAuthItem"
+            />
+            <ElButton size="small" type="primary" @click="addAuthItem" plain>添加</ElButton>
+          </div>
+        </div>
+      </template>
     </ArtForm>
 
     <template #footer>
@@ -38,23 +75,18 @@
 
 <script setup lang="ts">
   import type { FormRules } from 'element-plus';
-  import { ElIcon, ElTooltip } from 'element-plus';
-  import { QuestionFilled } from '@element-plus/icons-vue';
+  import { ElIcon, ElTooltip, ElMessage } from 'element-plus';
+  import { QuestionFilled, Close } from '@element-plus/icons-vue';
   import { formatMenuTitle } from '@/utils/router';
   import type { AppRouteRecord } from '@/types/router';
   import type { FormItem } from '@/components/core/forms/art-form/index.vue';
   import ArtForm from '@/components/core/forms/art-form/index.vue';
   import { useWindowSize } from '@vueuse/core';
   import { fetchAddMenu, fetchUpdateMenu } from '@/api/system-manage';
+  import { ref, reactive, computed, watch, nextTick, h } from 'vue';
 
   const { width } = useWindowSize();
 
-  /**
-   * 创建带 tooltip 的表单标签
-   * @param label 标签文本
-   * @param tooltip 提示文本
-   * @returns 渲染函数
-   */
   const createLabelTooltip = (label: string, tooltip: string) => {
     return () =>
       h('span', { class: 'flex items-center' }, [
@@ -69,6 +101,11 @@
         )
       ]);
   };
+
+  interface AuthItem {
+    title: string;
+    authMark: string;
+  }
 
   interface MenuFormData {
     id: number;
@@ -91,6 +128,7 @@
     activePath: string;
     roles: string[];
     isFullPage: boolean;
+    authList: AuthItem[];
     authName: string;
     authLabel: string;
     authIcon: string;
@@ -143,11 +181,33 @@
     activePath: '',
     roles: [],
     isFullPage: false,
+    authList: [],
     authName: '',
     authLabel: '',
     authIcon: '',
     authSort: 1
   });
+
+  const newAuthItem = reactive({ title: '', authMark: '' });
+
+  const addAuthItem = (): void => {
+    if (!newAuthItem.title.trim() || !newAuthItem.authMark.trim()) {
+      ElMessage.warning('请填写权限名称和标识');
+      return;
+    }
+    const exists = form.authList.some((item) => item.authMark === newAuthItem.authMark.trim());
+    if (exists) {
+      ElMessage.warning('该权限标识已存在');
+      return;
+    }
+    form.authList.push({ title: newAuthItem.title.trim(), authMark: newAuthItem.authMark.trim() });
+    newAuthItem.title = '';
+    newAuthItem.authMark = '';
+  };
+
+  const removeAuthItem = (index: number): void => {
+    form.authList.splice(index, 1);
+  };
 
   const rules = reactive<FormRules>({
     name: [
@@ -160,13 +220,8 @@
     authLabel: [{ required: true, message: '请输入权限标识', trigger: 'blur' }]
   });
 
-  /**
-   * 表单项配置
-   */
   const formItems = computed<FormItem[]>(() => {
     const baseItems: FormItem[] = [{ label: '菜单类型', key: 'menuType', span: 24 }];
-
-    // Switch 组件的 span：小屏幕 12，大屏幕 6
     const switchSpan = width.value < 640 ? 12 : 6;
 
     if (form.menuType === 'menu') {
@@ -236,7 +291,8 @@
         { label: '显示徽章', key: 'showBadge', type: 'switch', span: switchSpan },
         { label: '固定标签', key: 'fixedTab', type: 'switch', span: switchSpan },
         { label: '标签隐藏', key: 'isHideTab', type: 'switch', span: switchSpan },
-        { label: '全屏页面', key: 'isFullPage', type: 'switch', span: switchSpan }
+        { label: '全屏页面', key: 'isFullPage', type: 'switch', span: switchSpan },
+        { label: '权限标识', key: 'authList', span: 24 }
       ];
     } else {
       return [
@@ -268,26 +324,20 @@
     return isEdit.value ? `编辑${type}` : `新建${type}`;
   });
 
-  /**
-   * 是否禁用菜单类型切换
-   */
   const disableMenuType = computed(() => {
     if (isEdit.value) return true;
     if (!isEdit.value && form.menuType === 'menu' && props.lockType) return true;
     return false;
   });
 
-  /**
-   * 重置表单数据
-   */
   const resetForm = (): void => {
     formRef.value?.reset();
     form.menuType = 'menu';
+    form.authList = [];
+    newAuthItem.title = '';
+    newAuthItem.authMark = '';
   };
 
-  /**
-   * 加载表单数据（编辑模式）
-   */
   const loadFormData = (): void => {
     if (!props.editData) return;
 
@@ -315,6 +365,7 @@
       form.activePath = row.meta?.activePath || '';
       form.roles = row.meta?.roles || [];
       form.isFullPage = row.meta?.isFullPage ?? false;
+      form.authList = row.meta?.authList ? [...row.meta.authList] : [];
     } else {
       const row = props.editData;
       form.authName = row.title || '';
@@ -324,9 +375,6 @@
     }
   };
 
-  /**
-   * 提交表单
-   */
   const handleSubmit = async (): Promise<void> => {
     if (!formRef.value) return;
 
@@ -334,18 +382,17 @@
       await formRef.value.validate();
       loading.value = true;
 
-      // 构建提交到后端的数据结构
       let submitData: any;
 
       if (form.menuType === 'menu') {
         submitData = {
           id: isEdit.value ? form.id : undefined,
-          name: form.label, // name = 路由名称标识（label字段）
-          title: form.name, // title = 菜单显示名称（name字段）
+          name: form.label,
+          title: form.name,
           path: form.path,
           component: form.component,
           icon: form.icon,
-          type: 2, // 2:菜单，1:目录
+          type: 2,
           sort: form.sort,
           isEnable: form.isEnable,
           keepAlive: form.keepAlive,
@@ -358,15 +405,15 @@
           fixedTab: form.fixedTab,
           activePath: form.activePath,
           isFullPage: form.isFullPage,
-          roles: form.roles
+          roles: form.roles,
+          authList: form.authList.length ? form.authList : undefined
         };
       } else {
-        // 按钮类型：作为权限项提交
         submitData = {
           id: isEdit.value ? form.id : undefined,
           name: form.authLabel,
           title: form.authName,
-          type: 3, // 3:按钮
+          type: 3,
           sort: form.authSort,
           icon: form.authIcon
         };
@@ -384,7 +431,6 @@
       handleCancel();
     } catch (error) {
       if (error && typeof error === 'object' && !('message' in (error as any))) {
-        // 表单校验失败，不显示错误
         return;
       }
       ElMessage.error('提交失败，请重试');
@@ -393,24 +439,15 @@
     }
   };
 
-  /**
-   * 取消操作
-   */
   const handleCancel = (): void => {
     emit('update:visible', false);
   };
 
-  /**
-   * 对话框关闭后的回调
-   */
   const handleClosed = (): void => {
     resetForm();
     isEdit.value = false;
   };
 
-  /**
-   * 监听对话框显示状态
-   */
   watch(
     () => props.visible,
     (newVal) => {
@@ -425,9 +462,6 @@
     }
   );
 
-  /**
-   * 监听菜单类型变化
-   */
   watch(
     () => props.type,
     (newType) => {
@@ -437,3 +471,131 @@
     }
   );
 </script>
+
+<style scoped lang="scss">
+  .auth-list-editor {
+    width: 100%;
+    background: var(--el-fill-color-light);
+    border: 1px solid var(--el-border-color-light);
+    border-radius: 8px;
+    padding: 16px;
+    transition: all 0.3s ease;
+
+    &:hover {
+      border-color: var(--el-border-color);
+    }
+
+    .auth-tags {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-bottom: 16px;
+    }
+
+    .auth-tag-item {
+      display: inline-flex;
+      align-items: center;
+      height: 26px; /* 强制压低并固定高度 */
+      padding: 0 4px 0 10px; /* 取消上下 padding，完全靠 align-items: center 垂直居中 */
+      border-radius: 13px; /* 完美半圆角 */
+      background: var(--el-color-primary-light-9);
+      border: 1px solid var(--el-color-primary-light-7);
+      transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+      box-shadow: 0 1px 2px rgba(0, 0, 0, 0.02);
+      box-sizing: border-box;
+
+      &:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 8px rgba(var(--el-color-primary-rgb), 0.15);
+        border-color: var(--el-color-primary-light-5);
+      }
+
+      .auth-tag-title {
+        color: var(--el-color-primary);
+        font-size: 12px; /* 稍微减小字号以适配紧凑高度 */
+        font-weight: 600;
+        margin-right: 6px;
+      }
+
+      .auth-divider {
+        width: 1px;
+        height: 12px; /* 分割线稍微变短 */
+        background: var(--el-color-primary-light-5);
+        margin-right: 6px;
+      }
+
+      .auth-tag-mark {
+        color: var(--el-text-color-regular);
+        font-family: Consolas, Monaco, monospace;
+        font-size: 12px;
+        background: var(--el-bg-color);
+        padding: 0 6px; /* 去除上下 padding */
+        line-height: 18px; /* 限制行高 */
+        border-radius: 9px;
+        margin-right: 4px;
+        border: 1px solid var(--el-border-color-lighter);
+      }
+
+      .auth-tag-delete {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 16px; /* 缩小关闭按钮的宽高 */
+        height: 16px;
+        border-radius: 50%;
+        cursor: pointer;
+        color: var(--el-text-color-secondary);
+        font-size: 12px;
+        transition: all 0.2s ease;
+
+        &:hover {
+          background-color: var(--el-color-danger-light-9);
+          color: var(--el-color-danger);
+        }
+
+        .el-icon {
+          transform: scale(0.85); /* 稍微缩小内部 X 图标的比例 */
+        }
+      }
+    }
+
+    .auth-empty {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      height: 40px; /* 略微压低空状态高度 */
+      font-size: 13px;
+      color: var(--el-text-color-placeholder);
+      background: var(--el-fill-color-blank);
+      border: 1px dashed var(--el-border-color);
+      border-radius: 6px;
+      margin-bottom: 16px;
+    }
+
+    .auth-add-row {
+      display: flex;
+      gap: 12px;
+      align-items: center;
+      padding-top: 16px;
+      border-top: 1px dashed var(--el-border-color-light);
+
+      .auth-input {
+        flex: 1;
+      }
+    }
+
+    /* 列表过渡动画 */
+    .list-enter-active,
+    .list-leave-active {
+      transition: all 0.4s ease;
+    }
+    .list-enter-from,
+    .list-leave-to {
+      opacity: 0;
+      transform: scale(0.9) translateY(10px);
+    }
+    .list-leave-active {
+      position: absolute;
+    }
+  }
+</style>

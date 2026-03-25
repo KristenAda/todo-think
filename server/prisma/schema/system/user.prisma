@@ -25,6 +25,14 @@ model User {
   updateBy  String? // 新增：更新人
   updateTime DateTime @updatedAt // 改名：updatedAt → updateTime
   deletedAt DateTime? // 软删除标志
+
+  // ===== 任务模块反向关联 =====
+  managedProjects   Project[]        @relation("ProjectManager")
+  managedTasks      Task[]           @relation("TaskManager")
+  mainAssigneeTasks Task[]           @relation("TaskMainAssignee")
+  testerTasks       Task[]           @relation("TaskTester")
+  coAssigneeTasks   TaskCoAssignee[] @relation("TaskCoAssignee")
+  workLogs          WorkLog[]        @relation("WorkLogUser")
 }
 
 // ==========================================
