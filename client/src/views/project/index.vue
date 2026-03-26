@@ -126,9 +126,10 @@
       />
     </div>
 
-    <el-dialog
+    <ArtDialog
       v-model="dialogVisible"
       :title="editingId ? '编辑项目' : '新建项目'"
+      icon="solar:folder-bold-duotone"
       width="560px"
       destroy-on-close
     >
@@ -197,7 +198,7 @@
         <el-button @click="dialogVisible = false">取消</el-button>
         <el-button type="primary" :loading="submitting" @click="handleSubmit">确定</el-button>
       </template>
-    </el-dialog>
+    </ArtDialog>
   </div>
 </template>
 

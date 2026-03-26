@@ -1,10 +1,9 @@
 <template>
-  <ElDialog
+  <ArtDialog
     v-model="visible"
     title="菜单权限"
+    icon="solar:shield-check-bold-duotone"
     width="520px"
-    align-center
-    class="el-dialog-border"
     @close="handleClose"
   >
     <ElScrollbar height="70vh">
@@ -31,7 +30,7 @@
       }}</ElButton>
       <ElButton type="primary" @click="savePermission" :loading="loading">保存</ElButton>
     </template>
-  </ElDialog>
+  </ArtDialog>
 </template>
 
 <script setup lang="ts">

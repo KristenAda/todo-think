@@ -1,9 +1,9 @@
 <template>
-  <ElDialog
+  <ArtDialog
     v-model="dialogVisible"
     :title="dialogType === 'add' ? '添加用户' : '编辑用户'"
-    width="460px"
-    align-center
+    icon="solar:user-bold-duotone"
+    width="500px"
   >
     <ElForm ref="formRef" :model="formData" :rules="rules" label-width="80px">
       <!-- 头像上传 -->
@@ -65,7 +65,7 @@
         <ElButton type="primary" @click="handleSubmit" :loading="loading">提交</ElButton>
       </div>
     </template>
-  </ElDialog>
+  </ArtDialog>
 </template>
 
 <script setup lang="ts">

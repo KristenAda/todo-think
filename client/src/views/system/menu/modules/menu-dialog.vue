@@ -1,11 +1,12 @@
 <template>
-  <ElDialog
-    :title="dialogTitle"
+  <ArtDialog
     :model-value="visible"
-    @update:model-value="handleCancel"
+    :title="dialogTitle"
+    icon="solar:widget-2-bold-duotone"
     width="860px"
-    align-center
+    max-height="78vh"
     class="menu-dialog"
+    @update:model-value="handleCancel"
     @closed="handleClosed"
   >
     <ArtForm
@@ -70,7 +71,7 @@
         <ElButton type="primary" @click="handleSubmit" :loading="loading">确 定</ElButton>
       </span>
     </template>
-  </ElDialog>
+  </ArtDialog>
 </template>
 
 <script setup lang="ts">

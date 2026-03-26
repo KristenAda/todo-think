@@ -1,4 +1,4 @@
-﻿<template>
+<template>
   <div class="task-manager-wrapper">
     <div class="search-bar">
       <div class="bar-left">
@@ -69,7 +69,7 @@
     </div>
 
     <!-- 新建/编辑弹窗 -->
-    <el-dialog v-model="dialogVisible" :title="editingId ? '编辑任务' : '新建任务'" width="700px" destroy-on-close>
+    <ArtDialog v-model="dialogVisible" :title="editingId ? '编辑任务' : '新建任务'" icon="solar:checklist-bold-duotone" width="700px" destroy-on-close>
       <el-form ref="formRef" :model="form" :rules="rules" label-width="110px">
         <el-form-item label="任务名称" prop="title">
           <el-input v-model="form.title" placeholder="请输入任务名称" maxlength="200" show-word-limit />
@@ -132,7 +132,7 @@
         <el-button @click="dialogVisible = false">取消</el-button>
         <el-button type="primary" :loading="submitting" @click="handleSubmit">确定</el-button>
       </template>
-    </el-dialog>
+    </ArtDialog>
 
     <TaskDetailDrawer v-if="drawerVisible" v-model="drawerVisible" :task-id="selectedTaskId!" @refresh="loadTasks" />
   </div>

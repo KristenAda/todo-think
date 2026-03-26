@@ -3,7 +3,7 @@
   <div class="login-left-view">
     <div class="logo">
       <ArtLogo class="icon" size="46" />
-      <h1 class="title">{{ AppConfig.systemInfo.name }}</h1>
+      <ArtSystemName size="md" class="ml-2.5" />
     </div>
 
     <div class="left-img">
@@ -71,7 +71,6 @@
 </template>
 
 <script setup lang="ts">
-  import AppConfig from '@/config';
   import loginIcon from '@imgs/svg/login_icon.svg';
   import { themeAnimation } from '@/utils/ui/animation';
 
@@ -108,12 +107,6 @@
       z-index: 100;
       display: flex;
       align-items: center;
-
-      .title {
-        margin-left: 10px;
-        font-size: 20px;
-        font-weight: 400;
-      }
     }
 
     .left-img {

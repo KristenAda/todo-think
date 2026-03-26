@@ -154,3 +154,12 @@
 ## 行为准则：
 - 如果你不确定某个具体的格式化规则，请观察当前被编辑文件或项目中其他文件的上下文代码风格，并保持绝对一致。
 - 生成的代码必须是可以直接通过 `npm run lint` 或 `npm run format` 检查的代码。
+
+
+# 🛑 CRITICAL FILE EDITING RULES (MUST OBEY) 🛑
+
+1. NEVER write or execute Python scripts, Bash scripts, Node.js scripts, or use command-line tools (such as `sed`, `awk`, `grep`, `echo`) to modify, search, or replace text inside existing files.
+2. AUTOMATED SCRIPT REPLACEMENTS ARE STRICTLY FORBIDDEN. Doing so causes severe character encoding issues (garbled text/Mojibake) and destroys file integrity.
+3. ALWAYS use Cursor's native file editing, diff, and apply capabilities to modify code. 
+4. When you need to update code, simply output the updated code blocks in standard Markdown format within the chat, and let me use the native "Apply" button to merge the changes.
+5. Do not attempt to bypass this rule by creating temporary files for text processing.

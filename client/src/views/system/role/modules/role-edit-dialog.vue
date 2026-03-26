@@ -1,9 +1,8 @@
 <template>
-  <ElDialog
+  <ArtDialog
     v-model="visible"
     :title="dialogType === 'add' ? '新增角色' : '编辑角色'"
-    width="30%"
-    align-center
+    width="480px"
     @close="handleClose"
   >
     <ElForm ref="formRef" :model="form" :rules="rules" label-width="120px">
@@ -29,7 +28,7 @@
       <ElButton @click="handleClose">取消</ElButton>
       <ElButton type="primary" @click="handleSubmit" :loading="loading">提交</ElButton>
     </template>
-  </ElDialog>
+  </ArtDialog>
 </template>
 
 <script setup lang="ts">

@@ -164,22 +164,22 @@
    * 用户信息表单
    */
   const form = reactive({
-    realName: 'John Snow',
-    nikeName: '皮卡丘',
-    email: '59301283@mall.com',
-    mobile: '18888888888',
-    address: '广东省深圳市宝安区西乡街道101栋201',
+    realName: 'KristenAda',
+    nikeName: '神妙白玉',
+    email: 'fse9527@gmail.com',
+    mobile: '13372710661',
+    address: '地球',
     sex: '2',
-    des: 'Art Design Pro 是一款兼具设计美学与高效开发的后台系统.'
+    des: '让每一分努力精准度量 —— 企业级研发效能与绩效管理引擎.'
   });
 
   /**
    * 密码修改表单
    */
   const pwdForm = reactive({
-    password: '123456',
-    newPassword: '123456',
-    confirmPassword: '123456'
+    password: '',
+    newPassword: '',
+    confirmPassword: ''
   });
 
   /**

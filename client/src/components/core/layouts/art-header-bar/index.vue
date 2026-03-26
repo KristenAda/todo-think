@@ -19,7 +19,7 @@
         <div class="system-info-container flex-c c-p" @click="toHome" v-if="isTopMenu">
           <ArtLogo class="pl-4.5 logo-icon" />
           <div v-if="width >= 1400" class="system-name-wrapper">
-            <p class="system-name">{{ AppConfig.systemInfo.name }}</p>
+            <ArtSystemName size="md" />
           </div>
         </div>
 
@@ -517,26 +517,5 @@
     align-items: center;
     margin-left: 12px;
     height: 100%;
-  }
-
-  .system-name {
-    margin: 0;
-    padding: 0;
-    font-size: 16px;
-    font-weight: 600;
-    letter-spacing: 0.5px;
-    background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 50%, #d946ef 100%);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-
-    // .system-info-container:hover & {
-    //   letter-spacing: 1px;
-    //   filter: drop-shadow(0 0 8px rgba(99, 102, 241, 0.3));
-    // }
   }
 </style>
