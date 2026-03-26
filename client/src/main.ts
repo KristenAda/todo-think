@@ -10,6 +10,7 @@ import { setupGlobDirectives } from './directives'
 import { setupErrorHandle } from './utils/sys/error-handle'
 import ArtDialog from '@/components/core/base/art-dialog/index.vue'
 import ArtDialogTrayContainer from '@/components/core/base/art-dialog/ArtDialogTrayContainer.vue'
+import ColorAvatar from '@/components/core/base/ColorAvatar.vue'
 
 document.addEventListener(
   'touchstart',
@@ -26,4 +27,5 @@ setupErrorHandle(app)
 app.use(language)
 app.component('ArtDialog', ArtDialog)
 app.component('ArtDialogTrayContainer', ArtDialogTrayContainer)
+app.component('ColorAvatar', ColorAvatar)
 app.mount('#app')

@@ -1,4 +1,4 @@
-﻿<template>
+<template>
   <div class="org-wrapper">
     <div class="panel left-panel">
       <div class="panel-header">
@@ -107,9 +107,9 @@
             >
               <el-table-column label="头像" width="80" align="center">
                 <template #default="{ row }">
-                  <el-avatar :size="32" :src="row.avatar || ''"
-                    ><art-svg-icon icon="mdi:account"
-                  /></el-avatar>
+                  <el-avatar :size="32" :src="row.avatar || ''" fit="cover">
+                    <ColorAvatar :name="row.nickName || row.userName || '?'" :gender="row.userGender || '' " :size="32" />
+                  </el-avatar>
                 </template>
               </el-table-column>
               <el-table-column prop="userName" label="用户名" min-width="120" />
@@ -164,9 +164,9 @@
             <el-table :data="members" v-loading="membersLoading" height="100%" style="width: 100%">
               <el-table-column label="头像" width="80" align="center">
                 <template #default="{ row }">
-                  <el-avatar :size="32" :src="row.avatar || ''"
-                    ><art-svg-icon icon="mdi:account"
-                  /></el-avatar>
+                  <el-avatar :size="32" :src="row.avatar || ''" fit="cover">
+                    <ColorAvatar :name="row.nickName || row.userName || '?'" :gender="row.userGender || '' " :size="32" />
+                  </el-avatar>
                 </template>
               </el-table-column>
               <el-table-column prop="userName" label="用户名" min-width="120" />
@@ -214,12 +214,11 @@
       </div>
     </div>
 
-    <el-dialog
+    <ArtDialog
       v-model="addManagerVisible"
       title="添加部门管理者"
+      icon="mdi:crown"
       width="560px"
-      class="custom-dialog"
-      destroy-on-close
     >
       <div class="dialog-search">
         <el-input
@@ -240,9 +239,9 @@
               @click="toggleUser(user.id)"
             >
               <el-checkbox :model-value="selectedUserIds.includes(user.id)" @click.stop />
-              <el-avatar :size="36" :src="user.avatar || ''" class="item-avatar"
-                ><art-svg-icon icon="mdi:account"
-              /></el-avatar>
+              <el-avatar :size="36" :src="user.avatar || ''" class="item-avatar" fit="cover">
+                <ColorAvatar :name="user.nickName || user.userName || '?'" :gender="user.userGender || '' " :size="36" />
+              </el-avatar>
               <div class="item-info">
                 <div class="item-name">{{ user.nickName || user.userName }}</div>
                 <div class="item-sub">账号: {{ user.userName }}</div>
@@ -272,14 +271,13 @@
           </div>
         </div>
       </template>
-    </el-dialog>
+    </ArtDialog>
 
-    <el-dialog
+    <ArtDialog
       v-model="addMemberVisible"
       title="添加部门成员"
+      icon="mdi:account-plus"
       width="560px"
-      class="custom-dialog"
-      destroy-on-close
     >
       <div class="dialog-search">
         <el-input
@@ -300,9 +298,9 @@
               @click="toggleUser(user.id)"
             >
               <el-checkbox :model-value="selectedUserIds.includes(user.id)" @click.stop />
-              <el-avatar :size="36" :src="user.avatar || ''" class="item-avatar"
-                ><art-svg-icon icon="mdi:account"
-              /></el-avatar>
+              <el-avatar :size="36" :src="user.avatar || ''" class="item-avatar" fit="cover">
+                <ColorAvatar :name="user.nickName || user.userName || '?'" :gender="user.userGender || '' " :size="36" />
+              </el-avatar>
               <div class="item-info">
                 <div class="item-name">{{ user.nickName || user.userName }}</div>
                 <div class="item-sub">账号: {{ user.userName }}</div>
@@ -332,13 +330,20 @@
           </div>
         </div>
       </template>
-    </el-dialog>
+    </ArtDialog>
 
-    <el-dialog v-model="profileVisible" title="人员详情" width="400px" destroy-on-close>
+    <ArtDialog
+      v-model="profileVisible"
+      title="人员详情"
+      icon="mdi:account-details"
+      width="400px"
+      :show-minimize="false"
+      :show-maximize="false"
+    >
       <div v-if="profileUser" class="profile-card">
         <div class="profile-header">
-          <el-avatar :size="72" :src="profileUser.avatar || ''" class="profile-avatar">
-            <art-svg-icon icon="mdi:account" style="font-size: 36px; margin-top: 18px" />
+          <el-avatar :size="72" :src="profileUser.avatar || ''" class="profile-avatar" fit="cover">
+            <ColorAvatar :name="profileUser.nickName || profileUser.userName || '?'" :gender="profileUser.userGender || '' " :size="72" />
           </el-avatar>
           <div class="profile-name">{{ profileUser.nickName || profileUser.userName }}</div>
           <div class="profile-role">@{{ profileUser.userName }}</div>
@@ -370,7 +375,7 @@
           </div>
         </div>
       </div>
-    </el-dialog>
+    </ArtDialog>
   </div>
 </template>
 
@@ -504,7 +509,8 @@
     userSearchText.value = '';
     selectedUserIds.value = [];
     await loadAllUsers();
-    addManagerVisible.value = true;
+    addManagerVisible.value = false;
+    nextTick(() => { addManagerVisible.value = true; });
   };
   const submitAddManagers = async () => {
     if (!selectedUserIds.value.length) return ElMessage.warning('请至少选择一个用户');
@@ -535,7 +541,8 @@
     userSearchText.value = '';
     selectedUserIds.value = [];
     await loadAllUsers();
-    addMemberVisible.value = true;
+    addMemberVisible.value = false;
+    nextTick(() => { addMemberVisible.value = true; });
   };
   const submitAddMembers = async () => {
     if (!selectedUserIds.value.length) return ElMessage.warning('请至少选择一个用户');
@@ -565,7 +572,8 @@
   const profileUser = ref<any>(null);
   const openProfileDialog = (row: any) => {
     profileUser.value = row;
-    profileVisible.value = true;
+    profileVisible.value = false;
+    nextTick(() => { profileVisible.value = true; });
   };
 
   onMounted(async () => {
@@ -981,6 +989,79 @@
           color: $text-main;
           font-weight: 500;
         }
+      }
+    }
+  }
+
+  /* ================= 弹窗内容样式 ================= */
+  .dialog-search {
+    margin-bottom: 16px;
+  }
+
+  .user-select-container {
+    border: 1px solid $border-color;
+    border-radius: 8px;
+    padding: 8px;
+    background: #fafafa;
+
+    .user-list {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+
+      .user-item {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 10px 14px;
+        background: $panel-bg;
+        border: 1px solid transparent;
+        border-radius: 8px;
+        cursor: pointer;
+        transition: all 0.2s;
+
+        &:hover {
+          background: var(--el-color-primary-light-9);
+        }
+
+        &.is-selected {
+          border-color: var(--el-color-primary-light-5);
+          background: var(--el-color-primary-light-9);
+        }
+
+        .item-info {
+          flex: 1;
+
+          .item-name {
+            font-size: 14px;
+            font-weight: 500;
+            color: $text-main;
+          }
+
+          .item-sub {
+            font-size: 12px;
+            color: $text-secondary;
+            margin-top: 2px;
+          }
+        }
+      }
+    }
+  }
+
+  .dialog-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    width: 100%;
+    padding-top: 4px;
+
+    .selected-text {
+      font-size: 13px;
+      color: $text-regular;
+
+      strong {
+        color: $primary-color;
+        font-size: 16px;
       }
     }
   }

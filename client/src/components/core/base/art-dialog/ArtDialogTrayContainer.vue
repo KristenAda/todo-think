@@ -34,7 +34,7 @@
     position: fixed;
     bottom: 24px;
     left: 24px;
-    z-index: 10000;
+    z-index: 9001;
     display: flex;
     flex-direction: column;
     align-items: flex-end;

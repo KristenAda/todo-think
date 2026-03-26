@@ -109,7 +109,7 @@
     closeOnOverlay: false,
     showMinimize: true,
     showMaximize: true,
-    zIndex: 9999
+    zIndex: 9000
   });
 
   const emit = defineEmits<Emits>();

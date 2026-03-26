@@ -45,6 +45,7 @@
   import UserDialog from './modules/user-dialog.vue';
   import { ElTag, ElMessageBox, ElImage } from 'element-plus';
   import { DialogType } from '@/types';
+  import { resolveComponent } from 'vue';
 
   defineOptions({ name: 'User' });
 
@@ -115,17 +116,23 @@
           label: '用户名',
           width: 280,
           formatter: (row) => {
+            const ColorAvatar = resolveComponent('ColorAvatar');
             return h('div', { class: 'user flex-c' }, [
-              h(ElImage, {
-                class: 'size-9.5 rounded-md',
-                src: row.avatar || undefined,
-                previewSrcList: row.avatar ? [row.avatar] : [],
-                previewTeleported: true,
-                fit: 'cover',
-                style: !row.avatar ? 'background:#f0f2f5;display:flex;align-items:center;justify-content:center;' : ''
-              }, {
-                error: () => h('span', { style: 'font-size:20px;color:#c0c4cc;line-height:38px;' }, '👤')
-              }),
+              row.avatar
+                ? h(ElImage, {
+                    class: 'size-9.5 rounded-full',
+                    src: row.avatar,
+                    previewSrcList: [row.avatar],
+                    previewTeleported: true,
+                    fit: 'cover'
+                  })
+                : h('div', { class: 'size-9.5 rounded-full overflow-hidden flex-shrink-0' }, [
+                    h(ColorAvatar, {
+                      name: row.nickName || row.userName || '?',
+                      gender: row.userGender || '',
+                      size: 38
+                    })
+                  ]),
               h('div', { class: 'ml-2' }, [
                 h('p', { class: 'user-name' }, row.userName),
                 h('p', { class: 'email' }, row.userEmail)
