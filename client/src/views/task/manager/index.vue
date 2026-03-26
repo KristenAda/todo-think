@@ -221,7 +221,8 @@ function resetQuery() { query.page = 1; query.projectId = undefined; query.statu
 function openCreateDialog() {
   editingId.value = null;
   Object.assign(form, { title: '', projectId: undefined, description: '', mainAssigneeId: undefined, coAssigneeIds: [], testerId: undefined, estimatedHours: undefined, testCases: [] });
-  dialogVisible.value = true;
+  dialogVisible.value = false;
+  nextTick(() => { dialogVisible.value = true; });
 }
 
 function openEditDialog(row: Api.Task.Task) {
@@ -234,7 +235,8 @@ function openEditDialog(row: Api.Task.Task) {
     estimatedHours: row.estimatedHours ?? undefined,
     testCases: [],
   });
-  dialogVisible.value = true;
+  dialogVisible.value = false;
+  nextTick(() => { dialogVisible.value = true; });
 }
 
 function openDetail(row: Api.Task.Task) { selectedTaskId.value = row.id; drawerVisible.value = true; }

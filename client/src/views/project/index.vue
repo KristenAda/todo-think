@@ -321,7 +321,8 @@
       status: 'ACTIVE',
       dateRange: null
     });
-    dialogVisible.value = true;
+    dialogVisible.value = false;
+    nextTick(() => { dialogVisible.value = true; });
   }
 
   function openEditDialog(proj: ProjectItem) {
@@ -333,7 +334,8 @@
       status: proj.status,
       dateRange: proj.startDate && proj.endDate ? [proj.startDate, proj.endDate] : null
     });
-    dialogVisible.value = true;
+    dialogVisible.value = false;
+    nextTick(() => { dialogVisible.value = true; });
   }
 
   async function handleSubmit() {

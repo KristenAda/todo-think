@@ -1,4 +1,4 @@
-﻿<template>
+<template>
   <Teleport to="body">
     <Transition name="art-dialog-fade">
       <div
@@ -219,6 +219,16 @@
       } else {
         removeTray(instanceId);
         nextTick(() => emit('closed'));
+      }
+    }
+  );
+
+  // 监听 title 变化：最小化状态下如果 title 改变（如从编辑切换到新增），自动还原弹窗
+  watch(
+    () => props.title,
+    () => {
+      if (props.modelValue && isMinimized.value) {
+        handleRestore();
       }
     }
   );

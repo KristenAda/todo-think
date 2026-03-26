@@ -211,7 +211,8 @@
       type: 'primary'
     };
     editingEventIndex.value = -1;
-    dialogVisible.value = true;
+    dialogVisible.value = false;
+    nextTick(() => { dialogVisible.value = true; });
   };
 
   /**
@@ -225,7 +226,8 @@
     editingEventIndex.value = events.value.findIndex(
       (e) => e.date === event.date && e.content === event.content
     );
-    dialogVisible.value = true;
+    dialogVisible.value = false;
+    nextTick(() => { dialogVisible.value = true; });
   };
 
   /**

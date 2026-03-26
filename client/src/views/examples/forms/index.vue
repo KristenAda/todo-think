@@ -667,7 +667,8 @@
             },
             onPreview: (file: UploadFile) => {
               dialogImageUrl.value = file.url || '';
-              dialogVisible.value = true;
+              dialogVisible.value = false;
+              nextTick(() => { dialogVisible.value = true; });
             }
           },
           {

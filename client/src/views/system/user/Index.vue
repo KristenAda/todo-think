@@ -189,7 +189,8 @@
     dialogType.value = type;
     currentUserData.value = row || {};
     nextTick(() => {
-      dialogVisible.value = true;
+      dialogVisible.value = false;
+      nextTick(() => { dialogVisible.value = true; });
     });
   };
 

@@ -303,7 +303,8 @@
     dialogType.value = 'menu';
     editData.value = null;
     lockMenuType.value = true;
-    dialogVisible.value = true;
+    dialogVisible.value = false;
+    nextTick(() => { dialogVisible.value = true; });
   };
 
   /**
@@ -313,7 +314,8 @@
     dialogType.value = 'menu';
     editData.value = row;
     lockMenuType.value = true;
-    dialogVisible.value = true;
+    dialogVisible.value = false;
+    nextTick(() => { dialogVisible.value = true; });
   };
 
   /**
