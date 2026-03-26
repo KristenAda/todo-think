@@ -2,15 +2,13 @@
   <Teleport to="body">
     <Transition name="art-dialog-fade">
       <div
-        v-if="modelValue"
+        v-if="modelValue && !isMinimized"
         class="art-dialog-overlay"
-        :class="{ 'art-dialog-overlay--hidden': isMinimized }"
         :style="{ zIndex: props.zIndex }"
         @click.self="handleOverlayClick"
       >
         <Transition name="art-dialog-zoom">
           <div
-            v-if="modelValue && !isMinimized"
             class="art-dialog-wrapper"
             :class="{ 'art-dialog--maximized': isMaximized }"
             :style="dialogStyle"
@@ -71,20 +69,12 @@
         </Transition>
       </div>
     </Transition>
-    <!-- 最小化托盘 -->
-    <Transition name="art-dialog-tray">
-      <div v-if="isMinimized" class="art-dialog-tray" @click="handleRestore">
-        <ArtSvgIcon icon="solar:widget-bold-duotone" class="art-dialog-tray__icon" />
-        <span class="art-dialog-tray__title">{{ title }}</span>
-        <button class="art-dialog-tray__close" @click.stop="handleClose">
-          <ArtSvgIcon icon="solar:close-circle-bold-duotone" />
-        </button>
-      </div>
-    </Transition>
   </Teleport>
 </template>
 
 <script setup lang="ts">
+  import { useTrayManager } from './trayManager';
+
   defineOptions({ name: 'ArtDialog' });
 
   interface Props {
@@ -127,6 +117,11 @@
   const isMaximized = ref(false);
   const isMinimized = ref(false);
 
+  // 唯一实例 ID，用于托盘管理
+  const instanceId = `art-dialog-${Math.random().toString(36).slice(2)}`;
+  const { addTray, removeTray } = useTrayManager();
+
+  // 拖拽相关
   const offsetX = ref(0);
   const offsetY = ref(0);
   const isDragging = ref(false);
@@ -148,6 +143,7 @@
   }));
 
   const handleClose = () => {
+    removeTray(instanceId);
     isMinimized.value = false;
     isMaximized.value = false;
     offsetX.value = 0;
@@ -158,6 +154,13 @@
 
   const handleMinimize = () => {
     isMinimized.value = true;
+    addTray({
+      id: instanceId,
+      title: props.title || '弹窗',
+      icon: props.icon || '',
+      restore: handleRestore,
+      close: handleClose
+    });
     emit('minimize');
   };
 
@@ -174,6 +177,7 @@
 
   const handleRestore = () => {
     isMinimized.value = false;
+    removeTray(instanceId);
     emit('restore');
   };
 
@@ -208,16 +212,19 @@
       if (val) {
         isMinimized.value = false;
         isMaximized.value = false;
+        removeTray(instanceId);
         offsetX.value = 0;
         offsetY.value = 0;
         emit('open');
       } else {
+        removeTray(instanceId);
         nextTick(() => emit('closed'));
       }
     }
   );
 
   onUnmounted(() => {
+    removeTray(instanceId);
     document.removeEventListener('mousemove', onDrag);
     document.removeEventListener('mouseup', stopDrag);
   });
@@ -234,13 +241,6 @@
     background: rgba(0, 0, 0, 0.42);
     backdrop-filter: blur(6px);
     -webkit-backdrop-filter: blur(6px);
-
-    &--hidden {
-      background: transparent;
-      backdrop-filter: none;
-      -webkit-backdrop-filter: none;
-      pointer-events: none;
-    }
   }
 
   /* ====== 弹窗定位容器 ====== */
@@ -434,66 +434,6 @@
     );
   }
 
-  /* ====== 最小化托盘 ====== */
-  .art-dialog-tray {
-    position: fixed;
-    bottom: 24px;
-    left: 50%;
-    transform: translateX(-50%);
-    z-index: 10000;
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    padding: 10px 16px;
-    background: var(--art-main-bg-color, #fff);
-    border-radius: 40px;
-    box-shadow:
-      0 8px 32px rgba(0, 0, 0, 0.16),
-      0 0 0 1px var(--art-border-color, #e8e8e8);
-    cursor: pointer;
-    transition: all 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
-    user-select: none;
-
-    &:hover {
-      transform: translateX(-50%) translateY(-4px);
-      box-shadow:
-        0 16px 40px rgba(0, 0, 0, 0.2),
-        0 0 0 1px color-mix(in srgb, var(--main-color, #4080ff) 28%, transparent);
-    }
-
-    &__icon {
-      font-size: 18px;
-      color: var(--main-color, #4080ff);
-    }
-
-    &__title {
-      font-size: 13px;
-      font-weight: 500;
-      color: var(--art-gray-700, #606266);
-      max-width: 180px;
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
-    }
-
-    &__close {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      border: none;
-      background: none;
-      cursor: pointer;
-      color: var(--art-gray-400, #c0c4cc);
-      font-size: 17px;
-      padding: 0;
-      transition: color 0.2s;
-
-      &:hover {
-        color: #ef4444;
-      }
-    }
-  }
-
   /* ====== 过渡动画 ====== */
   .art-dialog-fade-enter-active,
   .art-dialog-fade-leave-active {
@@ -521,19 +461,5 @@
   .art-dialog-zoom-leave-to {
     opacity: 0;
     transform: translate(-50%, -50%) scale(0.88);
-  }
-
-  .art-dialog-tray-enter-active {
-    transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
-  }
-
-  .art-dialog-tray-leave-active {
-    transition: all 0.2s ease;
-  }
-
-  .art-dialog-tray-enter-from,
-  .art-dialog-tray-leave-to {
-    opacity: 0;
-    transform: translateX(-50%) translateY(20px) scale(0.85);
   }
 </style>

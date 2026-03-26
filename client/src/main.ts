@@ -9,6 +9,7 @@ import '@utils/sys/console.ts'                      // 控制台输出内容
 import { setupGlobDirectives } from './directives'
 import { setupErrorHandle } from './utils/sys/error-handle'
 import ArtDialog from '@/components/core/base/art-dialog/index.vue'
+import ArtDialogTrayContainer from '@/components/core/base/art-dialog/ArtDialogTrayContainer.vue'
 
 document.addEventListener(
   'touchstart',
@@ -24,4 +25,5 @@ setupErrorHandle(app)
 
 app.use(language)
 app.component('ArtDialog', ArtDialog)
+app.component('ArtDialogTrayContainer', ArtDialogTrayContainer)
 app.mount('#app')
