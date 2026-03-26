@@ -11,6 +11,7 @@ import {
   CreateWorkLogDto,
   SubmitTestDto,
   QaAuditDto,
+  PerformancePageDto,
 } from './task.dto';
 
 /** 从 JWT 中取当前用户 ID */
@@ -193,8 +194,13 @@ export const taskController = new TaskController();
 
 class PerformanceController {
   async stats(ctx: Context) {
-    const projectId = ctx.query.projectId ? Number(ctx.query.projectId) : undefined;
-    ctx.body = Result.success(await performanceService.stats(projectId));
+    const parsed = PerformancePageDto.safeParse(ctx.query);
+    if (!parsed.success) {
+      ctx.body = Result.error(parsed.error?.errors?.[0]?.message ?? '参数错误');
+      return;
+    }
+    const { list, total } = await performanceService.stats(parsed.data);
+    ctx.body = Result.page(list, total, parsed.data.page, parsed.data.pageSize);
   }
 }
 

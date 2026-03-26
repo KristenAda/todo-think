@@ -280,7 +280,7 @@
     height: 100%;
     display: flex;
     flex-direction: column;
-    background: var(--art-main-bg-color, #fff);
+    background: var(--default-box-color);
     border-radius: 16px;
     overflow: hidden;
     box-shadow:
@@ -304,8 +304,8 @@
     flex-shrink: 0;
     cursor: grab;
     user-select: none;
-    background: var(--art-main-bg-color, #fff);
-    border-bottom: 1px solid var(--art-border-color, #e8e8e8);
+    background: var(--default-box-color);
+    border-bottom: 1px solid var(--art-card-border);
 
     &:active {
       cursor: grabbing;
@@ -336,7 +336,7 @@
   .art-dialog__title {
     font-size: 15px;
     font-weight: 600;
-    color: var(--art-gray-800, #1a1a2e);
+    color: var(--el-text-color-primary);
     letter-spacing: 0.2px;
     white-space: nowrap;
     overflow: hidden;
@@ -345,7 +345,7 @@
 
   .art-dialog__subtitle {
     font-size: 12px;
-    color: var(--art-gray-500, #909399);
+    color: var(--el-text-color-secondary);
     white-space: nowrap;
     flex-shrink: 0;
   }
@@ -414,7 +414,7 @@
     flex: 1;
     padding: 24px;
     overflow-y: auto;
-    color: var(--art-gray-700, #606266);
+    color: var(--el-text-color-regular);
 
     &::-webkit-scrollbar {
       width: 5px;
@@ -436,12 +436,8 @@
     gap: 10px;
     padding: 14px 24px;
     flex-shrink: 0;
-    border-top: 1px solid var(--art-border-color, #e8e8e8);
-    background: color-mix(
-      in srgb,
-      var(--art-gray-100, #f5f5f5) 35%,
-      var(--art-main-bg-color, #fff)
-    );
+    border-top: 1px solid var(--art-card-border);
+    background: var(--el-fill-color-blank);
   }
 
   /* ====== 过渡动画 ====== */

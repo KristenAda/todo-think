@@ -251,7 +251,7 @@
   }));
 
   // 是否显示分页器
-  const showPagination = computed(() => props.pagination && !isEmpty.value);
+  const showPagination = computed(() => props.pagination);
 
   // 清理列属性，移除插槽相关的自定义属性，确保它们不会被 ElTableColumn 错误解释
   const cleanColumnProps = (col: ColumnOption) => {

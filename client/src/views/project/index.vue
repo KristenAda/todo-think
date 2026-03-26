@@ -379,7 +379,6 @@
 </script>
 
 <style scoped lang="scss">
-  $bg-color: #f2f3f5;
   $card-radius: 12px;
   $card-shadow: 0 2px 12px rgba(0, 0, 0, 0.07);
   $card-shadow-hover: 0 8px 28px rgba(0, 0, 0, 0.14);
@@ -390,7 +389,7 @@
     padding: 20px;
     height: 100%; /* 关键：固定满高 */
     box-sizing: border-box;
-    background: $bg-color;
+    background: var(--art-main-bg-color);
     display: flex;
     flex-direction: column;
     gap: 20px;
@@ -405,7 +404,7 @@
     justify-content: space-between;
     flex-wrap: wrap;
     gap: 12px;
-    background: #fff;
+    background: var(--default-box-color);
     padding: 14px 20px;
     border-radius: $card-radius;
     box-shadow: $card-shadow;
@@ -443,7 +442,7 @@
       width: 6px;
     }
     &::-webkit-scrollbar-thumb {
-      background: #dcdfe6;
+      background: var(--el-border-color);
       border-radius: 4px;
     }
     &::-webkit-scrollbar-track {
@@ -458,7 +457,7 @@
   }
 
   .project-card {
-    background: #fff;
+    background: var(--default-box-color);
     border-radius: $card-radius;
     box-shadow: $card-shadow;
     padding: 20px;
@@ -487,7 +486,7 @@
     &__name {
       font-size: 16px;
       font-weight: 700;
-      color: #1a1a2e;
+      color: var(--el-text-color-primary);
       flex: 1;
       word-break: break-all;
     }
@@ -496,7 +495,7 @@
     }
     &__progress-bar {
       height: 3px;
-      background: #f0f0f0;
+      background: var(--el-fill-color-light);
       border-radius: 2px;
       overflow: hidden;
     }
@@ -507,7 +506,7 @@
     }
     &__desc {
       font-size: 13px;
-      color: #888;
+      color: var(--el-text-color-secondary);
       line-height: 1.6;
       display: -webkit-box;
       -webkit-line-clamp: 2;
@@ -525,7 +524,7 @@
       align-items: center;
       gap: 5px;
       font-size: 12px;
-      color: #aaa;
+      color: var(--el-text-color-placeholder);
     }
     &__actions {
       display: flex;
@@ -534,7 +533,7 @@
       opacity: 0;
       transition: opacity $transition;
       padding-top: 4px;
-      border-top: 1px solid #f5f5f5;
+      border-top: 1px solid var(--art-card-border);
       &--visible {
         opacity: 1;
       }
@@ -546,7 +545,7 @@
     align-items: center;
     gap: 5px;
     font-size: 13px;
-    color: #555;
+    color: var(--el-text-color-regular);
     &__icon {
       color: var(--el-color-primary);
       font-size: 15px;
@@ -563,7 +562,7 @@
     align-items: center;
     justify-content: center;
     padding: 80px 0;
-    color: #ccc;
+    color: var(--el-text-color-placeholder);
     height: 100%;
     &__icon {
       font-size: 72px;
@@ -579,7 +578,7 @@
     flex-shrink: 0;
     display: flex;
     justify-content: flex-end;
-    background: #fff;
+    background: var(--default-box-color);
     padding: 14px 20px;
     border-radius: $card-radius;
     box-shadow: $card-shadow;

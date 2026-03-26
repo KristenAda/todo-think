@@ -108,7 +108,11 @@
               <el-table-column label="头像" width="80" align="center">
                 <template #default="{ row }">
                   <el-avatar :size="32" :src="row.avatar || ''" fit="cover">
-                    <ColorAvatar :name="row.nickName || row.userName || '?'" :gender="row.userGender || '' " :size="32" />
+                    <ColorAvatar
+                      :name="row.nickName || row.userName || '?'"
+                      :gender="row.userGender || ''"
+                      :size="32"
+                    />
                   </el-avatar>
                 </template>
               </el-table-column>
@@ -165,7 +169,11 @@
               <el-table-column label="头像" width="80" align="center">
                 <template #default="{ row }">
                   <el-avatar :size="32" :src="row.avatar || ''" fit="cover">
-                    <ColorAvatar :name="row.nickName || row.userName || '?'" :gender="row.userGender || '' " :size="32" />
+                    <ColorAvatar
+                      :name="row.nickName || row.userName || '?'"
+                      :gender="row.userGender || ''"
+                      :size="32"
+                    />
                   </el-avatar>
                 </template>
               </el-table-column>
@@ -214,12 +222,7 @@
       </div>
     </div>
 
-    <ArtDialog
-      v-model="addManagerVisible"
-      title="添加部门管理者"
-      icon="mdi:crown"
-      width="560px"
-    >
+    <ArtDialog v-model="addManagerVisible" title="添加部门管理者" icon="mdi:crown" width="560px">
       <div class="dialog-search">
         <el-input
           v-model="userSearchText"
@@ -240,7 +243,11 @@
             >
               <el-checkbox :model-value="selectedUserIds.includes(user.id)" @click.stop />
               <el-avatar :size="36" :src="user.avatar || ''" class="item-avatar" fit="cover">
-                <ColorAvatar :name="user.nickName || user.userName || '?'" :gender="user.userGender || '' " :size="36" />
+                <ColorAvatar
+                  :name="user.nickName || user.userName || '?'"
+                  :gender="user.userGender || ''"
+                  :size="36"
+                />
               </el-avatar>
               <div class="item-info">
                 <div class="item-name">{{ user.nickName || user.userName }}</div>
@@ -299,7 +306,11 @@
             >
               <el-checkbox :model-value="selectedUserIds.includes(user.id)" @click.stop />
               <el-avatar :size="36" :src="user.avatar || ''" class="item-avatar" fit="cover">
-                <ColorAvatar :name="user.nickName || user.userName || '?'" :gender="user.userGender || '' " :size="36" />
+                <ColorAvatar
+                  :name="user.nickName || user.userName || '?'"
+                  :gender="user.userGender || ''"
+                  :size="36"
+                />
               </el-avatar>
               <div class="item-info">
                 <div class="item-name">{{ user.nickName || user.userName }}</div>
@@ -343,7 +354,11 @@
       <div v-if="profileUser" class="profile-card">
         <div class="profile-header">
           <el-avatar :size="72" :src="profileUser.avatar || ''" class="profile-avatar" fit="cover">
-            <ColorAvatar :name="profileUser.nickName || profileUser.userName || '?'" :gender="profileUser.userGender || '' " :size="72" />
+            <ColorAvatar
+              :name="profileUser.nickName || profileUser.userName || '?'"
+              :gender="profileUser.userGender || ''"
+              :size="72"
+            />
           </el-avatar>
           <div class="profile-name">{{ profileUser.nickName || profileUser.userName }}</div>
           <div class="profile-role">@{{ profileUser.userName }}</div>
@@ -510,7 +525,9 @@
     selectedUserIds.value = [];
     await loadAllUsers();
     addManagerVisible.value = false;
-    nextTick(() => { addManagerVisible.value = true; });
+    nextTick(() => {
+      addManagerVisible.value = true;
+    });
   };
   const submitAddManagers = async () => {
     if (!selectedUserIds.value.length) return ElMessage.warning('请至少选择一个用户');
@@ -542,7 +559,9 @@
     selectedUserIds.value = [];
     await loadAllUsers();
     addMemberVisible.value = false;
-    nextTick(() => { addMemberVisible.value = true; });
+    nextTick(() => {
+      addMemberVisible.value = true;
+    });
   };
   const submitAddMembers = async () => {
     if (!selectedUserIds.value.length) return ElMessage.warning('请至少选择一个用户');
@@ -573,7 +592,9 @@
   const openProfileDialog = (row: any) => {
     profileUser.value = row;
     profileVisible.value = false;
-    nextTick(() => { profileVisible.value = true; });
+    nextTick(() => {
+      profileVisible.value = true;
+    });
   };
 
   onMounted(async () => {
@@ -595,28 +616,21 @@
 </script>
 
 <style scoped lang="scss">
-  /* 基础变量与颜色重置 */
-  $bg-color: #f2f3f5;
-  $panel-bg: #ffffff;
-  $border-color: #e5e6eb;
+  /* 基础变量与颜色重置 - 使用框架 CSS 变量适配亮/暗模式 */
   $primary-color: var(--el-color-primary);
-  $text-main: #1d2129;
-  $text-regular: #4e5969;
-  $text-secondary: #86909c;
-  $hover-bg: #f2f3f5;
 
   .org-wrapper {
     display: flex;
     height: 100%;
     width: 100%;
-    background-color: $bg-color;
+    background-color: var(--art-main-bg-color);
     padding: 16px;
     gap: 16px;
     box-sizing: border-box;
 
     /* 通用面板样式 */
     .panel {
-      background: $panel-bg;
+      background: var(--default-box-color);
       border-radius: 8px;
       box-shadow: 0 2px 5px rgba(0, 0, 0, 0.02);
       display: flex;
@@ -632,14 +646,14 @@
 
     .panel-header {
       padding: 16px 20px;
-      border-bottom: 1px solid $border-color;
+      border-bottom: 1px solid var(--art-card-border);
 
       .header-title {
         display: flex;
         align-items: center;
         font-size: 16px;
         font-weight: 600;
-        color: $text-main;
+        color: var(--el-text-color-primary);
 
         .title-mark {
           width: 4px;
@@ -671,7 +685,7 @@
           transition: all 0.2s ease;
 
           &:hover {
-            background-color: $hover-bg;
+            background-color: var(--el-fill-color-light);
           }
         }
 
@@ -687,7 +701,7 @@
         align-items: center;
         width: 100%;
         font-size: 14px;
-        color: $text-regular;
+        color: var(--el-text-color-regular);
         padding-right: 8px;
 
         .node-icon {
@@ -728,7 +742,7 @@
 
     .global-empty {
       height: 100%;
-      background: $panel-bg;
+      background: var(--default-box-color);
       border-radius: 8px;
       display: flex;
       align-items: center;
@@ -736,7 +750,7 @@
       flex-direction: column;
 
       &.placeholder-view {
-        color: $text-secondary;
+        color: var(--el-text-color-secondary);
         gap: 16px;
 
         .placeholder-icon {
@@ -753,7 +767,7 @@
       gap: 16px;
 
       .dept-title-bar {
-        background: $panel-bg;
+        background: var(--default-box-color);
         padding: 16px 24px;
         border-radius: 8px;
         display: flex;
@@ -768,14 +782,14 @@
         .title-text {
           font-size: 18px;
           font-weight: 600;
-          color: $text-main;
+          color: var(--el-text-color-primary);
         }
       }
 
       /* 上下分块的数据卡片 */
       .data-card {
         flex: 1;
-        background: $panel-bg;
+        background: var(--default-box-color);
         border-radius: 8px;
         display: flex;
         flex-direction: column;
@@ -787,18 +801,18 @@
           justify-content: space-between;
           align-items: center;
           padding: 14px 24px;
-          border-bottom: 1px solid $border-color;
+          border-bottom: 1px solid var(--art-card-border);
 
           .card-title {
             font-size: 15px;
             font-weight: 600;
-            color: $text-main;
+            color: var(--el-text-color-primary);
             display: flex;
             align-items: center;
             gap: 8px;
 
             .text-warning {
-              color: #ff7d00;
+              color: var(--el-color-warning);
               font-size: 18px;
             }
             .text-primary {
@@ -807,8 +821,8 @@
             }
 
             .count-badge {
-              background-color: #fff7e8;
-              color: #ff7d00;
+              background-color: var(--el-color-warning-light-9);
+              color: var(--el-color-warning);
               padding: 0 8px;
               border-radius: 10px;
               font-size: 12px;
@@ -838,8 +852,8 @@
             border-radius: 4px;
 
             th.el-table__cell {
-              background-color: #f7f8fa;
-              color: $text-main;
+              background-color: var(--el-fill-color-light);
+              color: var(--el-text-color-primary);
               font-weight: 600;
             }
           }
@@ -856,7 +870,7 @@
     color: var(--el-color-danger);
   }
   .text-muted {
-    color: $text-secondary;
+    color: var(--el-text-color-secondary);
   }
 
   /* ================= 弹窗样式美化 ================= */
@@ -870,10 +884,10 @@
     }
 
     .user-select-container {
-      border: 1px solid $border-color;
+      border: 1px solid var(--el-border);
       border-radius: 6px;
       padding: 8px;
-      background: #fafafa;
+      background: var(--el-fill-color-blank);
 
       .user-list {
         display: flex;
@@ -885,7 +899,7 @@
           align-items: center;
           gap: 12px;
           padding: 10px 14px;
-          background: $panel-bg;
+          background: var(--default-box-color);
           border: 1px solid transparent;
           border-radius: 6px;
           cursor: pointer;
@@ -905,11 +919,11 @@
             .item-name {
               font-size: 14px;
               font-weight: 500;
-              color: $text-main;
+              color: var(--el-text-color-primary);
             }
             .item-sub {
               font-size: 12px;
-              color: $text-secondary;
+              color: var(--el-text-color-secondary);
               margin-top: 2px;
             }
           }
@@ -925,7 +939,7 @@
 
       .selected-text {
         font-size: 13px;
-        color: $text-regular;
+        color: var(--el-text-color-regular);
         strong {
           color: $primary-color;
           font-size: 16px;
@@ -942,27 +956,27 @@
     .profile-header {
       margin-bottom: 24px;
       .profile-avatar {
-        border: 2px solid $border-color;
+        border: 2px solid var(--art-card-border);
         margin-bottom: 12px;
         display: inline-flex;
         align-items: center;
         justify-content: center;
-        background: #f4f4f5;
+        background: var(--el-fill-color-light);
       }
       .profile-name {
         font-size: 18px;
         font-weight: 600;
-        color: $text-main;
+        color: var(--el-text-color-primary);
       }
       .profile-role {
         font-size: 13px;
-        color: $text-secondary;
+        color: var(--el-text-color-secondary);
         margin-top: 4px;
       }
     }
 
     .profile-details {
-      background: $bg-color;
+      background: var(--art-main-bg-color);
       border-radius: 8px;
       padding: 16px;
       display: flex;
@@ -976,7 +990,7 @@
         font-size: 14px;
 
         .label {
-          color: $text-secondary;
+          color: var(--el-text-color-secondary);
           display: flex;
           align-items: center;
           gap: 6px;
@@ -986,7 +1000,7 @@
           }
         }
         .value {
-          color: $text-main;
+          color: var(--el-text-color-primary);
           font-weight: 500;
         }
       }
@@ -999,10 +1013,10 @@
   }
 
   .user-select-container {
-    border: 1px solid $border-color;
+    border: 1px solid var(--art-card-border);
     border-radius: 8px;
     padding: 8px;
-    background: #fafafa;
+    background: var(--el-fill-color-blank);
 
     .user-list {
       display: flex;
@@ -1014,7 +1028,7 @@
         align-items: center;
         gap: 12px;
         padding: 10px 14px;
-        background: $panel-bg;
+        background: var(--default-box-color);
         border: 1px solid transparent;
         border-radius: 8px;
         cursor: pointer;
@@ -1035,12 +1049,12 @@
           .item-name {
             font-size: 14px;
             font-weight: 500;
-            color: $text-main;
+            color: var(--el-text-color-primary);
           }
 
           .item-sub {
             font-size: 12px;
-            color: $text-secondary;
+            color: var(--el-text-color-secondary);
             margin-top: 2px;
           }
         }
@@ -1057,7 +1071,7 @@
 
     .selected-text {
       font-size: 13px;
-      color: $text-regular;
+      color: var(--el-text-color-regular);
 
       strong {
         color: $primary-color;

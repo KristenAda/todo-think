@@ -325,7 +325,6 @@
 </script>
 
 <style scoped lang="scss">
-  $bg: #f2f3f5;
   $card-radius: 12px;
   $card-shadow: 0 2px 12px rgba(0, 0, 0, 0.04);
   $card-shadow-hover: 0 8px 24px rgba(0, 0, 0, 0.1);
@@ -338,7 +337,7 @@
   /* ★ 占满高度、阻止外层滚动 */
   .workbench {
     padding: 16px;
-    background: $bg;
+    background: var(--art-main-bg-color);
     height: 100%;
     box-sizing: border-box;
     display: flex;
@@ -347,17 +346,17 @@
     overflow: hidden;
   }
 
-  /* ★ 1. 纯净质感横幅 */
+  /* ★ 1. 欢迎横幅 */
   .workbench__welcome {
     position: relative;
-    background: #ffffff;
+    background: var(--default-box-color);
     border-radius: $card-radius;
     padding: 16px 24px;
     display: flex;
     align-items: center;
     justify-content: space-between;
     box-shadow: 0 1px 4px rgba(0, 0, 0, 0.02);
-    border: 1px solid #ebeef5;
+    border: 1px solid var(--art-card-border);
     flex-shrink: 0;
     overflow: hidden;
 
@@ -384,7 +383,7 @@
       position: relative;
 
       .welcome-avatar {
-        border: 2px solid #ffffff;
+        border: 2px solid var(--default-box-color);
         box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
         background-color: var(--el-color-primary-light-9);
         color: var(--el-color-primary);
@@ -394,11 +393,11 @@
         position: absolute;
         bottom: -2px;
         right: -4px;
-        background: #ffffff;
+        background: var(--default-box-color);
         border-radius: 50%;
         padding: 3px;
         box-shadow: 0 2px 6px rgba(0, 0, 0, 0.12);
-        color: #f59e0b;
+        color: $color-pending;
         font-size: 12px;
         display: flex;
         align-items: center;
@@ -415,7 +414,7 @@
     .welcome-title {
       font-size: 18px;
       font-weight: 600;
-      color: #1f2937;
+      color: var(--el-text-color-primary);
       letter-spacing: 0.5px;
     }
 
@@ -425,7 +424,7 @@
 
     .welcome-desc {
       font-size: 13px;
-      color: #6b7280;
+      color: var(--el-text-color-secondary);
 
       strong {
         font-weight: 600;
@@ -444,7 +443,7 @@
     .welcome-right {
       z-index: 1;
       padding-left: 24px;
-      border-left: 1px dashed #e5e7eb;
+      border-left: 1px dashed var(--art-card-border);
     }
 
     .welcome-date-widget {
@@ -458,7 +457,7 @@
         align-items: center;
         gap: 6px;
         font-size: 12px;
-        color: #9ca3af;
+        color: var(--el-text-color-placeholder);
 
         .art-svg-icon {
           font-size: 14px;
@@ -468,7 +467,7 @@
       .date-value {
         font-size: 15px;
         font-weight: 600;
-        color: #374151;
+        color: var(--el-text-color-primary);
         letter-spacing: 0.5px;
       }
     }
@@ -489,7 +488,7 @@
   }
 
   .stat-card {
-    background: #fff;
+    background: var(--default-box-color);
     border-radius: $card-radius;
     box-shadow: $card-shadow;
     padding: 14px 16px;
@@ -512,7 +511,7 @@
     }
     &__label {
       font-size: 12px;
-      color: #888;
+      color: var(--el-text-color-secondary);
       font-weight: 500;
       margin-bottom: 4px;
     }
@@ -524,7 +523,7 @@
     }
     &__desc {
       font-size: 11px;
-      color: #bbb;
+      color: var(--el-text-color-placeholder);
     }
     &__icon-wrap {
       width: 44px;
@@ -541,43 +540,23 @@
 
     &--pending {
       border-left-color: $color-pending;
-      .stat-card__value {
-        color: $color-pending;
-      }
-      .stat-card__icon-wrap {
-        background: rgba($color-pending, 0.1);
-        color: $color-pending;
-      }
+      .stat-card__value { color: $color-pending; }
+      .stat-card__icon-wrap { background: rgba($color-pending, 0.1); color: $color-pending; }
     }
     &--qa {
       border-left-color: $color-qa;
-      .stat-card__value {
-        color: $color-qa;
-      }
-      .stat-card__icon-wrap {
-        background: rgba($color-qa, 0.1);
-        color: $color-qa;
-      }
+      .stat-card__value { color: $color-qa; }
+      .stat-card__icon-wrap { background: rgba($color-qa, 0.1); color: $color-qa; }
     }
     &--completed {
       border-left-color: $color-completed;
-      .stat-card__value {
-        color: $color-completed;
-      }
-      .stat-card__icon-wrap {
-        background: rgba($color-completed, 0.1);
-        color: $color-completed;
-      }
+      .stat-card__value { color: $color-completed; }
+      .stat-card__icon-wrap { background: rgba($color-completed, 0.1); color: $color-completed; }
     }
     &--bug {
       border-left-color: $color-bug;
-      .stat-card__value {
-        color: $color-bug;
-      }
-      .stat-card__icon-wrap {
-        background: rgba($color-bug, 0.1);
-        color: $color-bug;
-      }
+      .stat-card__value { color: $color-bug; }
+      .stat-card__icon-wrap { background: rgba($color-bug, 0.1); color: $color-bug; }
     }
   }
 
@@ -586,17 +565,18 @@
     width: 40px;
     height: 28px;
     border-radius: 4px;
-    background: linear-gradient(90deg, #f0f0f0 25%, #e4e4e4 50%, #f0f0f0 75%);
+    background: linear-gradient(
+      90deg,
+      var(--el-fill-color-light) 25%,
+      var(--el-fill-color) 50%,
+      var(--el-fill-color-light) 75%
+    );
     background-size: 200% 100%;
     animation: shimmer 1.4s infinite;
   }
   @keyframes shimmer {
-    0% {
-      background-position: 200% 0;
-    }
-    100% {
-      background-position: -200% 0;
-    }
+    0% { background-position: 200% 0; }
+    100% { background-position: -200% 0; }
   }
 
   // ===== 三列看板 =====
@@ -613,7 +593,7 @@
   }
 
   .board-col {
-    background: #fff;
+    background: var(--default-box-color);
     border-radius: $card-radius;
     box-shadow: $card-shadow;
     display: flex;
@@ -626,7 +606,7 @@
       align-items: center;
       justify-content: space-between;
       padding: 14px 16px;
-      border-bottom: 1px solid #f0f0f0;
+      border-bottom: 1px solid var(--art-card-border);
       flex-shrink: 0;
     }
     &__title {
@@ -635,26 +615,20 @@
       gap: 7px;
       font-size: 14px;
       font-weight: 600;
-      color: #333;
+      color: var(--el-text-color-primary);
     }
     &__dot {
       width: 8px;
       height: 8px;
       border-radius: 50%;
       flex-shrink: 0;
-      &--pending {
-        background: $color-pending;
-      }
-      &--qa {
-        background: $color-qa;
-      }
-      &--done {
-        background: $color-completed;
-      }
+      &--pending { background: $color-pending; }
+      &--qa { background: $color-qa; }
+      &--done { background: $color-completed; }
     }
     &__hicon {
       font-size: 17px;
-      color: #666;
+      color: var(--el-text-color-secondary);
     }
 
     &__list {
@@ -665,16 +639,12 @@
       gap: 10px;
       overflow-y: auto;
 
-      &::-webkit-scrollbar {
-        width: 6px;
-      }
+      &::-webkit-scrollbar { width: 6px; }
       &::-webkit-scrollbar-thumb {
-        background: #dfdfdf;
+        background: var(--el-border-color);
         border-radius: 3px;
       }
-      &::-webkit-scrollbar-track {
-        background: transparent;
-      }
+      &::-webkit-scrollbar-track { background: transparent; }
     }
 
     &__empty {
@@ -684,7 +654,7 @@
       justify-content: center;
       gap: 8px;
       padding: 40px 0;
-      color: #ccc;
+      color: var(--el-text-color-placeholder);
       font-size: 13px;
       height: 100%;
     }
@@ -692,16 +662,14 @@
 
   .empty-icon {
     font-size: 40px;
-    color: #d0d0d0;
-    &--ok {
-      color: #a7f3d0;
-    }
+    color: var(--el-text-color-disabled);
+    &--ok { color: #a7f3d0; }
   }
 
   // ===== 任务卡片 =====
   .task-card {
-    background: #fafafa;
-    border: 1px solid #f0f0f0;
+    background: var(--el-fill-color-blank);
+    border: 1px solid var(--art-card-border);
     border-radius: 8px;
     padding: 12px 14px;
     display: flex;
@@ -717,21 +685,17 @@
       &:hover {
         transform: translateY(-2px);
         box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
-        border-color: #d0d0d0;
-        .task-card__action {
-          opacity: 1;
-        }
+        border-color: var(--el-border-color);
+        .task-card__action { opacity: 1; }
       }
     }
-    &--qa {
-      border-left: 3px solid $color-qa;
-    }
+    &--qa { border-left: 3px solid $color-qa; }
     &--done {
       opacity: 0.75;
       .task-card__title {
-        color: #888;
+        color: var(--el-text-color-secondary);
         text-decoration: line-through;
-        text-decoration-color: #ddd;
+        text-decoration-color: var(--el-border-color);
       }
     }
 
@@ -740,18 +704,16 @@
       align-items: center;
       gap: 4px;
       font-size: 11px;
-      color: #aaa;
+      color: var(--el-text-color-placeholder);
       font-weight: 500;
       text-transform: uppercase;
       letter-spacing: 0.3px;
     }
-    &__proj-icon {
-      font-size: 13px;
-    }
+    &__proj-icon { font-size: 13px; }
     &__title {
       font-size: 14px;
       font-weight: 600;
-      color: #1a1a2e;
+      color: var(--el-text-color-primary);
       line-height: 1.4;
       display: -webkit-box;
       -webkit-line-clamp: 2;
@@ -766,7 +728,7 @@
     }
     &__time {
       font-size: 12px;
-      color: #bbb;
+      color: var(--el-text-color-placeholder);
       flex: 1;
     }
     &__action {
@@ -784,10 +746,7 @@
         font-size: 14px;
         transition: transform $transition;
       }
-
-      &:hover .action-icon {
-        transform: translateX(2px);
-      }
+      &:hover .action-icon { transform: translateX(2px); }
     }
   }
 </style>

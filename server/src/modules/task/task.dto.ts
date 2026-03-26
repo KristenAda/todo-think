@@ -100,3 +100,12 @@ export const QaAuditDto = z.object({
   actualHours: z.number().positive().optional(), // 全部通过时必传
 });
 export type QaAuditDtoType = z.infer<typeof QaAuditDto>;
+
+// ==================== Performance DTOs ====================
+
+export const PerformancePageDto = z.object({
+  page: z.coerce.number().int().positive().default(1),
+  pageSize: z.coerce.number().int().positive().max(1000).default(10),
+  projectId: z.coerce.number().int().positive().optional(),
+});
+export type PerformancePageDtoType = z.infer<typeof PerformancePageDto>;

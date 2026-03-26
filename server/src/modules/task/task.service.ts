@@ -9,6 +9,7 @@ import {
   CreateWorkLogDtoType,
   SubmitTestDtoType,
   QaAuditDtoType,
+  PerformancePageDtoType,
 } from './task.dto';
 
 // 用户基础信息 select
@@ -425,14 +426,15 @@ export const taskService = new TaskService();
 // =====================================================================
 
 class PerformanceService {
-  async stats(projectId?: number) {
+  async stats(dto: PerformancePageDtoType) {
+    const { page, pageSize, projectId } = dto;
     const where: any = { status: 'COMPLETED' };
     if (projectId) where.projectId = projectId;
 
     const completedTasks = await prisma.task.findMany({
       where,
       include: {
-        mainAssignee: { select: { id: true, userName: true, nickName: true, avatar: true } },
+        mainAssignee: { select: { id: true, userName: true, nickName: true, avatar: true, userEmail: true } },
         testCases: true,
       },
     });
@@ -470,12 +472,17 @@ class PerformanceService {
       if (bugCount === 0) stat.firstPassCount += 1;
     }
 
-    return Array.from(map.values()).map((s) => ({
+    const allStats = Array.from(map.values()).map((s) => ({
       ...s,
       firstPassRate: s.totalTasks > 0
         ? Math.round((s.firstPassCount / s.totalTasks) * 100)
         : 0,
     }));
+
+    const total = allStats.length;
+    const skip = (page - 1) * pageSize;
+    const list = allStats.slice(skip, skip + pageSize);
+    return { list, total };
   }
 }
 

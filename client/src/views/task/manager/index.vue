@@ -281,20 +281,20 @@ onMounted(() => { loadTasks(); loadProjects(); loadUsers(); });
 .task-manager-wrapper { padding: 20px; display: flex; flex-direction: column; gap: 16px; }
 .search-bar {
   display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px;
-  background: var(--art-main-bg-color, #fff); padding: 16px 20px; border-radius: 8px;
+  background: var(--default-box-color); padding: 16px 20px; border-radius: 8px;
   box-shadow: 0 1px 4px rgba(0,0,0,.06);
   .bar-left { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
 }
 .table-card {
-  background: var(--art-main-bg-color, #fff); border-radius: 8px;
+  background: var(--default-box-color); border-radius: 8px;
   box-shadow: 0 1px 4px rgba(0,0,0,.06); padding: 16px 20px;
 }
 .pagination-bar { margin-top: 16px; display: flex; justify-content: flex-end; }
 .user-cell { display: flex; align-items: center; gap: 8px; font-size: 13px; }
-.text-muted { color: #999; font-size: 13px; }
+.text-muted { color: var(--el-text-color-placeholder); font-size: 13px; }
 .avatar-group { display: flex; align-items: center; }
-.stacked-avatar { margin-left: -8px; border: 2px solid #fff; }
-.more-count { font-size: 12px; color: #666; margin-left: 4px; }
+.stacked-avatar { margin-left: -8px; border: 2px solid var(--default-box-color); }
+.more-count { font-size: 12px; color: var(--el-text-color-secondary); margin-left: 4px; }
 .test-case-list { display: flex; flex-direction: column; gap: 10px; }
 .test-case-item {
   display: flex; align-items: flex-start; gap: 10px;
