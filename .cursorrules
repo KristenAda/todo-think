@@ -135,3 +135,22 @@
 ## 6. 避坑指南 (Critical Fixes Context)
 - **前端代理拦截**: 前端 Vite proxy 默认拦截 `/api`，发给后端时**必须确认**是否需要 rewrite 去掉 `/api`，或者后端路由自带了 `/api` 前缀。
 - **响应体字段**: 前端统一解构的提示信息字段是 `message` 而非 `msg`，后端 `core/result.ts` 返回的结构是 `{ code, message, data }`，必须严格匹配，否则前端拦截器会报错。
+
+
+# 代码生成与格式化规范
+
+你在生成、修改或重构代码时，必须严格遵守本项目的 ESLint 和 Prettier 配置。请在生成代码前，优先参考项目根目录下的 `.prettierrc` (或类似配置文件) 和 `.eslintrc` (或 `eslint.config.js`)。
+
+## 核心要求：
+1. **Prettier 优先**：严格遵循项目的缩进（Spaces vs Tabs）、引号类型（单引号 vs 双引号）、末尾逗号（Trailing Commas）和分号（Semicolons）等规则。
+2. **ESLint 合规**：
+   - 避免生成会触发 ESLint 警告或错误的代码。
+   - 遵守项目中关于变量声明（优先使用 `const` 和 `let`，禁用 `var`）、解构赋值、箭头函数等语法规范。
+   - 如果项目使用了 TypeScript，请遵守 `@typescript-eslint` 的相关规则（如明确返回类型、避免使用 `any` 等）。
+   - 如果项目是 React/Vue，请遵守对应的 Hooks 依赖规则或模板规范。
+3. **未引用的变量**：不要生成声明了但未使用的变量或导入（No unused vars / No unused imports）。
+4. **代码整洁**：生成的代码不应该包含多余的空行，且块级作用域的括号风格需与现有代码库保持一致。
+
+## 行为准则：
+- 如果你不确定某个具体的格式化规则，请观察当前被编辑文件或项目中其他文件的上下文代码风格，并保持绝对一致。
+- 生成的代码必须是可以直接通过 `npm run lint` 或 `npm run format` 检查的代码。

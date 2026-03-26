@@ -2,7 +2,7 @@
 
 /* 授权页右侧区域 */
 .auth-right-wrap {
-  @apply absolute inset-0 w-[440px] h-[650px] py-[5px] m-auto overflow-hidden
+  @apply absolute inset-0 w-[440px] h-[650px] py-[5px] m-auto overflow-visible
     max-sm:px-7 max-sm:w-full
     animate-[slideInRight_0.6s_cubic-bezier(0.25,0.46,0.45,0.94)_forwards]
     max-md:animate-none;
@@ -12,15 +12,15 @@
   }
 
   .title {
-    @apply text-g-900 text-4xl font-semibold max-md:text-3xl max-sm:pt-10;
+    @apply text-4xl font-bold max-md:text-3xl max-sm:pt-10;
+    /* 文字增加渐变色，提升高级感 */
+    background: linear-gradient(135deg, var(--art-gray-900) 0%, var(--art-gray-600) 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
   }
 
   .sub-title {
-    @apply mt-[10px] text-g-600 text-sm;
-  }
-
-  .custom-height {
-    @apply !h-[40px];
+    @apply mt-[12px] text-g-500 text-[15px] font-medium tracking-wide;
   }
 }
 

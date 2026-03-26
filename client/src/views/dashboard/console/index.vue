@@ -85,7 +85,10 @@
                 {{ statusLabel(task.status) }}
               </el-tag>
               <span class="task-card__time">{{ fromNow(task.updatedAt) }}</span>
-              <span class="task-card__action">去处理 ›</span>
+              <span class="task-card__action">
+                去处理
+                <art-svg-icon icon="ri:arrow-right-line" class="action-icon" />
+              </span>
             </div>
           </div>
         </div>
@@ -119,7 +122,10 @@
             <div class="task-card__footer">
               <el-tag type="warning" size="small" round>验收中</el-tag>
               <span class="task-card__time">{{ fromNow(task.updatedAt) }}</span>
-              <span class="task-card__action">去验收 ›</span>
+              <span class="task-card__action">
+                去验收
+                <art-svg-icon icon="ri:arrow-right-line" class="action-icon" />
+              </span>
             </div>
           </div>
         </div>
@@ -153,7 +159,10 @@
             <div class="task-card__footer">
               <el-tag type="success" size="small" round>已完成</el-tag>
               <span class="task-card__time">{{ fromNow(task.updatedAt) }}</span>
-              <span class="task-card__action">查看 ›</span>
+              <span class="task-card__action">
+                查看
+                <art-svg-icon icon="ri:arrow-right-line" class="action-icon" />
+              </span>
             </div>
           </div>
         </div>
@@ -767,6 +776,18 @@
       opacity: 0;
       transition: opacity $transition;
       white-space: nowrap;
+      display: flex;
+      align-items: center;
+      gap: 2px;
+
+      .action-icon {
+        font-size: 14px;
+        transition: transform $transition;
+      }
+
+      &:hover .action-icon {
+        transform: translateX(2px);
+      }
     }
   }
 </style>

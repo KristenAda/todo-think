@@ -16,9 +16,11 @@
     >
       <div class="flex-c flex-1 min-w-0 leading-15" style="display: flex">
         <!-- 系统信息  -->
-        <div class="flex-c c-p" @click="toHome" v-if="isTopMenu">
-          <ArtLogo class="pl-4.5" />
-          <p v-if="width >= 1400" class="my-0 mx-2 ml-2 text-lg">{{ AppConfig.systemInfo.name }}</p>
+        <div class="system-info-container flex-c c-p" @click="toHome" v-if="isTopMenu">
+          <ArtLogo class="pl-4.5 logo-icon" />
+          <div v-if="width >= 1400" class="system-name-wrapper">
+            <p class="system-name">{{ AppConfig.systemInfo.name }}</p>
+          </div>
         </div>
 
         <ArtLogo
@@ -481,5 +483,60 @@
     .btn-box {
       width: 40px;
     }
+  }
+
+  /* System info styling */
+  .system-info-container {
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    border-radius: 8px;
+    padding: 0 12px;
+    margin-left: 8px;
+
+    // &:hover {
+    //   background: linear-gradient(
+    //     135deg,
+    //     rgba(99, 102, 241, 0.08) 0%,
+    //     rgba(139, 92, 246, 0.08) 100%
+    //   );
+    //   // transform: translateY(-1px);
+    // }
+  }
+
+  .logo-icon {
+    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    display: flex;
+    align-items: center;
+
+    // .system-info-container:hover & {
+    //   transform: scale(1.05) rotate(2deg);
+    // }
+  }
+
+  .system-name-wrapper {
+    display: flex;
+    align-items: center;
+    margin-left: 12px;
+    height: 100%;
+  }
+
+  .system-name {
+    margin: 0;
+    padding: 0;
+    font-size: 16px;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+    background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 50%, #d946ef 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+
+    // .system-info-container:hover & {
+    //   letter-spacing: 1px;
+    //   filter: drop-shadow(0 0 8px rgba(99, 102, 241, 0.3));
+    // }
   }
 </style>

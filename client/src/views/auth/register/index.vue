@@ -7,45 +7,66 @@
 
       <div class="auth-right-wrap">
         <div class="form">
-          <h3 class="title">{{ $t('register.title') }}</h3>
-          <p class="sub-title">{{ $t('register.subTitle') }}</p>
+          <div class="mb-8">
+            <h3 class="title">{{ $t('register.title') }}</h3>
+            <p class="sub-title">{{ $t('register.subTitle') }}</p>
+          </div>
+
           <ElForm
-            class="mt-7.5"
             ref="formRef"
             :model="formData"
             :rules="rules"
             label-position="top"
             :key="formKey"
+            hide-required-asterisk
+            @keyup.enter="register"
           >
-            <ElFormItem prop="username">
+            <ElFormItem prop="username" :label="$t('register.placeholder.username')">
               <ElInput
-                class="custom-height"
+                class="custom-height login-input"
                 v-model.trim="formData.username"
                 :placeholder="$t('register.placeholder.username')"
-              />
+              >
+                <template #prefix>
+                  <div class="icon-wrapper">
+                    <ArtSvgIcon icon="solar:user-bold-duotone" class="input-icon" />
+                  </div>
+                </template>
+              </ElInput>
             </ElFormItem>
 
-            <ElFormItem prop="password">
+            <ElFormItem prop="password" :label="$t('register.placeholder.password')">
               <ElInput
-                class="custom-height"
+                class="custom-height login-input"
                 v-model.trim="formData.password"
                 :placeholder="$t('register.placeholder.password')"
                 type="password"
                 autocomplete="off"
                 show-password
-              />
+              >
+                <template #prefix>
+                  <div class="icon-wrapper">
+                    <ArtSvgIcon icon="solar:lock-password-bold-duotone" class="input-icon" />
+                  </div>
+                </template>
+              </ElInput>
             </ElFormItem>
 
-            <ElFormItem prop="confirmPassword">
+            <ElFormItem prop="confirmPassword" :label="$t('register.placeholder.confirmPassword')">
               <ElInput
-                class="custom-height"
+                class="custom-height login-input"
                 v-model.trim="formData.confirmPassword"
                 :placeholder="$t('register.placeholder.confirmPassword')"
                 type="password"
                 autocomplete="off"
-                @keyup.enter="register"
                 show-password
-              />
+              >
+                <template #prefix>
+                  <div class="icon-wrapper">
+                    <ArtSvgIcon icon="solar:shield-keyhole-bold-duotone" class="input-icon" />
+                  </div>
+                </template>
+              </ElInput>
             </ElFormItem>
 
             <ElFormItem prop="agreement">
@@ -59,9 +80,9 @@
               </ElCheckbox>
             </ElFormItem>
 
-            <div style="margin-top: 15px">
+            <div style="margin-top: 20px; padding: 4px 4px 12px">
               <ElButton
-                class="w-full custom-height"
+                class="w-full btn-login"
                 type="primary"
                 @click="register"
                 :loading="loading"
@@ -71,9 +92,9 @@
               </ElButton>
             </div>
 
-            <div class="mt-5 text-sm text-g-600">
+            <div class="mt-6 text-sm text-gray-500 text-center font-medium">
               <span>{{ $t('register.hasAccount') }}</span>
-              <RouterLink class="text-theme" :to="{ name: 'Login' }">{{
+              <RouterLink class="text-theme hover:underline transition-all" :to="{ name: 'Login' }">{{
                 $t('register.toLogin')
               }}</RouterLink>
             </div>
@@ -88,7 +109,6 @@
   import { useI18n } from 'vue-i18n';
   import type { FormInstance, FormRules } from 'element-plus';
   import { fetchRegister } from '@/api/auth';
-  // useRouter, ref, reactive, watch, computed 会由 unplugin-auto-import 自动导入，无需手动写 import
 
   defineOptions({ name: 'Register' });
 
@@ -123,27 +143,17 @@
     agreement: false
   });
 
-  /**
-   * 验证密码
-   * 当密码输入后，如果确认密码已填写，则触发确认密码的验证
-   */
   const validatePassword = (_rule: any, value: string, callback: (error?: Error) => void) => {
     if (!value) {
       callback(new Error(t('register.placeholder.password')));
       return;
     }
-
     if (formData.confirmPassword) {
       formRef.value?.validateField('confirmPassword');
     }
-
     callback();
   };
 
-  /**
-   * 验证确认密码
-   * 检查确认密码是否与密码一致
-   */
   const validateConfirmPassword = (
     _rule: any,
     value: string,
@@ -153,19 +163,13 @@
       callback(new Error(t('register.rule.confirmPasswordRequired')));
       return;
     }
-
     if (value !== formData.password) {
       callback(new Error(t('register.rule.passwordMismatch')));
       return;
     }
-
     callback();
   };
 
-  /**
-   * 验证用户协议
-   * 确保用户已勾选同意协议
-   */
   const validateAgreement = (_rule: any, value: boolean, callback: (error?: Error) => void) => {
     if (!value) {
       callback(new Error(t('register.rule.agreementRequired')));
@@ -192,32 +196,20 @@
     agreement: [{ validator: validateAgreement, trigger: 'change' }]
   }));
 
-  /**
-   * 注册用户
-   * 验证表单后提交注册请求
-   */
   const register = async () => {
     if (!formRef.value) return;
 
     try {
-      // 1. 触发前端表单验证
       await formRef.value.validate();
       loading.value = true;
 
-      // 2. 组装发给后端的数据
-      // 剔除 confirmPassword 和 agreement，并且把 username 映射为后端需要的 userName
       const submitData = {
         userName: formData.username,
         password: formData.password
       };
 
-      // 3. 调用真实 API
       await fetchRegister(submitData);
-
       loading.value = false;
-
-      // 4. 注册成功后跳转登录页
-      // （http 拦截器里由于传入了 showSuccessMessage: true 或后端自带的 msg，默认会弹出提示，不需要自己写 ElMessage）
       toLogin();
     } catch (error) {
       console.error('表单验证或注册失败:', error);
@@ -225,9 +217,6 @@
     }
   };
 
-  /**
-   * 跳转到登录页面
-   */
   const toLogin = () => {
     setTimeout(() => {
       router.push({ name: 'Login' });
@@ -237,4 +226,111 @@
 
 <style scoped>
   @import '../login/style.css';
+</style>
+
+<style lang="scss" scoped>
+  :deep(.el-form-item__label) {
+    display: block;
+    width: 100%;
+    text-align: left;
+    line-height: 1.4;
+    padding-bottom: 8px;
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--art-gray-800);
+    letter-spacing: 0.3px;
+  }
+
+  :deep(.el-form-item) {
+    flex-direction: column;
+    align-items: flex-start;
+    margin-bottom: 20px;
+  }
+
+  :deep(.el-form-item__content) {
+    width: 100%;
+  }
+
+  /* ---------------- 美化输入框 ---------------- */
+  .custom-height {
+    height: 46px !important;
+  }
+
+  :deep(.login-input .el-input__wrapper) {
+    border-radius: 12px;
+    box-shadow: 0 0 0 1.5px var(--art-border-color) inset;
+    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    background: var(--art-main-bg-color);
+    padding: 0 14px 0 10px;
+
+    &:hover {
+      box-shadow: 0 0 0 1.5px color-mix(in srgb, var(--main-color) 60%, transparent) inset;
+    }
+
+    &.is-focus {
+      box-shadow:
+        0 0 0 3px color-mix(in srgb, var(--main-color) 18%, transparent),
+        0 0 0 1.5px var(--main-color) inset;
+      background: color-mix(in srgb, var(--main-color) 3%, var(--art-main-bg-color));
+    }
+  }
+
+  /* Chrome 自动填充样式修复 */
+  :deep(.el-input__inner:-webkit-autofill),
+  :deep(.el-input__inner:-webkit-autofill:hover),
+  :deep(.el-input__inner:-webkit-autofill:focus),
+  :deep(.el-input__inner:-webkit-autofill:active) {
+    -webkit-transition-delay: 99999s;
+    -webkit-transition:
+      color 99999s ease-out,
+      background-color 99999s ease-out;
+    -webkit-text-fill-color: var(--art-gray-800) !important;
+  }
+
+  /* ---------------- 彩色图标底座设计 ---------------- */
+  .icon-wrapper {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    border-radius: 8px;
+    background: color-mix(in srgb, var(--main-color) 12%, transparent);
+    color: var(--main-color);
+    margin-right: 6px;
+    transition: all 0.3s ease;
+  }
+
+  :deep(.login-input .el-input__wrapper.is-focus) .icon-wrapper {
+    background: var(--main-color);
+    color: #fff;
+    box-shadow: 0 2px 6px color-mix(in srgb, var(--main-color) 40%, transparent);
+  }
+
+  .input-icon {
+    font-size: 18px;
+  }
+
+  /* ---------------- 注册按钮美化 ---------------- */
+  .btn-login {
+    height: 56px;
+    border-radius: 7px;
+    font-size: 15px;
+    font-weight: 700;
+    letter-spacing: 4px;
+    text-transform: uppercase;
+    color: #fff;
+    background: var(--main-color);
+    border: none;
+    box-shadow: 0 0 12px color-mix(in srgb, var(--main-color) 60%, transparent);
+    transition: 0.5s;
+    transition-property: box-shadow;
+
+    &:hover {
+      box-shadow:
+        0 0 6px color-mix(in srgb, var(--main-color) 50%, transparent),
+        0 0 28px color-mix(in srgb, var(--main-color) 40%, transparent),
+        0 0 48px color-mix(in srgb, var(--main-color) 25%, transparent);
+    }
+  }
 </style>

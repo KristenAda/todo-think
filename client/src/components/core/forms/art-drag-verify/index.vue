@@ -339,7 +339,14 @@
     box-sizing: border-box;
     overflow: hidden;
     text-align: center;
-    border: 1px solid var(--default-border-dashed);
+    border: 1.5px solid var(--art-border-color);
+    border-radius: 10px;
+    transition: border-color 0.25s ease, box-shadow 0.25s ease;
+
+    &:hover {
+      border-color: color-mix(in srgb, var(--main-color) 50%, transparent);
+      box-shadow: 0 0 0 3px color-mix(in srgb, var(--main-color) 10%, transparent);
+    }
 
     .dv_handler {
       position: absolute;
@@ -348,24 +355,31 @@
       display: flex;
       align-items: center;
       justify-content: center;
-      cursor: move;
+      cursor: grab;
+      border-radius: 8px;
+      border-right: 1.5px solid var(--art-border-color);
+      box-shadow: 2px 0 8px rgba(0, 0, 0, 0.08);
+      transition: box-shadow 0.2s ease;
+      z-index: 10;
+
+      &:active {
+        cursor: grabbing;
+        box-shadow: 4px 0 14px rgba(0, 0, 0, 0.15);
+      }
 
       i {
         padding-left: 0;
         font-size: 14px;
         color: #999;
       }
-
-      .el-icon-circle-check {
-        margin-top: 9px;
-        color: #6c6;
-      }
     }
 
     .dv_progress_bar {
       position: absolute;
       width: 0;
-      height: 34px;
+      height: 100%;
+      border-radius: 8px 0 0 8px;
+      opacity: 0.9;
     }
 
     .dv_text {
@@ -374,6 +388,9 @@
       display: flex;
       align-items: center;
       justify-content: center;
+      font-size: 13px;
+      font-weight: 500;
+      letter-spacing: 0.5px;
       color: transparent;
       user-select: none;
       background: linear-gradient(
@@ -398,12 +415,12 @@
 
   .goFirst {
     left: 0 !important;
-    transition: left 0.5s;
+    transition: left 0.5s cubic-bezier(0.4, 0, 0.2, 1);
   }
 
   .goFirst2 {
     width: 0 !important;
-    transition: width 0.5s;
+    transition: width 0.5s cubic-bezier(0.4, 0, 0.2, 1);
   }
 </style>
 
