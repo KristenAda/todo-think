@@ -10,5 +10,9 @@ router.post("/update", userController.update);
 router.post("/delete", userController.delete);
 router.post("/assignRoles", userController.assignRoles);
 router.post("/roles", userController.getRoles);
+// 个人中心
+router.get("/profile", userController.profile);
+router.post("/profile", userController.updateProfile);
+router.post("/change-password", userController.changePassword);
 
 export default router;

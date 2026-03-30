@@ -70,7 +70,7 @@
         <div ref="hoursChartRef" class="chart-box"></div>
       </div>
       <div class="chart-card">
-        <div class="chart-title">Bug 密度 &amp; 一次通过率</div>
+        <div class="chart-title">多维绩效雷达图</div>
         <div ref="bugChartRef" class="chart-box"></div>
       </div>
     </div>
@@ -98,16 +98,16 @@
 </template>
 
 <script setup lang="ts">
-  import { ref, computed, onMounted, nextTick, h } from 'vue';
-  import { ElTag, ElProgress, ElAvatar } from 'element-plus';
+  import { ref, computed, onMounted, onUnmounted, nextTick, h, resolveComponent } from 'vue';
+  import { ElTag, ElProgress, ElImage } from 'element-plus';
   import { fetchPerformanceStats, fetchProjectList } from '@/api/task';
   import { useTable } from '@/hooks/core/useTable';
   import * as echarts from 'echarts/core';
-  import { BarChart } from 'echarts/charts';
-  import { TooltipComponent, GridComponent, LegendComponent } from 'echarts/components';
+  import { BarChart, RadarChart } from 'echarts/charts';
+  import { TooltipComponent, GridComponent, LegendComponent, RadarComponent } from 'echarts/components';
   import { CanvasRenderer } from 'echarts/renderers';
 
-  echarts.use([BarChart, TooltipComponent, GridComponent, LegendComponent, CanvasRenderer]);
+  echarts.use([BarChart, RadarChart, TooltipComponent, GridComponent, LegendComponent, RadarComponent, CanvasRenderer]);
 
   defineOptions({ name: 'Performance' });
 
@@ -177,14 +177,27 @@
         {
           prop: 'user',
           label: '成员',
-          minWidth: 180,
+          minWidth: 200,
           formatter: (row: PerformanceStat) => {
+            const ColorAvatar = resolveComponent('ColorAvatar');
             const displayName = row.user.nickName || row.user.userName;
+            const avatarNode = row.user.avatar
+              ? h(ElImage, {
+                  class: 'size-9 rounded-full flex-shrink-0',
+                  src: row.user.avatar,
+                  previewSrcList: [row.user.avatar],
+                  previewTeleported: true,
+                  fit: 'cover'
+                })
+              : h('div', { class: 'size-9 rounded-full overflow-hidden flex-shrink-0' }, [
+                  h(ColorAvatar, { name: displayName || '?', gender: '', size: 36 })
+                ]);
             return h('div', { class: 'user-cell' }, [
-              h(ElAvatar, { size: 28, src: row.user.avatar ?? undefined }, () =>
-                initials(row.user)
-              ),
-              h('span', {}, displayName)
+              avatarNode,
+              h('div', { class: 'ml-2' }, [
+                h('p', { class: 'user-name' }, displayName),
+                h('p', { class: 'user-email' }, row.user.userEmail ?? '')
+              ])
             ]);
           }
         },
@@ -286,72 +299,98 @@
   function renderCharts() {
     const names = allStats.value.map((s) => s.user.nickName || s.user.userName);
 
+    // 预估 vs 实际工时柱状图
     if (hoursChartRef.value) {
       if (!hoursChart) hoursChart = echarts.init(hoursChartRef.value);
       hoursChart.setOption({
-        tooltip: { trigger: 'axis' },
-        legend: { data: ['预估工时', '实际工时'] },
-        grid: { left: 40, right: 20, bottom: 40, top: 40 },
-        xAxis: { type: 'category', data: names, axisLabel: { rotate: 30 } },
-        yAxis: { type: 'value', name: '小时' },
+        tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' } },
+        legend: { data: ['预估工时', '实际工时'], top: 8, itemWidth: 12, itemHeight: 12 },
+        grid: { left: 48, right: 16, bottom: 56, top: 48 },
+        xAxis: {
+          type: 'category',
+          data: names,
+          axisLabel: { rotate: names.length > 4 ? 30 : 0, interval: 0 }
+        },
+        yAxis: { type: 'value', name: '小时', nameTextStyle: { padding: [0, 30, 0, 0] } },
         series: [
           {
             name: '预估工时',
             type: 'bar',
+            barMaxWidth: 36,
             data: allStats.value.map((s) => +s.totalEstimatedHours.toFixed(1)),
-            itemStyle: { color: '#409eff' }
+            itemStyle: { color: '#409eff', borderRadius: [4, 4, 0, 0] }
           },
           {
             name: '实际工时',
             type: 'bar',
+            barMaxWidth: 36,
             data: allStats.value.map((s) => +s.totalActualHours.toFixed(1)),
-            itemStyle: { color: '#67c23a' }
+            itemStyle: { color: '#67c23a', borderRadius: [4, 4, 0, 0] }
           }
         ]
       });
     }
 
+    // 雷达图：多维度绩效
     if (bugChartRef.value) {
       if (!bugChart) bugChart = echarts.init(bugChartRef.value);
+      const radarStats = allStats.value.slice(0, 6);
+      const maxTasks = Math.max(...radarStats.map((s) => s.totalTasks), 1);
+      const maxHours = Math.max(...radarStats.map((s) => s.totalActualHours), 1);
       bugChart.setOption({
-        tooltip: { trigger: 'axis' },
-        legend: { data: ['Bug数', '一次通过率(%)'] },
-        grid: { left: 40, right: 60, bottom: 40, top: 40 },
-        xAxis: { type: 'category', data: names, axisLabel: { rotate: 30 } },
-        yAxis: [
-          { type: 'value', name: 'Bug数' },
-          {
-            type: 'value',
-            name: '通过率(%)',
-            min: 0,
-            max: 100,
-            axisLabel: { formatter: '{value}%' }
-          }
-        ],
-        series: [
-          {
-            name: 'Bug数',
-            type: 'bar',
-            data: allStats.value.map((s) => s.totalBugCount),
-            itemStyle: { color: '#f56c6c' }
-          },
-          {
-            name: '一次通过率(%)',
-            type: 'bar',
-            yAxisIndex: 1,
-            data: allStats.value.map((s) => s.firstPassRate),
-            itemStyle: { color: '#e6a23c' }
-          }
-        ]
+        tooltip: { trigger: 'item' },
+        legend: {
+          type: 'scroll',
+          bottom: 4,
+          itemWidth: 10,
+          itemHeight: 10,
+          data: radarStats.map((s) => s.user.nickName || s.user.userName)
+        },
+        radar: {
+          center: ['50%', '46%'],
+          radius: '58%',
+          indicator: [
+            { name: '完成任务', max: maxTasks },
+            { name: '通过率', max: 100 },
+            { name: '实际工时', max: maxHours },
+            { name: '零Bug', max: 1 },
+            { name: '工时准确度', max: 100 }
+          ],
+          axisName: { fontSize: 11 }
+        },
+        series: [{
+          type: 'radar',
+          data: radarStats.map((s) => {
+            const accuracy = s.totalEstimatedHours > 0
+              ? Math.max(0, 100 - Math.abs(s.totalActualHours - s.totalEstimatedHours) / s.totalEstimatedHours * 100)
+              : 100;
+            return {
+              name: s.user.nickName || s.user.userName,
+              value: [s.totalTasks, s.firstPassRate, s.totalActualHours, s.totalBugCount === 0 ? 1 : 0, +accuracy.toFixed(0)],
+              areaStyle: { opacity: 0.15 }
+            };
+          })
+        }]
       });
     }
   }
 
+  function handleResize() {
+    hoursChart?.resize();
+    bugChart?.resize();
+  }
+
   onMounted(() => {
     loadProjects();
-    // searchParams 初始化项目过滤
     (searchParams as Record<string, unknown>).projectId = filterProjectId.value;
     Promise.all([getData(), loadAllStats()]);
+    window.addEventListener('resize', handleResize);
+  });
+
+  onUnmounted(() => {
+    window.removeEventListener('resize', handleResize);
+    hoursChart?.dispose();
+    bugChart?.dispose();
   });
 </script>
 
@@ -473,6 +512,21 @@
     display: flex;
     align-items: center;
     gap: 8px;
+
+    .user-name {
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--el-text-color-primary);
+      margin: 0;
+      line-height: 1.4;
+    }
+
+    .user-email {
+      font-size: 12px;
+      color: var(--el-text-color-placeholder);
+      margin: 0;
+      line-height: 1.4;
+    }
   }
 
   .text-danger {

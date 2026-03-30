@@ -78,6 +78,44 @@ class UserController {
     ctx.body = Result.success();
   }
 
+  // GET /user/profile —— 获取当前登录用户的个人资料
+  async profile(ctx: Context) {
+    const { id } = ctx.state.user;
+    const user = await userService.getProfile(id);
+    ctx.body = Result.success(user);
+  }
+
+  // POST /user/profile —— 更新当前登录用户的个人资料
+  async updateProfile(ctx: Context) {
+    const { id } = ctx.state.user;
+    const body = ctx.request.body as any;
+    const allowedFields = ["nickName", "userPhone", "userEmail", "userGender", "avatar", "remark"];
+    const data: any = {};
+    allowedFields.forEach((f) => {
+      if (body[f] !== undefined) data[f] = body[f];
+    });
+    // tags 单独处理：前端传数组，后端序列化为 JSON 字符串
+    if (body.tags !== undefined) {
+      data.tags = Array.isArray(body.tags) ? JSON.stringify(body.tags) : body.tags;
+    }
+    const res = await userService.update(id, data);
+    // 返回时解析 tags
+    const tags = res.tags ? JSON.parse(res.tags as string) : [];
+    ctx.body = Result.success({ ...res, tags });
+  }
+
+  // POST /user/change-password —— 修改当前登录用户的密码
+  async changePassword(ctx: Context) {
+    const { id } = ctx.state.user;
+    const { oldPassword, newPassword } = ctx.request.body as any;
+    if (!oldPassword || !newPassword) {
+      ctx.body = Result.error("请填写原密码和新密码");
+      return;
+    }
+    await userService.changePassword(id, oldPassword, newPassword);
+    ctx.body = Result.success(null, "密码修改成功");
+  }
+
   // POST /user/assignRoles
   async assignRoles(ctx: Context) {
     const { userId, roleIds } = ctx.request.body as any;

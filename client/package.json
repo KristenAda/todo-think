@@ -8,6 +8,7 @@
   },
   "scripts": {
     "dev": "vite --open",
+    "tauri": "tauri",
     "build": "vue-tsc --noEmit && vite build",
     "serve": "vite preview",
     "lint": "eslint",
@@ -83,6 +84,7 @@
     "@commitlint/cli": "^19.4.1",
     "@commitlint/config-conventional": "^19.4.1",
     "@eslint/js": "^9.9.1",
+    "@tauri-apps/cli": "^2.10.1",
     "@types/node": "^24.0.5",
     "@typescript-eslint/eslint-plugin": "^8.3.0",
     "@typescript-eslint/parser": "^8.3.0",

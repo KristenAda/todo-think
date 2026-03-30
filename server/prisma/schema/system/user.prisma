@@ -12,6 +12,7 @@ model User {
   avatar    String? @db.LongText // 使用 LongText 支持大型 base64 图片
   status    String  @default("1") // 改为 String：'1'正常 '2'离线 '3'异常 '4'注销
   remark    String? // 备注
+  tags      String? // 个人标签（JSON 数组字符串，如 ["Vue","TypeScript"]）
 
   roles Role[]
 

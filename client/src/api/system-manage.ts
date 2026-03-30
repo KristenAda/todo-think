@@ -173,3 +173,34 @@ export function fetchDeleteMenu(id: number) {
     data: { id }
   });
 }
+
+// ==================== 个人中心 ====================
+
+/**
+ * 获取当前登录用户个人资料
+ */
+export function fetchGetProfile() {
+  return request.get<Api.SystemManage.UserProfile>({
+    url: '/user/profile'
+  });
+}
+
+/**
+ * 更新当前登录用户个人资料
+ */
+export function fetchUpdateProfile(data: Api.SystemManage.UpdateProfileParams) {
+  return request.post<Api.SystemManage.UserProfile>({
+    url: '/user/profile',
+    data
+  });
+}
+
+/**
+ * 修改密码
+ */
+export function fetchChangePassword(data: { oldPassword: string; newPassword: string }) {
+  return request.post({
+    url: '/user/change-password',
+    data
+  });
+}

@@ -13,6 +13,34 @@ class UserService extends BaseService {
     super("user");
   }
 
+  // 获取当前用户个人资料（含部门、角色）
+  async getProfile(id: number) {
+    const user = await this.model.findUnique({
+      where: { id },
+      include: {
+        roles: { select: { roleCode: true, roleName: true } },
+      },
+    });
+    if (!user) throw new Error('用户不存在');
+    const { password: _pwd, ...rest } = user;
+    // 将 tags JSON 字符串解析为数组
+    return {
+      ...rest,
+      tags: rest.tags ? JSON.parse(rest.tags) : []
+    };
+  }
+
+  // 修改密码（需验证旧密码）
+  async changePassword(id: number, oldPassword: string, newPassword: string) {
+    const user = await this.model.findUnique({ where: { id } });
+    if (!user) throw new Error('用户不存在');
+    if (!AuthUtil.comparePassword(oldPassword, user.password)) {
+      throw new Error('原密码错误');
+    }
+    const hashed = AuthUtil.hashPassword(newPassword);
+    await this.model.update({ where: { id }, data: { password: hashed } });
+  }
+
   // 覆写 add：先对密码做 SHA-256（与前端保持一致），再 bcrypt 加密存储
   async add(data: any) {
     if (data.password) {

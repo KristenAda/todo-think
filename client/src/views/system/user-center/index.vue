@@ -1,247 +1,669 @@
-<!-- 个人中心页面 -->
 <template>
-  <div class="w-full h-full p-0 bg-transparent border-none shadow-none">
-    <div class="relative flex-b mt-2.5 max-md:block max-md:mt-1">
-      <div class="w-112 mr-5 max-md:w-full max-md:mr-0">
-        <div class="art-card-sm relative p-9 pb-6 overflow-hidden text-center">
-          <img class="absolute top-0 left-0 w-full h-50 object-cover" src="@imgs/user/bg.webp" />
-          <img
-            class="relative z-10 w-20 h-20 mt-30 mx-auto object-cover border-2 border-white rounded-full"
-            src="@imgs/user/avatar.webp"
-          />
-          <h2 class="mt-5 text-xl font-normal">{{ userInfo.userName }}</h2>
-          <p class="mt-5 text-sm">专注于用户体验跟视觉设计</p>
-
-          <div class="w-75 mx-auto mt-7.5 text-left">
-            <div class="mt-2.5">
-              <ArtSvgIcon icon="ri:mail-line" class="text-g-700" />
-              <span class="ml-2 text-sm">jdkjjfnndf@mall.com</span>
-            </div>
-            <div class="mt-2.5">
-              <ArtSvgIcon icon="ri:user-3-line" class="text-g-700" />
-              <span class="ml-2 text-sm">交互专家</span>
-            </div>
-            <div class="mt-2.5">
-              <ArtSvgIcon icon="ri:map-pin-line" class="text-g-700" />
-              <span class="ml-2 text-sm">广东省深圳市</span>
-            </div>
-            <div class="mt-2.5">
-              <ArtSvgIcon icon="ri:dribbble-fill" class="text-g-700" />
-              <span class="ml-2 text-sm">字节跳动－某某平台部－UED</span>
-            </div>
+  <div class="uc-wrapper">
+    <!-- 左侧卡片 -->
+    <aside class="uc-aside">
+      <div class="uc-cover">
+        <img src="@imgs/user/bg.webp" class="uc-cover__bg" alt="cover" />
+        <div class="uc-cover__overlay" />
+      </div>
+      <div class="uc-profile">
+        <div class="uc-avatar-wrap">
+          <el-avatar :size="80" :src="profile.avatar || ''" class="uc-avatar">
+            <art-svg-icon icon="mdi:account" style="font-size: 40px" />
+          </el-avatar>
+          <el-upload
+            class="uc-avatar-upload"
+            :show-file-list="false"
+            accept="image/*"
+            :before-upload="handleAvatarUpload"
+          >
+            <div class="uc-avatar-edit"><art-svg-icon icon="mdi:camera" /></div>
+          </el-upload>
+        </div>
+        <h2 class="uc-profile__name">{{ profile.nickName || profile.userName }}</h2>
+        <p class="uc-profile__username">@{{ profile.userName }}</p>
+        <div class="uc-profile__roles">
+          <el-tag
+            v-for="r in profile.roles"
+            :key="r.roleCode"
+            size="small"
+            type="primary"
+            effect="plain"
+            >{{ r.roleName }}</el-tag
+          >
+        </div>
+        <div class="uc-profile__meta">
+          <div class="meta-row" v-if="profile.userEmail">
+            <art-svg-icon icon="mdi:email-outline" class="meta-icon" /><span>{{
+              profile.userEmail
+            }}</span>
           </div>
-
-          <div class="mt-10">
-            <h3 class="text-sm font-medium">标签</h3>
-            <div class="flex flex-wrap justify-center mt-3.5">
-              <div
-                v-for="item in lableList"
-                :key="item"
-                class="py-1 px-1.5 mr-2.5 mb-2.5 text-xs border border-g-300 rounded"
-              >
-                {{ item }}
-              </div>
-            </div>
+          <div class="meta-row" v-if="profile.userPhone">
+            <art-svg-icon icon="mdi:cellphone" class="meta-icon" /><span>{{
+              profile.userPhone
+            }}</span>
+          </div>
+          <div class="meta-row" v-if="profile.userGender">
+            <art-svg-icon icon="mdi:gender-male-female" class="meta-icon" /><span>{{
+              profile.userGender
+            }}</span>
+          </div>
+          <div class="meta-row" v-if="profile.createTime">
+            <art-svg-icon icon="mdi:calendar-account" class="meta-icon" /><span
+              >加入于 {{ formatDate(profile.createTime) }}</span
+            >
+          </div>
+        </div>
+        <!-- <div class="uc-profile__remark" v-if="profile.remark">
+          <art-svg-icon icon="mdi:format-quote-open" class="quote-icon" />{{ profile.remark }}
+        </div> -->
+        <div class="uc-profile__tags" v-if="profile.tags && profile.tags.length">
+          <div class="tags-title"
+            ><art-svg-icon icon="mdi:tag-multiple" class="tag-icon" />个人标签</div
+          >
+          <div class="tags-list">
+            <el-tag
+              v-for="tag in profile.tags"
+              :key="tag"
+              size="small"
+              effect="plain"
+              round
+              class="profile-tag"
+              >{{ tag }}</el-tag
+            >
           </div>
         </div>
       </div>
-      <div class="flex-1 overflow-hidden max-md:w-full max-md:mt-3.5">
-        <div class="art-card-sm">
-          <h1 class="p-4 text-xl font-normal border-b border-g-300">基本设置</h1>
+    </aside>
 
-          <ElForm
-            :model="form"
-            class="box-border p-5 [&>.el-row_.el-form-item]:w-[calc(50%-10px)] [&>.el-row_.el-input]:w-full [&>.el-row_.el-select]:w-full"
-            ref="ruleFormRef"
-            :rules="rules"
-            label-width="86px"
-            label-position="top"
-          >
-            <ElRow>
-              <ElFormItem label="姓名" prop="realName">
-                <ElInput v-model="form.realName" :disabled="!isEdit" />
-              </ElFormItem>
-              <ElFormItem label="性别" prop="sex" class="ml-5">
-                <ElSelect v-model="form.sex" placeholder="Select" :disabled="!isEdit">
-                  <ElOption
-                    v-for="item in options"
-                    :key="item.value"
-                    :label="item.label"
-                    :value="item.value"
-                  />
-                </ElSelect>
-              </ElFormItem>
-            </ElRow>
-
-            <ElRow>
-              <ElFormItem label="昵称" prop="nikeName">
-                <ElInput v-model="form.nikeName" :disabled="!isEdit" />
-              </ElFormItem>
-              <ElFormItem label="邮箱" prop="email" class="ml-5">
-                <ElInput v-model="form.email" :disabled="!isEdit" />
-              </ElFormItem>
-            </ElRow>
-
-            <ElRow>
-              <ElFormItem label="手机" prop="mobile">
-                <ElInput v-model="form.mobile" :disabled="!isEdit" />
-              </ElFormItem>
-              <ElFormItem label="地址" prop="address" class="ml-5">
-                <ElInput v-model="form.address" :disabled="!isEdit" />
-              </ElFormItem>
-            </ElRow>
-
-            <ElFormItem label="个人介绍" prop="des" class="h-32">
-              <ElInput type="textarea" :rows="4" v-model="form.des" :disabled="!isEdit" />
-            </ElFormItem>
-
-            <div class="flex-c justify-end [&_.el-button]:!w-27.5">
-              <ElButton type="primary" class="w-22.5" v-ripple @click="edit">
-                {{ isEdit ? '保存' : '编辑' }}
-              </ElButton>
-            </div>
-          </ElForm>
+    <!-- 右侧内容 -->
+    <main class="uc-main">
+      <!-- 基本信息 -->
+      <div class="uc-card">
+        <div class="uc-card__header">
+          <div class="uc-card__title">
+            <art-svg-icon icon="mdi:account-edit" class="title-icon" /><span>基本信息</span>
+          </div>
+          <el-button v-if="!isEditInfo" type="primary" plain size="small" @click="startEditInfo">
+            <art-svg-icon icon="mdi:pencil" style="margin-right: 4px" />编辑
+          </el-button>
+          <div v-else class="uc-card__actions">
+            <el-button size="small" @click="cancelEditInfo">取消</el-button>
+            <el-button type="primary" size="small" :loading="savingInfo" @click="saveInfo"
+              >保存</el-button
+            >
+          </div>
         </div>
+        <el-form
+          ref="infoFormRef"
+          :model="infoForm"
+          :rules="infoRules"
+          label-position="top"
+          class="uc-form"
+        >
+          <div class="uc-form__grid">
+            <el-form-item label="昵称" prop="nickName">
+              <el-input
+                v-model="infoForm.nickName"
+                :disabled="!isEditInfo"
+                placeholder="请输入昵称"
+              />
+            </el-form-item>
+            <el-form-item label="性别" prop="userGender">
+              <el-select
+                v-model="infoForm.userGender"
+                :disabled="!isEditInfo"
+                placeholder="请选择"
+                style="width: 100%"
+              >
+                <el-option label="男" value="男" /><el-option label="女" value="女" /><el-option
+                  label="保密"
+                  value="保密"
+                />
+              </el-select>
+            </el-form-item>
+            <el-form-item label="手机号" prop="userPhone">
+              <el-input
+                v-model="infoForm.userPhone"
+                :disabled="!isEditInfo"
+                placeholder="请输入手机号"
+              />
+            </el-form-item>
+            <el-form-item label="邮箱" prop="userEmail">
+              <el-input
+                v-model="infoForm.userEmail"
+                :disabled="!isEditInfo"
+                placeholder="请输入邮箱"
+              />
+            </el-form-item>
+          </div>
+          <el-form-item label="个人标签" prop="tags">
+            <div class="tags-editor">
+              <el-tag
+                v-for="(tag, idx) in infoForm.tags"
+                :key="idx"
+                :closable="isEditInfo"
+                :disable-transitions="false"
+                size="small"
+                round
+                @close="removeTag(idx)"
+                >{{ tag }}</el-tag
+              >
+              <template v-if="isEditInfo">
+                <el-input
+                  v-if="tagInputVisible"
+                  ref="tagInputRef"
+                  v-model="tagInputValue"
+                  size="small"
+                  class="tag-input"
+                  maxlength="12"
+                  @keyup.enter="confirmTag"
+                  @blur="confirmTag"
+                />
+                <el-button v-else size="small" class="tag-add-btn" @click="showTagInput">
+                  <art-svg-icon icon="mdi:plus" /> 新增标签
+                </el-button>
+              </template>
+            </div>
+          </el-form-item>
+        </el-form>
+      </div>
 
-        <div class="art-card-sm my-5">
-          <h1 class="p-4 text-xl font-normal border-b border-g-300">更改密码</h1>
-
-          <ElForm :model="pwdForm" class="box-border p-5" label-width="86px" label-position="top">
-            <ElFormItem label="当前密码" prop="password">
-              <ElInput
-                v-model="pwdForm.password"
+      <!-- 修改密码 -->
+      <div class="uc-card">
+        <div class="uc-card__header">
+          <div class="uc-card__title">
+            <art-svg-icon icon="mdi:lock-reset" class="title-icon" /><span>修改密码</span>
+          </div>
+          <el-button v-if="!isEditPwd" type="warning" plain size="small" @click="isEditPwd = true">
+            <art-svg-icon icon="mdi:key" style="margin-right: 4px" />修改
+          </el-button>
+          <div v-else class="uc-card__actions">
+            <el-button size="small" @click="cancelEditPwd">取消</el-button>
+            <el-button type="primary" size="small" :loading="savingPwd" @click="savePwd"
+              >保存</el-button
+            >
+          </div>
+        </div>
+        <el-form
+          ref="pwdFormRef"
+          :model="pwdForm"
+          :rules="pwdRules"
+          label-position="top"
+          class="uc-form"
+        >
+          <div class="uc-form__grid">
+            <el-form-item label="当前密码" prop="oldPassword">
+              <el-input
+                v-model="pwdForm.oldPassword"
                 type="password"
                 :disabled="!isEditPwd"
                 show-password
+                placeholder="请输入当前密码"
               />
-            </ElFormItem>
-
-            <ElFormItem label="新密码" prop="newPassword">
-              <ElInput
+            </el-form-item>
+            <el-form-item label="新密码" prop="newPassword">
+              <el-input
                 v-model="pwdForm.newPassword"
                 type="password"
                 :disabled="!isEditPwd"
                 show-password
+                placeholder="至少 6 位"
               />
-            </ElFormItem>
-
-            <ElFormItem label="确认新密码" prop="confirmPassword">
-              <ElInput
+            </el-form-item>
+            <el-form-item label="确认新密码" prop="confirmPassword">
+              <el-input
                 v-model="pwdForm.confirmPassword"
                 type="password"
                 :disabled="!isEditPwd"
                 show-password
+                placeholder="再次输入新密码"
               />
-            </ElFormItem>
-
-            <div class="flex-c justify-end [&_.el-button]:!w-27.5">
-              <ElButton type="primary" class="w-22.5" v-ripple @click="editPwd">
-                {{ isEditPwd ? '保存' : '编辑' }}
-              </ElButton>
-            </div>
-          </ElForm>
-        </div>
+            </el-form-item>
+          </div>
+        </el-form>
       </div>
-    </div>
+    </main>
   </div>
 </template>
 
 <script setup lang="ts">
+  import { ref, reactive, onMounted, nextTick } from 'vue';
+  import { ElMessage } from 'element-plus';
+  import type { FormInstance, FormRules, UploadRawFile } from 'element-plus';
+  import { fetchGetProfile, fetchUpdateProfile, fetchChangePassword } from '@/api/system-manage';
   import { useUserStore } from '@/store/modules/user';
-  import type { FormInstance, FormRules } from 'element-plus';
 
   defineOptions({ name: 'UserCenter' });
 
   const userStore = useUserStore();
-  const userInfo = computed(() => userStore.getUserInfo);
 
-  const isEdit = ref(false);
+  const profile = reactive<Api.SystemManage.UserProfile>({
+    id: 0,
+    userName: '',
+    nickName: null,
+    userPhone: null,
+    userEmail: null,
+    userGender: null,
+    avatar: null,
+    remark: null,
+    tags: [],
+    status: '1',
+    createTime: '',
+    roles: []
+  });
+
+  async function loadProfile() {
+    const data = await fetchGetProfile();
+    if (data) {
+      Object.assign(profile, data);
+      // 同步填充表单，使非编辑状态下也能显示数据
+      infoForm.nickName = data.nickName || '';
+      infoForm.userGender = data.userGender || '';
+      infoForm.userPhone = data.userPhone || '';
+      infoForm.userEmail = data.userEmail || '';
+      infoForm.tags = Array.isArray(data.tags) ? [...data.tags] : [];
+    }
+  }
+
+  function formatDate(d: string) {
+    return d ? new Date(d).toLocaleDateString('zh-CN') : '-';
+  }
+
+  function handleAvatarUpload(file: UploadRawFile) {
+    const reader = new FileReader();
+    reader.onload = async (e) => {
+      const base64 = e.target?.result as string;
+      const res = await fetchUpdateProfile({ avatar: base64 });
+      if (res) {
+        profile.avatar = base64;
+        userStore.setUserInfo({ ...userStore.info, avatar: base64 } as any);
+        ElMessage.success('头像更新成功');
+      }
+    };
+    reader.readAsDataURL(file);
+    return false;
+  }
+
+  const isEditInfo = ref(false);
+  const savingInfo = ref(false);
+  const infoFormRef = ref<FormInstance>();
+  const infoForm = reactive({
+    nickName: '',
+    userGender: '',
+    userPhone: '',
+    userEmail: '',
+    tags: [] as string[]
+  });
+
+  // ===== 标签操作 =====
+  const tagInputVisible = ref(false);
+  const tagInputValue = ref('');
+  const tagInputRef = ref<any>();
+
+  function showTagInput() {
+    tagInputVisible.value = true;
+    nextTick(() => tagInputRef.value?.focus());
+  }
+
+  function confirmTag() {
+    const val = tagInputValue.value.trim();
+    if (val && !infoForm.tags.includes(val) && infoForm.tags.length < 10) {
+      infoForm.tags.push(val);
+    }
+    tagInputVisible.value = false;
+    tagInputValue.value = '';
+  }
+
+  function removeTag(idx: number) {
+    if (isEditInfo.value) infoForm.tags.splice(idx, 1);
+  }
+
+  const infoRules: FormRules = {
+    userEmail: [{ type: 'email', message: '请输入正确的邮箱格式', trigger: 'blur' }],
+    userPhone: [{ pattern: /^1[3-9]\d{9}$/, message: '请输入正确的手机号', trigger: 'blur' }]
+  };
+
+  function startEditInfo() {
+    infoForm.nickName = profile.nickName || '';
+    infoForm.userGender = profile.userGender || '';
+    infoForm.userPhone = profile.userPhone || '';
+    infoForm.userEmail = profile.userEmail || '';
+    infoForm.tags = Array.isArray(profile.tags) ? [...profile.tags] : [];
+    isEditInfo.value = true;
+  }
+
+  function cancelEditInfo() {
+    // 从 profile 恢复表单数据，避免 resetFields 清空标签
+    infoForm.nickName = profile.nickName || '';
+    infoForm.userGender = profile.userGender || '';
+    infoForm.userPhone = profile.userPhone || '';
+    infoForm.userEmail = profile.userEmail || '';
+    infoForm.tags = Array.isArray(profile.tags) ? [...profile.tags] : [];
+    isEditInfo.value = false;
+    infoFormRef.value?.clearValidate();
+  }
+
+  async function saveInfo() {
+    await infoFormRef.value?.validate();
+    savingInfo.value = true;
+    try {
+      const res = await fetchUpdateProfile({
+        nickName: infoForm.nickName || undefined,
+        userGender: infoForm.userGender || undefined,
+        userPhone: infoForm.userPhone || undefined,
+        userEmail: infoForm.userEmail || undefined,
+        tags: infoForm.tags
+      });
+      if (res) {
+        Object.assign(profile, res);
+        userStore.setUserInfo({ ...userStore.info, userName: profile.userName } as any);
+        ElMessage.success('保存成功');
+        isEditInfo.value = false;
+      }
+    } finally {
+      savingInfo.value = false;
+    }
+  }
+
   const isEditPwd = ref(false);
-  const date = ref('');
-  const ruleFormRef = ref<FormInstance>();
+  const savingPwd = ref(false);
+  const pwdFormRef = ref<FormInstance>();
+  const pwdForm = reactive({ oldPassword: '', newPassword: '', confirmPassword: '' });
 
-  /**
-   * 用户信息表单
-   */
-  const form = reactive({
-    realName: 'KristenAda',
-    nikeName: '神妙白玉',
-    email: 'fse9527@gmail.com',
-    mobile: '13372710661',
-    address: '地球',
-    sex: '2',
-    des: '让每一分努力精准度量 —— 企业级研发效能与绩效管理引擎.'
-  });
-
-  /**
-   * 密码修改表单
-   */
-  const pwdForm = reactive({
-    password: '',
-    newPassword: '',
-    confirmPassword: ''
-  });
-
-  /**
-   * 表单验证规则
-   */
-  const rules = reactive<FormRules>({
-    realName: [
-      { required: true, message: '请输入姓名', trigger: 'blur' },
-      { min: 2, max: 50, message: '长度在 2 到 50 个字符', trigger: 'blur' }
+  const pwdRules: FormRules = {
+    oldPassword: [{ required: true, message: '请输入当前密码', trigger: 'blur' }],
+    newPassword: [
+      { required: true, message: '请输入新密码', trigger: 'blur' },
+      { min: 6, message: '密码至少 6 位', trigger: 'blur' }
     ],
-    nikeName: [
-      { required: true, message: '请输入昵称', trigger: 'blur' },
-      { min: 2, max: 50, message: '长度在 2 到 50 个字符', trigger: 'blur' }
-    ],
-    email: [{ required: true, message: '请输入邮箱', trigger: 'blur' }],
-    mobile: [{ required: true, message: '请输入手机号码', trigger: 'blur' }],
-    address: [{ required: true, message: '请输入地址', trigger: 'blur' }],
-    sex: [{ required: true, message: '请选择性别', trigger: 'blur' }]
-  });
-
-  /**
-   * 性别选项
-   */
-  const options = [
-    { value: '1', label: '男' },
-    { value: '2', label: '女' }
-  ];
-
-  /**
-   * 用户标签列表
-   */
-  const lableList: Array<string> = ['专注设计', '很有想法', '辣~', '大长腿', '川妹子', '海纳百川'];
-
-  onMounted(() => {
-    getDate();
-  });
-
-  /**
-   * 根据当前时间获取问候语
-   */
-  const getDate = () => {
-    const h = new Date().getHours();
-
-    if (h >= 6 && h < 9) date.value = '早上好';
-    else if (h >= 9 && h < 11) date.value = '上午好';
-    else if (h >= 11 && h < 13) date.value = '中午好';
-    else if (h >= 13 && h < 18) date.value = '下午好';
-    else if (h >= 18 && h < 24) date.value = '晚上好';
-    else date.value = '很晚了，早点睡';
+    confirmPassword: [
+      { required: true, message: '请确认新密码', trigger: 'blur' },
+      {
+        validator: (_rule, value, callback) => {
+          if (value !== pwdForm.newPassword) callback(new Error('两次密码不一致'));
+          else callback();
+        },
+        trigger: 'blur'
+      }
+    ]
   };
 
-  /**
-   * 切换用户信息编辑状态
-   */
-  const edit = () => {
-    isEdit.value = !isEdit.value;
-  };
+  function cancelEditPwd() {
+    isEditPwd.value = false;
+    pwdFormRef.value?.resetFields();
+  }
 
-  /**
-   * 切换密码编辑状态
-   */
-  const editPwd = () => {
-    isEditPwd.value = !isEditPwd.value;
-  };
+  async function savePwd() {
+    await pwdFormRef.value?.validate();
+    savingPwd.value = true;
+    try {
+      await fetchChangePassword({
+        oldPassword: pwdForm.oldPassword,
+        newPassword: pwdForm.newPassword
+      });
+      ElMessage.success('密码修改成功');
+      isEditPwd.value = false;
+      pwdFormRef.value?.resetFields();
+    } finally {
+      savingPwd.value = false;
+    }
+  }
+
+  onMounted(() => loadProfile());
 </script>
+
+<style scoped lang="scss">
+  .uc-wrapper {
+    display: flex;
+    gap: 20px;
+    padding: 20px;
+    min-height: 100%;
+    box-sizing: border-box;
+    background: var(--art-main-bg-color);
+    align-items: flex-start;
+    @media (max-width: 900px) {
+      flex-direction: column;
+    }
+  }
+
+  .uc-aside {
+    width: 340px;
+    flex-shrink: 0;
+    background: var(--default-box-color);
+    border-radius: 16px;
+    overflow: hidden;
+    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
+    border: 1px solid var(--art-card-border);
+    @media (max-width: 900px) {
+      width: 100%;
+    }
+  }
+
+  .uc-cover {
+    position: relative;
+    height: 110px;
+    overflow: hidden;
+    &__bg {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+    &__overlay {
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(to bottom, transparent 40%, var(--default-box-color));
+    }
+  }
+
+  .uc-profile {
+    padding: 0 20px 24px;
+    text-align: center;
+  }
+
+  .uc-avatar-wrap {
+    position: relative;
+    display: inline-block;
+    margin-top: -40px;
+    margin-bottom: 10px;
+  }
+
+  .uc-avatar {
+    border: 3px solid var(--default-box-color);
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.12);
+    background: var(--el-color-primary-light-9);
+    color: var(--el-color-primary);
+  }
+
+  .uc-avatar-upload {
+    position: absolute;
+    bottom: 0;
+    right: 0;
+  }
+
+  .uc-avatar-edit {
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    background: var(--el-color-primary);
+    color: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 13px;
+    cursor: pointer;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+    transition: transform 0.2s;
+    &:hover {
+      transform: scale(1.1);
+    }
+  }
+
+  .uc-profile__name {
+    font-size: 17px;
+    font-weight: 700;
+    color: var(--el-text-color-primary);
+    margin: 0 0 4px;
+  }
+
+  .uc-profile__username {
+    font-size: 12px;
+    color: var(--el-text-color-placeholder);
+    margin: 0 0 10px;
+  }
+
+  .uc-profile__roles {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 6px;
+    margin-bottom: 16px;
+  }
+
+  .uc-profile__meta {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    text-align: left;
+    margin-bottom: 14px;
+  }
+
+  .meta-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 13px;
+    color: var(--el-text-color-regular);
+    .meta-icon {
+      color: var(--el-color-primary);
+      font-size: 15px;
+      flex-shrink: 0;
+    }
+  }
+
+  .uc-profile__remark {
+    background: var(--el-fill-color-light);
+    border-radius: 8px;
+    padding: 10px 12px;
+    font-size: 13px;
+    color: var(--el-text-color-secondary);
+    line-height: 1.6;
+    text-align: left;
+    display: flex;
+    gap: 6px;
+    .quote-icon {
+      color: var(--el-color-primary);
+      flex-shrink: 0;
+      margin-top: 2px;
+    }
+  }
+
+  .uc-profile__tags {
+    margin-top: 0;
+    padding-top: 14px;
+    border-top: 1px dashed var(--art-card-border);
+    text-align: left;
+
+    .tags-title {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      font-size: 12px;
+      color: var(--el-text-color-secondary);
+      margin-bottom: 8px;
+      .tag-icon {
+        font-size: 14px;
+        color: var(--el-color-primary);
+      }
+    }
+
+    .tags-list {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+    }
+
+    .profile-tag {
+      border-radius: 20px;
+    }
+  }
+
+  .tags-editor {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    align-items: center;
+    min-height: 32px;
+    padding: 6px 10px;
+    border: 1px solid var(--el-border-color);
+    border-radius: var(--el-border-radius-base);
+    background: var(--el-fill-color-blank);
+    cursor: text;
+
+    .tag-input {
+      width: 100px;
+    }
+
+    .tag-add-btn {
+      height: 24px;
+      padding: 0 8px;
+      font-size: 12px;
+      border-style: dashed;
+    }
+  }
+
+  .uc-main {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  .uc-card {
+    background: var(--default-box-color);
+    border-radius: 12px;
+    border: 1px solid var(--art-card-border);
+    box-shadow: 0 1px 6px rgba(0, 0, 0, 0.04);
+    overflow: hidden;
+
+    &__header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 16px 20px;
+      border-bottom: 1px solid var(--art-card-border);
+    }
+
+    &__title {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 15px;
+      font-weight: 600;
+      color: var(--el-text-color-primary);
+      .title-icon {
+        color: var(--el-color-primary);
+        font-size: 18px;
+      }
+    }
+
+    &__actions {
+      display: flex;
+      gap: 8px;
+    }
+  }
+
+  .uc-form {
+    padding: 20px;
+
+    &__grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 0 20px;
+      @media (max-width: 640px) {
+        grid-template-columns: 1fr;
+      }
+    }
+  }
+</style>
