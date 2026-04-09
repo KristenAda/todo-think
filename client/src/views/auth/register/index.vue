@@ -94,9 +94,11 @@
 
             <div class="mt-6 text-sm text-gray-500 text-center font-medium">
               <span>{{ $t('register.hasAccount') }}</span>
-              <RouterLink class="text-theme hover:underline transition-all" :to="{ name: 'Login' }">{{
-                $t('register.toLogin')
-              }}</RouterLink>
+              <RouterLink
+                class="text-theme hover:underline transition-all"
+                :to="{ name: 'Login' }"
+                >{{ $t('register.toLogin') }}</RouterLink
+              >
             </div>
           </ElForm>
         </div>
@@ -109,6 +111,8 @@
   import { useI18n } from 'vue-i18n';
   import type { FormInstance, FormRules } from 'element-plus';
   import { fetchRegister } from '@/api/auth';
+  // 👉 新增引入加密工具
+  import { hashPassword } from '@/utils/crypto';
 
   defineOptions({ name: 'Register' });
 
@@ -205,7 +209,7 @@
 
       const submitData = {
         userName: formData.username,
-        password: formData.password
+        password: hashPassword(formData.password)
       };
 
       await fetchRegister(submitData);

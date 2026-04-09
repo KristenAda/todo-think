@@ -1,4 +1,4 @@
-import prisma from '@/core/prisma';
+import prisma from "@/core/prisma";
 import {
   CreateProjectDtoType,
   UpdateProjectDtoType,
@@ -10,7 +10,7 @@ import {
   SubmitTestDtoType,
   QaAuditDtoType,
   PerformancePageDtoType,
-} from './task.dto';
+} from "./task.dto";
 
 // 用户基础信息 select
 const userSelect = {
@@ -38,7 +38,7 @@ class ProjectService {
         where,
         skip,
         take: pageSize,
-        orderBy: { id: 'desc' },
+        orderBy: { id: "desc" },
         include: {
           manager: { select: userSelect },
           _count: { select: { tasks: true } },
@@ -75,7 +75,7 @@ class ProjectService {
       return prisma.user.findMany({
         where: { deletedAt: null },
         select: userSelect,
-        orderBy: { id: 'asc' },
+        orderBy: { id: "asc" },
       });
     }
 
@@ -88,22 +88,27 @@ class ProjectService {
     const relatedDeptIds = new Set<number>(myDeptIds);
     for (const dept of allDepts) {
       if (!dept.ancestors) continue;
-      const ancestorIds = dept.ancestors.split(',').map((s) => s.trim()).filter(Boolean);
-      if (ancestorIds.some((aid) => myDeptIdSet.has(aid))) relatedDeptIds.add(dept.id);
+      const ancestorIds = dept.ancestors
+        .split(",")
+        .map((s) => s.trim())
+        .filter(Boolean);
+      if (ancestorIds.some((aid) => myDeptIdSet.has(aid)))
+        relatedDeptIds.add(dept.id);
     }
 
     const memberRows = await prisma.deptMember.findMany({
       where: { deptId: { in: Array.from(relatedDeptIds) } },
       select: { userId: true },
-      distinct: ['userId'],
+      distinct: ["userId"],
     });
     const memberUserIds = memberRows.map((r) => r.userId);
-    if (!memberUserIds.includes(currentUserId)) memberUserIds.push(currentUserId);
+    if (!memberUserIds.includes(currentUserId))
+      memberUserIds.push(currentUserId);
 
     return prisma.user.findMany({
       where: { id: { in: memberUserIds }, deletedAt: null },
       select: userSelect,
-      orderBy: { id: 'asc' },
+      orderBy: { id: "asc" },
     });
   }
 
@@ -113,7 +118,8 @@ class ProjectService {
         name: dto.name,
         description: dto.description,
         managerId: dto.managerId,
-        status: dto.status ?? 'ACTIVE',
+        orgId: dto.orgId, // 👉 注入 orgId
+        status: dto.status ?? "ACTIVE",
         startDate: dto.startDate ? new Date(dto.startDate) : null,
         endDate: dto.endDate ? new Date(dto.endDate) : null,
       },
@@ -121,24 +127,41 @@ class ProjectService {
   }
 
   async update(id: number, dto: UpdateProjectDtoType) {
-    return prisma.project.update({
-      where: { id },
+    const { version, ...updateData } = dto;
+
+    // 👉 使用 updateMany 实现基于版本号的乐观锁
+    const result = await prisma.project.updateMany({
+      where: {
+        id,
+        version: version,
+      },
       data: {
-        ...dto,
-        startDate: dto.startDate ? new Date(dto.startDate) : undefined,
-        endDate: dto.endDate ? new Date(dto.endDate) : undefined,
+        ...updateData,
+        startDate: updateData.startDate
+          ? new Date(updateData.startDate)
+          : undefined,
+        endDate: updateData.endDate ? new Date(updateData.endDate) : undefined,
+        version: { increment: 1 }, // 👉 更新成功则版本号 +1
       },
     });
-  }
 
+    if (result.count === 0) {
+      throw {
+        status: 409,
+        message: "当前项目数据已被其他人修改，请刷新页面获取最新数据后重试",
+      };
+    }
+
+    return prisma.project.findUnique({ where: { id } });
+  }
   async delete(id: number) {
     return prisma.project.delete({ where: { id } });
   }
 
   async list() {
     return prisma.project.findMany({
-      where: { status: 'ACTIVE' },
-      orderBy: { id: 'desc' },
+      where: { status: "ACTIVE" },
+      orderBy: { id: "desc" },
       select: { id: true, name: true, status: true },
     });
   }
@@ -165,7 +188,7 @@ class TaskService {
         where,
         skip,
         take: pageSize,
-        orderBy: { id: 'desc' },
+        orderBy: { id: "desc" },
         include: {
           project: { select: { id: true, name: true } },
           manager: { select: userSelect },
@@ -196,7 +219,7 @@ class TaskService {
         testCases: true,
         workLogs: {
           include: { user: { select: userSelect } },
-          orderBy: { createdAt: 'desc' },
+          orderBy: { createdAt: "desc" },
         },
       },
     });
@@ -211,13 +234,18 @@ class TaskService {
       const task = await tx.task.create({
         data: {
           projectId: taskData.projectId,
+          orgId: taskData.orgId, // 👉 注入 orgId
+          parentId: taskData.parentId, // 👉 注入 parentId
+          type: taskData.type, // 👉 注入 type
+          priority: taskData.priority, // 👉 注入 priority
+          dueDate: taskData.dueDate ? new Date(taskData.dueDate) : null, // 👉 注入 dueDate
           title: taskData.title,
           description: taskData.description,
           managerId: taskData.managerId,
           mainAssigneeId: taskData.mainAssigneeId,
           testerId: taskData.testerId,
           estimatedHours: taskData.estimatedHours,
-          status: 'PENDING',
+          status: "PENDING",
         },
       });
 
@@ -253,21 +281,53 @@ class TaskService {
 
   // 更新任务（含协助人重置）
   async update(id: number, dto: UpdateTaskDtoType) {
-    const { coAssigneeIds, ...taskData } = dto;
+    const { version, coAssigneeIds, ...taskData } = dto;
 
     return prisma.$transaction(async (tx) => {
-      const task = await tx.task.update({
-        where: { id },
+      // 👉 使用 updateMany 配合 version 实现乐观锁防覆盖
+      const updateResult = await tx.task.updateMany({
+        where: {
+          id,
+          version: version,
+        },
         data: {
+          ...(taskData.parentId !== undefined && {
+            parentId: taskData.parentId,
+          }),
+          ...(taskData.type !== undefined && { type: taskData.type }),
+          ...(taskData.priority !== undefined && {
+            priority: taskData.priority,
+          }),
+          ...(taskData.dueDate !== undefined && {
+            dueDate: taskData.dueDate ? new Date(taskData.dueDate) : null,
+          }),
           ...(taskData.title !== undefined && { title: taskData.title }),
-          ...(taskData.description !== undefined && { description: taskData.description }),
-          ...(taskData.managerId !== undefined && { managerId: taskData.managerId }),
-          ...(taskData.mainAssigneeId !== undefined && { mainAssigneeId: taskData.mainAssigneeId }),
-          ...(taskData.testerId !== undefined && { testerId: taskData.testerId }),
-          ...(taskData.estimatedHours !== undefined && { estimatedHours: taskData.estimatedHours }),
+          ...(taskData.description !== undefined && {
+            description: taskData.description,
+          }),
+          ...(taskData.managerId !== undefined && {
+            managerId: taskData.managerId,
+          }),
+          ...(taskData.mainAssigneeId !== undefined && {
+            mainAssigneeId: taskData.mainAssigneeId,
+          }),
+          ...(taskData.testerId !== undefined && {
+            testerId: taskData.testerId,
+          }),
+          ...(taskData.estimatedHours !== undefined && {
+            estimatedHours: taskData.estimatedHours,
+          }),
           ...(taskData.status !== undefined && { status: taskData.status }),
+          version: { increment: 1 }, // 👉 更新成功则版本号 +1
         },
       });
+
+      if (updateResult.count === 0) {
+        throw {
+          status: 409,
+          message: "当前任务状态或信息已被他人修改，请刷新后重试",
+        };
+      }
 
       // 重置协助人列表
       if (coAssigneeIds !== undefined) {
@@ -280,7 +340,7 @@ class TaskService {
         }
       }
 
-      return task;
+      return tx.task.findUnique({ where: { id } });
     });
   }
 
@@ -294,20 +354,20 @@ class TaskService {
       where: { id: taskId },
       include: { coAssignees: true },
     });
-    if (!task) throw { status: 404, message: '任务不存在' };
+    if (!task) throw { status: 404, message: "任务不存在" };
 
     const isMainAssignee = task.mainAssigneeId === userId;
     const isCoAssignee = task.coAssignees.some((ca) => ca.userId === userId);
     if (!isMainAssignee && !isCoAssignee) {
-      throw { status: 403, message: '无权限：仅任务负责人可开始开发' };
+      throw { status: 403, message: "无权限：仅任务负责人可开始开发" };
     }
-    if (task.status !== 'PENDING' && task.status !== 'REJECTED') {
+    if (task.status !== "PENDING" && task.status !== "REJECTED") {
       throw { status: 400, message: `当前状态（${task.status}）无法开始开发` };
     }
 
     return prisma.task.update({
       where: { id: taskId },
-      data: { status: 'IN_PROGRESS' },
+      data: { status: "IN_PROGRESS" },
     });
   }
 
@@ -317,12 +377,12 @@ class TaskService {
       where: { id: taskId },
       include: { coAssignees: true },
     });
-    if (!task) throw { status: 404, message: '任务不存在' };
+    if (!task) throw { status: 404, message: "任务不存在" };
 
     const isMainAssignee = task.mainAssigneeId === userId;
     const isCoAssignee = task.coAssignees.some((ca) => ca.userId === userId);
     if (!isMainAssignee && !isCoAssignee) {
-      throw { status: 403, message: '无权限：仅任务负责人可填写工时' };
+      throw { status: 403, message: "无权限：仅任务负责人可填写工时" };
     }
 
     return prisma.workLog.create({
@@ -336,17 +396,22 @@ class TaskService {
       where: { id: taskId },
       include: { testCases: true },
     });
-    if (!task) throw { status: 404, message: '任务不存在' };
+    if (!task) throw { status: 404, message: "任务不存在" };
 
     // 严格权限校验：仅主负责人
     if (task.mainAssigneeId !== userId) {
-      throw { status: 403, message: '仅主要负责人才可提交验收' };
+      throw { status: 403, message: "仅主要负责人才可提交验收" };
     }
 
     // 校验所有用例必须全部自测通过
-    const allPassed = dto.testCaseResults.every((r) => r.selfTestStatus === 'PASSED');
+    const allPassed = dto.testCaseResults.every(
+      (r) => r.selfTestStatus === "PASSED"
+    );
     if (!allPassed) {
-      throw { status: 400, message: '所有测试用例必须全部自测通过才能提交验收' };
+      throw {
+        status: 400,
+        message: "所有测试用例必须全部自测通过才能提交验收",
+      };
     }
 
     return prisma.$transaction(async (tx) => {
@@ -363,7 +428,7 @@ class TaskService {
       // 将任务状态推进到 QA_REVIEW
       return tx.task.update({
         where: { id: taskId },
-        data: { status: 'QA_REVIEW' },
+        data: { status: "QA_REVIEW" },
       });
     });
   }
@@ -374,18 +439,18 @@ class TaskService {
       where: { id: taskId },
       include: { testCases: true },
     });
-    if (!task) throw { status: 404, message: '任务不存在' };
+    if (!task) throw { status: 404, message: "任务不存在" };
 
     // 权限校验：仅测试验收人
     if (task.testerId !== userId) {
-      throw { status: 403, message: '无权限：仅测试验收人可进行 QA 审核' };
+      throw { status: 403, message: "无权限：仅测试验收人可进行 QA 审核" };
     }
 
-    if (task.status !== 'QA_REVIEW') {
-      throw { status: 400, message: '任务当前不在验收中状态' };
+    if (task.status !== "QA_REVIEW") {
+      throw { status: 400, message: "任务当前不在验收中状态" };
     }
 
-    const hasFailure = dto.testCaseResults.some((r) => r.qaStatus === 'FAILED');
+    const hasFailure = dto.testCaseResults.some((r) => r.qaStatus === "FAILED");
 
     return prisma.$transaction(async (tx) => {
       for (const r of dto.testCaseResults) {
@@ -394,7 +459,7 @@ class TaskService {
           data: {
             qaStatus: r.qaStatus,
             qaRemark: r.qaRemark,
-            ...(r.qaStatus === 'FAILED' && { bugCount: { increment: 1 } }),
+            ...(r.qaStatus === "FAILED" && { bugCount: { increment: 1 } }),
           },
         });
       }
@@ -403,18 +468,94 @@ class TaskService {
         // 有用例失败 → 打回
         return tx.task.update({
           where: { id: taskId },
-          data: { status: 'REJECTED' },
+          data: { status: "REJECTED" },
         });
       } else {
         // 全部通过 → 完成，必须填写实际工时
         if (!dto.actualHours) {
-          throw { status: 400, message: '验收通过时必须填写实际工时' };
+          throw { status: 400, message: "验收通过时必须填写实际工时" };
         }
         return tx.task.update({
           where: { id: taskId },
-          data: { status: 'COMPLETED', actualHours: dto.actualHours },
+          data: { status: "COMPLETED", actualHours: dto.actualHours },
         });
       }
+    });
+  }
+
+  // ==================== 以下为新增的状态流转(逆向)业务 ====================
+
+  // 暂停任务 (IN_PROGRESS -> PAUSED)
+  async pauseTask(taskId: number, userId: number) {
+    const task = await prisma.task.findUnique({
+      where: { id: taskId },
+      include: { coAssignees: true },
+    });
+    if (!task) throw { status: 404, message: "任务不存在" };
+
+    const isMainAssignee = task.mainAssigneeId === userId;
+    const isCoAssignee = task.coAssignees.some((ca) => ca.userId === userId);
+    if (!isMainAssignee && !isCoAssignee && task.managerId !== userId) {
+      throw { status: 403, message: "无权限：仅任务负责人或管理员可暂停任务" };
+    }
+
+    if (task.status !== "IN_PROGRESS") {
+      throw { status: 400, message: `当前状态（${task.status}）无法暂停` };
+    }
+
+    return prisma.task.update({
+      where: { id: taskId },
+      data: { status: "PAUSED", version: { increment: 1 } },
+    });
+  }
+
+  // 恢复开发 (PAUSED -> IN_PROGRESS)
+  async resumeTask(taskId: number, userId: number) {
+    const task = await prisma.task.findUnique({
+      where: { id: taskId },
+      include: { coAssignees: true },
+    });
+    if (!task) throw { status: 404, message: "任务不存在" };
+
+    const isMainAssignee = task.mainAssigneeId === userId;
+    const isCoAssignee = task.coAssignees.some((ca) => ca.userId === userId);
+    if (!isMainAssignee && !isCoAssignee) {
+      throw { status: 403, message: "无权限：仅任务负责人可恢复开发" };
+    }
+
+    if (task.status !== "PAUSED") {
+      throw { status: 400, message: `当前状态不是暂停中，无法恢复` };
+    }
+
+    return prisma.task.update({
+      where: { id: taskId },
+      data: { status: "IN_PROGRESS", version: { increment: 1 } },
+    });
+  }
+
+  // 重新打开任务 (REJECTED / COMPLETED -> IN_PROGRESS)
+  async reopenTask(taskId: number, userId: number) {
+    const task = await prisma.task.findUnique({ where: { id: taskId } });
+    if (!task) throw { status: 404, message: "任务不存在" };
+
+    if (task.status !== "REJECTED" && task.status !== "COMPLETED") {
+      throw {
+        status: 400,
+        message: `当前状态（${task.status}）不支持重新打开，仅支持已打回或已完成的任务`,
+      };
+    }
+
+    return prisma.$transaction(async (tx) => {
+      // 重新打开时，需要将所有关联的测试用例状态重置为 UNTESTED，强制要求重新走自测与QA流程
+      await tx.testCase.updateMany({
+        where: { taskId },
+        data: { selfTestStatus: "UNTESTED", qaStatus: "UNTESTED" },
+      });
+
+      return tx.task.update({
+        where: { id: taskId },
+        data: { status: "IN_PROGRESS", version: { increment: 1 } },
+      });
     });
   }
 }
@@ -428,26 +569,37 @@ export const taskService = new TaskService();
 class PerformanceService {
   async stats(dto: PerformancePageDtoType) {
     const { page, pageSize, projectId } = dto;
-    const where: any = { status: 'COMPLETED' };
+    const where: any = { status: "COMPLETED" };
     if (projectId) where.projectId = projectId;
 
     const completedTasks = await prisma.task.findMany({
       where,
       include: {
-        mainAssignee: { select: { id: true, userName: true, nickName: true, avatar: true, userEmail: true } },
+        mainAssignee: {
+          select: {
+            id: true,
+            userName: true,
+            nickName: true,
+            avatar: true,
+            userEmail: true,
+          },
+        },
         testCases: true,
       },
     });
 
     // 按主负责人聚合
-    const map = new Map<number, {
-      user: any;
-      totalTasks: number;
-      totalActualHours: number;
-      totalEstimatedHours: number;
-      totalBugCount: number;
-      firstPassCount: number;
-    }>();
+    const map = new Map<
+      number,
+      {
+        user: any;
+        totalTasks: number;
+        totalActualHours: number;
+        totalEstimatedHours: number;
+        totalBugCount: number;
+        firstPassCount: number;
+      }
+    >();
 
     for (const task of completedTasks) {
       if (!task.mainAssigneeId || !task.mainAssignee) continue;
@@ -474,9 +626,10 @@ class PerformanceService {
 
     const allStats = Array.from(map.values()).map((s) => ({
       ...s,
-      firstPassRate: s.totalTasks > 0
-        ? Math.round((s.firstPassCount / s.totalTasks) * 100)
-        : 0,
+      firstPassRate:
+        s.totalTasks > 0
+          ? Math.round((s.firstPassCount / s.totalTasks) * 100)
+          : 0,
     }));
 
     const total = allStats.length;

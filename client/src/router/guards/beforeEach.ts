@@ -156,28 +156,43 @@ async function handleRouteGuard(
     NProgress.start();
   }
 
-  // 1. 检查登录状态
-  if (!handleLoginStatus(to, userStore, next)) {
+  // 1. 【核心修复】：检查是否是白名单页面
+  if (to.path === RoutesAlias.Login || isStaticRoute(to.path)) {
+    console.log('1 :>> ', 1);
+    console.log('to.path === RoutesAlias.Login :>> ', to.path === RoutesAlias.Login);
+    if (userStore.isLogin && to.path === RoutesAlias.Login) {
+      // 破除 404 陷阱关键点：用户主动通过 URL 访问登录页，视为想要重新登录或切换账号。
+      // 直接清理旧的登录状态并放行，坚决不要踢回首页去触发后续的连环错误。
+      userStore.logOut();
+      next();
+      return;
+    }
+    next();
     return;
   }
 
-  // 2. 检查路由初始化是否已失败（防止死循环）
+  // 2. 检查登录状态
+  if (!userStore.isLogin) {
+    next({
+      name: 'Login',
+      query: { redirect: to.fullPath }
+    });
+    return;
+  }
+
+  // 3. 检查路由初始化是否已失败（防止死循环）
   if (routeInitFailed) {
-    // 已经失败过，直接放行到错误页面，不再重试
     if (to.matched.length > 0) {
       next();
     } else {
-      // 未匹配到路由，跳转到 500 页面
       next({ name: 'Exception500', replace: true });
     }
     return;
   }
 
-  // 3. 处理动态路由注册
+  // 4. 处理动态路由注册
   if (!routeRegistry?.isRegistered() && userStore.isLogin) {
-    // 防止并发请求（快速连续导航场景）
     if (routeInitInProgress) {
-      // 正在初始化中，等待完成后重新导航
       next(false);
       return;
     }
@@ -185,12 +200,12 @@ async function handleRouteGuard(
     return;
   }
 
-  // 4. 处理根路径重定向
+  // 5. 处理根路径重定向
   if (handleRootPathRedirect(to, next)) {
     return;
   }
 
-  // 5. 处理已匹配的路由
+  // 6. 处理已匹配的路由
   if (to.matched.length > 0) {
     setWorktab(to);
     setPageTitle(to);
@@ -198,7 +213,16 @@ async function handleRouteGuard(
     return;
   }
 
-  // 6. 未匹配到路由，跳转到 404
+  // 7. 【核心修复】：未匹配到路由时的降级处理
+  const menuStore = useMenuStore();
+  // 检查是否是因为该账号“没有任何菜单权限”导致的找不到路由
+  if (userStore.isLogin && menuStore.menuList.length === 0) {
+    // 拦截到无权限黑户，引导去 403 无权限页面，而不是 404
+    next({ name: 'Exception403' });
+    return;
+  }
+
+  // 真正的 404 页面不存在
   next({ name: 'Exception404' });
 }
 
@@ -272,8 +296,14 @@ async function handleDynamicRoutes(
     const menuList = await menuProcessor.getMenuList();
 
     // 3. 验证菜单数据
-    if (!menuProcessor.validateMenuList(menuList)) {
-      throw new Error('获取菜单列表失败，请重新登录');
+    if (!Array.isArray(menuList)) {
+      throw new Error('获取菜单数据格式异常');
+    }
+    if (menuList.length === 0) {
+      console.warn('[RouteGuard] 当前用户未分配任何菜单权限');
+      // 直接通过，不抛错。如果没有菜单，后面的 hasPermission 校验会把它拦下来跳到首页或403
+    } else if (!menuProcessor.validateMenuList(menuList)) {
+      throw new Error('获取菜单列表失败，数据结构校验未通过');
     }
 
     // 4. 注册动态路由

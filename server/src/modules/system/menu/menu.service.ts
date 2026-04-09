@@ -17,7 +17,9 @@ class MenuService extends BaseService {
       orderBy: { sort: "asc" },
     });
     // 转换为前端期望的 meta 嵌套格式，与管理端表格和弹窗对齐
-    return Result.success(this.transformToFrontendFormat(this.listToTree(list)));
+    return Result.success(
+      this.transformToFrontendFormat(this.listToTree(list))
+    );
   }
 
   // 获取当前登录用户的导航菜单树（动态路由专用）
@@ -33,7 +35,10 @@ class MenuService extends BaseService {
       },
     });
 
-    if (!user) return Result.success([]);
+    if (!user) {
+      // 抛出 401 状态码，通知前端此 Token 的用户在库中已不存在
+      throw { status: 401, message: "用户信息异常或已失效，请重新登录" };
+    }
 
     const isAdmin = user.roles.some((r: any) => r.roleCode === "admin");
 
@@ -59,7 +64,9 @@ class MenuService extends BaseService {
     }
 
     // 转换为前端期望的格式（包含 meta 对象）
-    return Result.success(this.transformToFrontendFormat(this.listToTree(list)));
+    return Result.success(
+      this.transformToFrontendFormat(this.listToTree(list))
+    );
   }
 
   // 转换菜单数据为前端期望的格式

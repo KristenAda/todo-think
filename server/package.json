@@ -7,7 +7,9 @@
     "dev": "tsx watch --clear-screen=false src/app.ts",
     "build:ts": "tsc && tsc-alias",
     "build": "node scripts/build.js",
-    "start": "node dist/app.js"
+    "start": "node dist/app.js",
+    "db:sync": "prisma migrate dev --name auto_sync",
+    "db:migrate": "prisma migrate dev"
   },
   "keywords": [],
   "author": "",

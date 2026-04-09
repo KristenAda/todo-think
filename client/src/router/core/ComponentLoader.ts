@@ -18,23 +18,41 @@ export class ComponentLoader {
   }
 
   /**
-   * 加载组件
+   * 加载组件 (支持忽略大小写匹配)
    */
   load(componentPath: string): () => Promise<any> {
     if (!componentPath) {
       return this.createEmptyComponent();
     }
 
-    // 构建可能的路径
-    const fullPath = `../../views${componentPath}.vue`;
-    const fullPathWithIndex = `../../views${componentPath}/index.vue`;
+    // 1. 确保路径前缀格式正确 (之前修复的防漏斜杠逻辑)
+    const safePath = componentPath.startsWith('/') ? componentPath : `/${componentPath}`;
 
-    // 先尝试直接路径，再尝试添加/index的路径
-    const module = this.modules[fullPath] || this.modules[fullPathWithIndex];
+    // 2. 构建预期的标准路径
+    const expectedPath = `../../views${safePath}.vue`;
+    const expectedPathWithIndex = `../../views${safePath}/index.vue`;
+
+    // 3. 【核心修复】全部转为小写，准备进行忽略大小写的查找
+    const expectedPathLower = expectedPath.toLowerCase();
+    const expectedPathWithIndexLower = expectedPathWithIndex.toLowerCase();
+
+    // 4. 遍历 vite glob 扫描到的所有真实物理文件路径
+    const moduleKeys = Object.keys(this.modules);
+
+    // 寻找真实路径全小写后，与我们预期路径全小写相等的那个 key
+    const actualKey = moduleKeys.find((key) => {
+      const keyLower = key.toLowerCase();
+      return keyLower === expectedPathLower || keyLower === expectedPathWithIndexLower;
+    });
+
+    // 5. 使用真实匹配到的 key 去获取模块
+    const module = actualKey ? this.modules[actualKey] : undefined;
 
     if (!module) {
       console.error(
-        `[ComponentLoader] 未找到组件: ${componentPath}，尝试过的路径: ${fullPath} 和 ${fullPathWithIndex}`
+        `[ComponentLoader] 未找到组件: ${componentPath}\n` +
+          `预期匹配(忽略大小写): ${expectedPathLower} 或 ${expectedPathWithIndexLower}\n` +
+          `请检查 views 目录下是否存在该文件。`
       );
       return this.createErrorComponent(componentPath);
     }
