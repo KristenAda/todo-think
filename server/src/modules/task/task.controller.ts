@@ -29,15 +29,16 @@ class ProjectController {
   async page(ctx: Context) {
     const parsed = ProjectPageDto.safeParse(ctx.query);
     if (!parsed.success) {
-      ctx.body = Result.error(parsed.error.errors[0]?.message ?? "参数错误");
+      ctx.body = Result.error(parsed.error.issues?.[0]?.message ?? "参数错误");
       return;
     }
-    const { list, total } = await projectService.page(parsed.data);
+    const uid = currentUserId(ctx);
+    const { list, total } = await projectService.page(parsed.data, uid);
     ctx.body = Result.page(list, total, parsed.data.page, parsed.data.pageSize);
   }
 
   async list(ctx: Context) {
-    ctx.body = Result.success(await projectService.list());
+    ctx.body = Result.success(await projectService.list(currentUserId(ctx)));
   }
 
   async orgMembers(ctx: Context) {
@@ -52,7 +53,7 @@ class ProjectController {
 
   async info(ctx: Context) {
     const id = Number(ctx.params.id);
-    const data = await projectService.info(id);
+    const data = await projectService.info(id, currentUserId(ctx));
     if (!data) {
       ctx.body = Result.error("项目不存在", 404);
       return;
@@ -63,32 +64,48 @@ class ProjectController {
   async create(ctx: Context) {
     const parsed = CreateProjectDto.safeParse(ctx.request.body);
     if (!parsed.success) {
-      ctx.body = Result.error(parsed.error.errors[0]?.message ?? "参数错误");
+      ctx.body = Result.error(parsed.error.issues?.[0]?.message ?? "参数错误");
       return;
     }
-    ctx.body = Result.success(
-      await projectService.create(parsed.data),
-      "创建成功"
-    );
+    const userId = currentUserId(ctx);
+    try {
+      ctx.body = Result.success(
+        await projectService.create(parsed.data, userId),
+        "创建成功"
+      );
+    } catch (e: any) {
+      ctx.status = e.status ?? 400;
+      ctx.body = Result.error(e.message ?? "创建失败", e.status ?? 400);
+    }
   }
 
   async update(ctx: Context) {
     const id = Number(ctx.params.id);
     const parsed = UpdateProjectDto.safeParse(ctx.request.body);
     if (!parsed.success) {
-      ctx.body = Result.error(parsed.error.errors[0]?.message ?? "参数错误");
+      ctx.body = Result.error(parsed.error.issues[0]?.message ?? "参数错误");
       return;
     }
-    ctx.body = Result.success(
-      await projectService.update(id, parsed.data),
-      "更新成功"
-    );
+    try {
+      ctx.body = Result.success(
+        await projectService.update(id, parsed.data, currentUserId(ctx)),
+        "更新成功"
+      );
+    } catch (e: any) {
+      ctx.status = e.status ?? 500;
+      ctx.body = Result.error(e.message ?? "更新失败", e.status ?? 500);
+    }
   }
 
   async delete(ctx: Context) {
     const id = Number(ctx.params.id);
-    await projectService.delete(id);
-    ctx.body = Result.success(null, "删除成功");
+    try {
+      await projectService.delete(id, currentUserId(ctx));
+      ctx.body = Result.success(null, "删除成功");
+    } catch (e: any) {
+      ctx.status = e.status ?? 500;
+      ctx.body = Result.error(e.message ?? "删除失败", e.status ?? 500);
+    }
   }
 }
 
@@ -100,16 +117,19 @@ class TaskController {
   async page(ctx: Context) {
     const parsed = TaskPageDto.safeParse(ctx.query);
     if (!parsed.success) {
-      ctx.body = Result.error(parsed.error.errors[0]?.message ?? "参数错误");
+      ctx.body = Result.error(parsed.error.issues[0]?.message ?? "参数错误");
       return;
     }
-    const { list, total } = await taskService.page(parsed.data);
+    const { list, total } = await taskService.page(
+      parsed.data,
+      currentUserId(ctx),
+    );
     ctx.body = Result.page(list, total, parsed.data.page, parsed.data.pageSize);
   }
 
   async info(ctx: Context) {
     const id = Number(ctx.params.id);
-    const data = await taskService.info(id);
+    const data = await taskService.info(id, currentUserId(ctx));
     if (!data) {
       ctx.body = Result.error("任务不存在", 404);
       return;
@@ -120,32 +140,48 @@ class TaskController {
   async create(ctx: Context) {
     const parsed = CreateTaskDto.safeParse(ctx.request.body);
     if (!parsed.success) {
-      ctx.body = Result.error(parsed.error.errors[0]?.message ?? "参数错误");
+      ctx.body = Result.error(parsed.error.issues?.[0]?.message ?? "参数错误");
       return;
     }
-    ctx.body = Result.success(
-      await taskService.create(parsed.data),
-      "创建成功"
-    );
+    const userId = currentUserId(ctx);
+    try {
+      ctx.body = Result.success(
+        await taskService.create(parsed.data, userId),
+        "创建成功",
+      );
+    } catch (e: any) {
+      ctx.status = e.status ?? 500;
+      ctx.body = Result.error(e.message ?? "创建失败", e.status ?? 500);
+    }
   }
 
   async update(ctx: Context) {
     const id = Number(ctx.params.id);
     const parsed = UpdateTaskDto.safeParse(ctx.request.body);
     if (!parsed.success) {
-      ctx.body = Result.error(parsed.error.errors[0]?.message ?? "参数错误");
+      ctx.body = Result.error(parsed.error.issues[0]?.message ?? "参数错误");
       return;
     }
-    ctx.body = Result.success(
-      await taskService.update(id, parsed.data),
-      "更新成功"
-    );
+    try {
+      ctx.body = Result.success(
+        await taskService.update(id, parsed.data, currentUserId(ctx)),
+        "更新成功",
+      );
+    } catch (e: any) {
+      ctx.status = e.status ?? 500;
+      ctx.body = Result.error(e.message ?? "更新失败", e.status ?? 500);
+    }
   }
 
   async delete(ctx: Context) {
     const id = Number(ctx.params.id);
-    await taskService.delete(id);
-    ctx.body = Result.success(null, "删除成功");
+    try {
+      await taskService.delete(id, currentUserId(ctx));
+      ctx.body = Result.success(null, "删除成功");
+    } catch (e: any) {
+      ctx.status = e.status ?? 500;
+      ctx.body = Result.error(e.message ?? "删除失败", e.status ?? 500);
+    }
   }
 
   async startWork(ctx: Context) {
@@ -167,7 +203,7 @@ class TaskController {
     const userId = currentUserId(ctx);
     const parsed = CreateWorkLogDto.safeParse(ctx.request.body);
     if (!parsed.success) {
-      ctx.body = Result.error(parsed.error.errors[0]?.message ?? "参数错误");
+      ctx.body = Result.error(parsed.error.issues[0]?.message ?? "参数错误");
       return;
     }
     try {
@@ -186,7 +222,7 @@ class TaskController {
     const userId = currentUserId(ctx);
     const parsed = SubmitTestDto.safeParse(ctx.request.body);
     if (!parsed.success) {
-      ctx.body = Result.error(parsed.error.errors[0]?.message ?? "参数错误");
+      ctx.body = Result.error(parsed.error.issues[0]?.message ?? "参数错误");
       return;
     }
     try {
@@ -205,7 +241,7 @@ class TaskController {
     const userId = currentUserId(ctx);
     const parsed = QaAuditDto.safeParse(ctx.request.body);
     if (!parsed.success) {
-      ctx.body = Result.error(parsed.error.errors[0]?.message ?? "参数错误");
+      ctx.body = Result.error(parsed.error.issues[0]?.message ?? "参数错误");
       return;
     }
     try {
@@ -272,10 +308,13 @@ class PerformanceController {
   async stats(ctx: Context) {
     const parsed = PerformancePageDto.safeParse(ctx.query);
     if (!parsed.success) {
-      ctx.body = Result.error(parsed.error?.errors?.[0]?.message ?? "参数错误");
+      ctx.body = Result.error(parsed.error.issues?.[0]?.message ?? "参数错误");
       return;
     }
-    const { list, total } = await performanceService.stats(parsed.data);
+    const { list, total } = await performanceService.stats(
+      parsed.data,
+      currentUserId(ctx),
+    );
     ctx.body = Result.page(list, total, parsed.data.page, parsed.data.pageSize);
   }
 }

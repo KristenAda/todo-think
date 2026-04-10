@@ -27,6 +27,7 @@ import { isIframe } from './route';
 import { useSettingStore } from '@/store/modules/setting';
 import { IframeRouteManager } from '@/router/core';
 import { useCommon } from '@/hooks/core/useCommon';
+import { resolveMenuIconifyIcon } from '@/utils/iconify';
 
 /**
  * 根据当前路由信息设置工作标签页（worktab）
@@ -43,7 +44,7 @@ export const setWorktab = (to: RouteLocationNormalized): void => {
       if (iframeRoute?.meta) {
         worktabStore.openTab({
           title: iframeRoute.meta.title,
-          icon: meta.icon as string,
+          icon: resolveMenuIconifyIcon(meta.icon),
           path,
           name: name as string,
           keepAlive: meta.keepAlive as boolean,
@@ -54,7 +55,7 @@ export const setWorktab = (to: RouteLocationNormalized): void => {
     } else if (useSettingStore().showWorkTab || path === useCommon().homePath.value) {
       worktabStore.openTab({
         title: meta.title as string,
-        icon: meta.icon as string,
+        icon: resolveMenuIconifyIcon(meta.icon),
         path,
         name: name as string,
         keepAlive: meta.keepAlive as boolean,

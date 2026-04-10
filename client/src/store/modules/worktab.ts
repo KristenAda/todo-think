@@ -32,7 +32,7 @@
  * ## 持久化
  * - 使用 localStorage 存储
  * - 存储键：sys-v{version}-worktab
- * - 刷新页面保持标签状态
+ * - F5 / 浏览器刷新后仅保留当前页对应标签（见路由守卫中 clearOpenedForPageReload）
  *
  * @module store/modules/worktab
  * @author Art Design Pro Team
@@ -486,6 +486,18 @@ export const useWorktabStore = defineStore(
     };
 
     /**
+     * 整页刷新（F5）后调用：关闭其余标签，仅由当前路由再次 openTab 重建一条。
+     * 旧标签对应的 KeepAlive 会加入排除列表，避免残留缓存实例。
+     */
+    const clearOpenedForPageReload = (): void => {
+      if (opened.value.length > 0) {
+        markTabsToRemove([...opened.value]);
+      }
+      opened.value = [];
+      current.value = {};
+    };
+
+    /**
      * 获取状态快照（用于持久化存储）
      */
     const getStateSnapshot = (): WorktabState => {
@@ -545,6 +557,7 @@ export const useWorktabStore = defineStore(
       toggleFixedTab,
       validateWorktabs,
       clearAll,
+      clearOpenedForPageReload,
       getStateSnapshot,
 
       // 工具方法

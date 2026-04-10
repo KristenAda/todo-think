@@ -6,7 +6,8 @@ export const CreateProjectDto = z.object({
   name: z.string().min(1, "项目名称不能为空").max(100),
   description: z.string().optional(),
   managerId: z.number().int().positive("负责人ID无效"),
-  orgId: z.number().int().positive("归属组织ID无效"), // 👉 新增字段
+  // 前端可选传 orgId，未传则由 Controller 从 JWT 上下文自动推导
+  orgId: z.number().int().positive("归属组织ID无效").optional(),
   status: z.enum(["PLANNING", "ACTIVE", "COMPLETED", "SUSPENDED"]).optional(),
   startDate: z.string().datetime({ offset: true }).optional().nullable(),
   endDate: z.string().datetime({ offset: true }).optional().nullable(),
@@ -15,6 +16,8 @@ export type CreateProjectDtoType = z.infer<typeof CreateProjectDto>;
 
 export const UpdateProjectDto = CreateProjectDto.partial().extend({
   version: z.number().int().nonnegative("更新时必须提供数据版本号以确保一致性"),
+  // orgId 在更新时也可选
+  orgId: z.number().int().positive("归属组织ID无效").optional().nullable(),
 });
 export type UpdateProjectDtoType = z.infer<typeof UpdateProjectDto>;
 
@@ -38,11 +41,11 @@ export type TestCaseInputDtoType = z.infer<typeof TestCaseInputDto>;
 
 export const CreateTaskDto = z.object({
   projectId: z.number().int().positive("项目ID无效"),
-  orgId: z.number().int().positive("归属组织ID无效"), // 👉 新增字段
+  orgId: z.number().int().positive("归属组织ID无效").optional().nullable(), // 👉 未传时由 Controller 自动推导
   parentId: z.number().int().positive().optional().nullable(), // 👉 新增字段
   type: z.enum(["FEATURE", "BUG", "CHORE", "ENHANCEMENT"]).default("FEATURE"), // 👉 新增字段
   priority: z.enum(["P0", "P1", "P2", "P3"]).default("P2"), // 👉 新增字段
-  dueDate: z.string().datetime({ offset: true }).optional().nullable(), // 👉 新增字段
+  dueDate: z.string().optional().nullable(), // 👉 新增字段
   title: z.string().min(1, "任务名称不能为空").max(200),
   description: z.string().optional(),
   managerId: z.number().int().positive().optional().nullable(),
@@ -51,6 +54,8 @@ export const CreateTaskDto = z.object({
   coAssigneeIds: z.array(z.number().int().positive()).optional().default([]),
   estimatedHours: z.number().positive().optional().nullable(),
   testCases: z.array(TestCaseInputDto).optional().default([]),
+  /** 已上传完成的附件 ID（可选，须为当前用户本人上传） */
+  attachmentIds: z.array(z.number().int().positive()).max(50).optional(),
 });
 export type CreateTaskDtoType = z.infer<typeof CreateTaskDto>;
 
@@ -59,7 +64,7 @@ export const UpdateTaskDto = z.object({
   parentId: z.number().int().positive().optional().nullable(), // 👉 新增字段
   type: z.enum(["FEATURE", "BUG", "CHORE", "ENHANCEMENT"]).optional(), // 👉 新增字段
   priority: z.enum(["P0", "P1", "P2", "P3"]).optional(), // 👉 新增字段
-  dueDate: z.string().datetime({ offset: true }).optional().nullable(), // 👉 新增字段
+  dueDate: z.string().optional().nullable(), // 👉 新增字段
   title: z.string().min(1).max(200).optional(),
   description: z.string().optional(),
   managerId: z.number().int().positive().optional().nullable(),
@@ -80,6 +85,8 @@ export const UpdateTaskDto = z.object({
       "CANCELLED",
     ])
     .optional(),
+  /** 传入则整体替换任务附件集（空数组表示清空）；不传则不修改附件 */
+  attachmentIds: z.array(z.number().int().positive()).max(50).optional(),
 });
 export type UpdateTaskDtoType = z.infer<typeof UpdateTaskDto>;
 
@@ -110,6 +117,8 @@ export type TaskPageDtoType = z.infer<typeof TaskPageDto>;
 export const CreateWorkLogDto = z.object({
   hours: z.number().positive("工时必须大于0"),
   content: z.string().min(1, "工作内容不能为空"),
+  /** 已上传完成的附件 ID（可选） */
+  attachmentIds: z.array(z.number().int().positive()).max(50).optional(),
 });
 export type CreateWorkLogDtoType = z.infer<typeof CreateWorkLogDto>;
 

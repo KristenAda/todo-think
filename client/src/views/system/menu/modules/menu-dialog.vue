@@ -248,7 +248,12 @@
           type: 'input',
           props: { placeholder: '如：/system/user 或留空' }
         },
-        { label: '图标', key: 'icon', type: 'input', props: { placeholder: '如：ri:user-line' } },
+        {
+          label: '图标',
+          key: 'icon',
+          type: 'input',
+          props: { placeholder: 'Iconify 名称，如 ri:user-line、mdi:folder-outline' }
+        },
         {
           label: createLabelTooltip(
             '角色权限',

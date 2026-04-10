@@ -2,13 +2,13 @@ import { Context } from "koa";
 import { Result } from "@/core/result";
 import organizationService from "./organization.service";
 import { AddManagersDto, AddMembersDto } from "./organization.dto";
+import { isSuperAdminRoles } from "@/utils/role.util";
 
 function currentUserId(ctx: Context): number {
   return (ctx.state as any).user?.id as number;
 }
 function isSuperAdmin(ctx: Context): boolean {
-  const result = (ctx.state as any).user?.roles ?? [];
-  return result.includes("R_SUPER") || result.includes("R_ADMIN");
+  return isSuperAdminRoles((ctx.state as any).user?.roles);
 }
 
 class OrganizationController {
@@ -34,7 +34,7 @@ class OrganizationController {
     const deptId = Number(ctx.params.id);
     const parsed = AddManagersDto.safeParse(ctx.request.body);
     if (!parsed.success) {
-      ctx.body = Result.error(parsed.error.errors[0]?.message ?? "参数错误");
+      ctx.body = Result.error(parsed.error.issues[0]?.message ?? "参数错误");
       return;
     }
     await organizationService.addManagers(deptId, parsed.data.userIds);
@@ -70,7 +70,7 @@ class OrganizationController {
     }
     const parsed = AddMembersDto.safeParse(ctx.request.body);
     if (!parsed.success) {
-      ctx.body = Result.error(parsed.error.errors[0]?.message ?? "参数错误");
+      ctx.body = Result.error(parsed.error.issues[0]?.message ?? "参数错误");
       return;
     }
     await organizationService.addMembers(deptId, parsed.data.userIds);

@@ -27,7 +27,7 @@
             @click="handleMenuJump(item, true)"
           >
             <ArtSvgIcon
-              :icon="item.meta.icon"
+              :icon="resolveMenuIconifyIcon(item.meta?.icon)"
               class="text-lg text-g-700 dark:text-g-800 mr-1"
               :class="item.isActive && '!text-theme'"
             />
@@ -57,6 +57,7 @@
   import { ArrowLeft, ArrowRight } from '@element-plus/icons-vue';
   import { useThrottleFn } from '@vueuse/core';
   import { formatMenuTitle } from '@/utils/router';
+  import { resolveMenuIconifyIcon } from '@/utils/iconify';
   import { handleMenuJump } from '@/utils/navigation';
   import type { AppRouteRecord } from '@/types/router';
 

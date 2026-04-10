@@ -23,7 +23,7 @@
           task.estimatedHours != null ? task.estimatedHours + 'h' : '-'
         }}</el-descriptions-item>
         <el-descriptions-item label="实际工时">{{
-          task.actualHours != null ? task.actualHours + 'h' : '-'
+          displayActualHours != null ? displayActualHours + 'h' : '-'
         }}</el-descriptions-item>
         <el-descriptions-item label="测试验收人">
           <div v-if="task.tester" class="user-inline">
@@ -62,6 +62,45 @@
           task.description || '-'
         }}</el-descriptions-item>
       </el-descriptions>
+
+      <div v-if="task.attachments?.length" class="section">
+        <div class="section-title">
+          <art-svg-icon icon="mdi:paperclip" />
+          <span>任务附件</span>
+        </div>
+        <div class="attach-row">
+          <div
+            v-for="row in task.attachments"
+            :key="row.id"
+            class="attach-line"
+            :class="getFileCategoryClass(row.attachment.originalName, row.attachment.mimeType)"
+            :style="attachTintStyle(row.attachment)"
+          >
+            <div class="attach-line__icon" aria-hidden="true">
+              <ArtSvgIcon :icon="getFileIcon(row.attachment.originalName, row.attachment.mimeType)" />
+            </div>
+            <div class="attach-line__main">
+              <span class="fname" :title="row.attachment.originalName">{{
+                row.attachment.originalName
+              }}</span>
+              <div class="attach-line__meta">
+                <span v-if="getFileExtLabel(row.attachment.originalName)" class="attach-line__ext">{{
+                  getFileExtLabel(row.attachment.originalName)
+                }}</span>
+                <span class="fsize">{{ formatFileSize(row.attachment.size) }}</span>
+              </div>
+            </div>
+            <div class="attach-line__actions">
+              <el-button link type="primary" size="small" @click="openServerPreview(row.attachment)">
+                预览
+              </el-button>
+              <el-button link type="primary" size="small" @click="downloadAtt(row.attachment)">
+                下载
+              </el-button>
+            </div>
+          </div>
+        </div>
+      </div>
 
       <div class="section">
         <div class="section-title">
@@ -132,6 +171,36 @@
                 <span class="log-time">{{ formatDate(log.createdAt) }}</span>
               </div>
               <div class="log-text">{{ log.content }}</div>
+              <div v-if="log.attachments?.length" class="log-attach">
+                <span class="log-attach-label">附件</span>
+                <div
+                  v-for="ar in log.attachments"
+                  :key="ar.id"
+                  class="log-attach-chip"
+                  :class="getFileCategoryClass(ar.attachment.originalName, ar.attachment.mimeType)"
+                  :style="attachTintStyle(ar.attachment)"
+                >
+                  <span class="log-attach-chip__icon" aria-hidden="true">
+                    <ArtSvgIcon
+                      :icon="getFileIcon(ar.attachment.originalName, ar.attachment.mimeType)"
+                    />
+                  </span>
+                  <span class="log-attach-chip__name" :title="ar.attachment.originalName">{{
+                    ar.attachment.originalName
+                  }}</span>
+                  <el-button
+                    link
+                    type="primary"
+                    size="small"
+                    @click="openServerPreview(ar.attachment)"
+                  >
+                    预览
+                  </el-button>
+                  <el-button link type="primary" size="small" @click="downloadAtt(ar.attachment)">
+                    下载
+                  </el-button>
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -154,10 +223,7 @@
         </el-button>
 
         <el-button
-          v-if="
-            isMainAssignee &&
-            ['PENDING', 'IN_PROGRESS', 'SELF_TESTING', 'REJECTED'].includes(task?.status ?? '')
-          "
+          v-if="isMainAssignee && ['IN_PROGRESS', 'REJECTED'].includes(task?.status ?? '')"
           type="warning"
           @click="handleSubmitTest"
           :loading="actionLoading"
@@ -173,11 +239,38 @@
             <art-svg-icon icon="mdi:check-circle-outline" style="margin-right: 4px" /> 验收通过
           </el-button>
         </template>
+
+        <el-button
+          v-if="isMainAssignee && task?.status === 'IN_PROGRESS'"
+          type="info"
+          @click="handlePause"
+          :loading="actionLoading"
+        >
+          <art-svg-icon icon="mdi:pause-circle-outline" style="margin-right: 4px" /> 暂停
+        </el-button>
+
+        <el-button
+          v-if="(isMainAssignee || isCoAssignee) && task?.status === 'PAUSED'"
+          type="primary"
+          @click="handleResume"
+          :loading="actionLoading"
+        >
+          <art-svg-icon icon="mdi:play-circle-outline" style="margin-right: 4px" /> 恢复开发
+        </el-button>
+
+        <el-button
+          v-if="['REJECTED', 'COMPLETED'].includes(task?.status ?? '')"
+          type="warning"
+          @click="handleReopen"
+          :loading="actionLoading"
+        >
+          <art-svg-icon icon="mdi:refresh-circle-outline" style="margin-right: 4px" /> 重新打开
+        </el-button>
       </div>
     </template>
   </el-drawer>
 
-  <el-dialog v-model="workLogDialogVisible" title="登记工时" width="440px" destroy-on-close>
+  <el-dialog v-model="workLogDialogVisible" title="登记工时" width="560px" destroy-on-close>
     <el-form ref="workLogFormRef" :model="workLogForm" :rules="workLogRules" label-width="90px">
       <el-form-item label="工时(h)" prop="hours">
         <el-input-number
@@ -194,6 +287,12 @@
           type="textarea"
           :rows="4"
           placeholder="请描述本次工作内容"
+        />
+      </el-form-item>
+      <el-form-item label="附件">
+        <TaskAttachmentField
+          ref="workLogAttachRef"
+          hint="可选，多文件依次上传；与本次工时一并提交"
         />
       </el-form-item>
     </el-form>
@@ -222,20 +321,40 @@
       >
     </template>
   </el-dialog>
+
+  <AttachmentPreviewDialog
+    v-model="previewOpen"
+    :attachment-id="previewDoc?.id"
+    :file-name="previewDoc?.originalName ?? ''"
+    :mime-type="previewDoc?.mimeType ?? null"
+  />
 </template>
 
 <script setup lang="ts">
-  import { ref, computed, reactive, watch } from 'vue';
+  import { ref, computed, reactive, watch, nextTick } from 'vue';
   import { ElMessage } from 'element-plus';
   import type { FormInstance, FormRules } from 'element-plus';
   import {
     fetchTaskInfo,
+    fetchUpdateTask,
+    fetchStartWork,
     fetchAddWorkLog,
     fetchSubmitTest,
     fetchQaAudit,
-    fetchStartWork
+    fetchPauseTask,
+    fetchResumeTask,
+    fetchReopenTask,
   } from '@/api/task';
+  import { downloadAttachmentBlob } from '@/api/attachment';
+  import {
+    getFileIcon,
+    getFileCategoryClass,
+    getFileTintRgb,
+    getFileExtLabel
+  } from '@/utils/fileTypeIcon';
   import { useUserStore } from '@/store/modules/user';
+  import TaskAttachmentField from '../components/TaskAttachmentField.vue';
+  import AttachmentPreviewDialog from '../components/AttachmentPreviewDialog.vue';
 
   const props = defineProps<{ taskId: number }>();
   const emit = defineEmits<{ (e: 'update:modelValue', v: boolean): void; (e: 'refresh'): void }>();
@@ -251,6 +370,10 @@
   const qaPassDialogVisible = ref(false);
   const actualHoursInput = ref<number>(1);
   const workLogFormRef = ref<FormInstance>();
+  const workLogAttachRef = ref<InstanceType<typeof TaskAttachmentField> | null>(null);
+
+  const previewOpen = ref(false);
+  const previewDoc = ref<Api.Task.TaskAttachmentMeta | null>(null);
 
   // 自测状态 map: tcId -> status
   const selfTestMap = reactive<Record<number, Api.Task.TestStatus>>({});
@@ -275,6 +398,25 @@
     () => !!currentUserId.value && task.value?.testerId === currentUserId.value
   );
 
+  /** 工时登记表合计（小时） */
+  const workLogsHoursSum = computed(() =>
+    (task.value?.workLogs ?? []).reduce((sum, log) => sum + Number(log.hours ?? 0), 0)
+  );
+
+  /**
+   * 展示用「实际工时」：
+   * - 库里的 actualHours 仅在 QA 验收通过时写入；登记工时只写 WorkLog，不会更新该字段。
+   * - 未完成或未验收前：显示工时记录合计；已 COMPLETED 且库里有 actualHours：以验收确认值为准。
+   */
+  const displayActualHours = computed(() => {
+    const t = task.value;
+    if (!t) return null;
+    if (t.status === 'COMPLETED' && t.actualHours != null) return Number(t.actualHours);
+    const sum = workLogsHoursSum.value;
+    if (sum > 0) return sum;
+    return t.actualHours != null ? Number(t.actualHours) : null;
+  });
+
   // ==================== 枚举工具 ====================
   const STATUS_OPTIONS: { label: string; value: string }[] = [
     { label: '待分配', value: 'PENDING' },
@@ -282,7 +424,9 @@
     { label: '待提测', value: 'SELF_TESTING' },
     { label: '验收中', value: 'QA_REVIEW' },
     { label: '打回修改', value: 'REJECTED' },
-    { label: '已完成', value: 'COMPLETED' }
+    { label: '已完成', value: 'COMPLETED' },
+    { label: '已暂停', value: 'PAUSED' },
+    { label: '已取消', value: 'CANCELLED' },
   ];
   const STATUS_TAG: Record<string, string> = {
     PENDING: 'info',
@@ -290,7 +434,9 @@
     SELF_TESTING: 'warning',
     QA_REVIEW: 'warning',
     REJECTED: 'danger',
-    COMPLETED: 'success'
+    COMPLETED: 'success',
+    PAUSED: 'warning',
+    CANCELLED: 'info',
   };
   function statusLabel(s?: string) {
     return STATUS_OPTIONS.find((o) => o.value === s)?.label ?? s ?? '';
@@ -311,12 +457,40 @@
     return d ? new Date(d).toLocaleString('zh-CN', { hour12: false }).slice(0, 16) : '';
   }
 
+  function formatFileSize(n: number) {
+    if (n < 1024) return `${n} B`;
+    if (n < 1024 * 1024) return `${(n / 1024).toFixed(1)} KB`;
+    return `${(n / 1024 / 1024).toFixed(2)} MB`;
+  }
+
+  function openServerPreview(a: Api.Task.TaskAttachmentMeta) {
+    previewDoc.value = a;
+    previewOpen.value = true;
+  }
+
+  function attachTintStyle(a: Api.Task.TaskAttachmentMeta) {
+    return { '--ft-tint': getFileTintRgb(a.originalName, a.mimeType) } as Record<string, string>;
+  }
+
+  async function downloadAtt(a: Api.Task.TaskAttachmentMeta) {
+    try {
+      const { blob, name } = await downloadAttachmentBlob(a.id);
+      const url = URL.createObjectURL(blob);
+      const el = document.createElement('a');
+      el.href = url;
+      el.download = name || a.originalName;
+      el.click();
+      URL.revokeObjectURL(url);
+    } catch {
+      ElMessage.error('下载失败');
+    }
+  }
+
   // ==================== 数据加载 ====================
   async function loadDetail() {
     loadingDetail.value = true;
     try {
       const res = await fetchTaskInfo(props.taskId);
-      console.log('res :>> ', res);
       task.value = res;
       // 初始化 selfTestMap
       (task.value?.testCases ?? []).forEach((tc) => {
@@ -335,6 +509,10 @@
     },
     { immediate: true }
   );
+
+  watch(workLogDialogVisible, (v) => {
+    if (v) nextTick(() => workLogAttachRef.value?.reset());
+  });
 
   function handleClose() {
     visible.value = false;
@@ -360,14 +538,22 @@
     await workLogFormRef.value?.validate();
     actionLoading.value = true;
     try {
+      try {
+        await workLogAttachRef.value?.uploadAll();
+      } catch {
+        return;
+      }
+      const attachmentIds = workLogAttachRef.value?.getAttachmentIds() ?? [];
       await fetchAddWorkLog(props.taskId, {
         hours: workLogForm.hours,
-        content: workLogForm.content
+        content: workLogForm.content,
+        attachmentIds: attachmentIds.length ? attachmentIds : undefined
       });
       ElMessage.success('工时登记成功');
       workLogDialogVisible.value = false;
       workLogForm.hours = 1;
       workLogForm.content = '';
+      workLogAttachRef.value?.reset();
       loadDetail();
     } catch (e: any) {
       ElMessage.error(e?.response?.data?.message ?? '操作失败');
@@ -425,6 +611,51 @@
     try {
       await fetchQaAudit(props.taskId, payload);
       ElMessage.success(action === 'pass' ? '验收通过' : '已打回');
+      emit('refresh');
+      loadDetail();
+    } catch (e: any) {
+      ElMessage.error(e?.response?.data?.message ?? '操作失败');
+    } finally {
+      actionLoading.value = false;
+    }
+  }
+
+  // ==================== 暂停任务 ====================
+  async function handlePause() {
+    actionLoading.value = true;
+    try {
+      await fetchPauseTask(props.taskId);
+      ElMessage.success('任务已暂停');
+      emit('refresh');
+      loadDetail();
+    } catch (e: any) {
+      ElMessage.error(e?.response?.data?.message ?? '操作失败');
+    } finally {
+      actionLoading.value = false;
+    }
+  }
+
+  // ==================== 恢复开发 ====================
+  async function handleResume() {
+    actionLoading.value = true;
+    try {
+      await fetchResumeTask(props.taskId);
+      ElMessage.success('任务已恢复开发');
+      emit('refresh');
+      loadDetail();
+    } catch (e: any) {
+      ElMessage.error(e?.response?.data?.message ?? '操作失败');
+    } finally {
+      actionLoading.value = false;
+    }
+  }
+
+  // ==================== 重新打开任务 ====================
+  async function handleReopen() {
+    actionLoading.value = true;
+    try {
+      await fetchReopenTask(props.taskId);
+      ElMessage.success('任务已重新打开并进入开发状态');
       emit('refresh');
       loadDetail();
     } catch (e: any) {
@@ -551,6 +782,145 @@
         font-size: 13px;
         color: #555;
       }
+      .log-attach {
+        margin-top: 10px;
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        font-size: 12px;
+
+        .log-attach-label {
+          font-size: 11px;
+          font-weight: 600;
+          letter-spacing: 0.08em;
+          color: var(--el-text-color-secondary);
+          text-transform: uppercase;
+        }
+      }
+
+      .log-attach-chip {
+        --ft-tint: 120, 144, 156;
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 6px 8px;
+        padding: 8px 10px;
+        border-radius: 10px;
+        background: rgba(var(--ft-tint), 0.06);
+        border: 1px solid rgba(var(--ft-tint), 0.16);
+
+        &__icon {
+          flex-shrink: 0;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          width: 28px;
+          height: 28px;
+          border-radius: 8px;
+          font-size: 18px;
+          color: rgb(var(--ft-tint));
+          background: rgba(var(--ft-tint), 0.12);
+        }
+
+        &__name {
+          flex: 1;
+          min-width: 0;
+          font-size: 12px;
+          font-weight: 500;
+          overflow: hidden;
+          text-overflow: ellipsis;
+          white-space: nowrap;
+          color: var(--el-text-color-regular);
+        }
+      }
+    }
+  }
+  .attach-row {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .attach-line {
+    --ft-tint: 120, 144, 156;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 12px;
+    border-radius: 12px;
+    font-size: 13px;
+    background: linear-gradient(
+      120deg,
+      rgba(var(--ft-tint), 0.08) 0%,
+      var(--el-fill-color-blank) 48%
+    );
+    border: 1px solid rgba(var(--ft-tint), 0.18);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+    transition:
+      border-color 0.2s,
+      box-shadow 0.2s;
+
+    &:hover {
+      border-color: rgba(var(--ft-tint), 0.35);
+      box-shadow: 0 4px 14px rgba(0, 0, 0, 0.06);
+    }
+
+    &__icon {
+      flex-shrink: 0;
+      width: 44px;
+      height: 44px;
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: rgba(var(--ft-tint), 0.12);
+      border: 1px solid rgba(var(--ft-tint), 0.22);
+      font-size: 26px;
+      color: rgb(var(--ft-tint));
+    }
+
+    &__main {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .fname {
+      display: block;
+      font-weight: 500;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      color: var(--el-text-color-primary);
+    }
+
+    &__meta {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-top: 4px;
+    }
+
+    &__ext {
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 0.06em;
+      padding: 1px 6px;
+      border-radius: 999px;
+      color: rgb(var(--ft-tint));
+      background: rgba(var(--ft-tint), 0.12);
+      border: 1px solid rgba(var(--ft-tint), 0.2);
+    }
+
+    .fsize {
+      font-size: 12px;
+      color: var(--el-text-color-secondary);
+    }
+
+    &__actions {
+      flex-shrink: 0;
+      display: flex;
+      align-items: center;
+      gap: 4px;
     }
   }
   .drawer-footer {

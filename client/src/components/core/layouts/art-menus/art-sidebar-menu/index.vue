@@ -37,7 +37,7 @@
               >
                 <ArtSvgIcon
                   class="menu-icon text-g-700 dark:text-g-800"
-                  :icon="menu.meta.icon"
+                  :icon="resolveMenuIconifyIcon(menu.meta?.icon)"
                   :style="{
                     marginBottom: dualMenuShowText ? '5px' : '0'
                   }"
@@ -136,6 +136,7 @@
   import { useMenuStore } from '@/store/modules/menu';
   import { isIframe } from '@/utils/navigation';
   import { handleMenuJump } from '@/utils/navigation';
+  import { resolveMenuIconifyIcon } from '@/utils/iconify';
   import SidebarSubmenu from './widget/SidebarSubmenu.vue';
   import { useCommon } from '@/hooks/core/useCommon';
   import { useWindowSize, useTimeoutFn } from '@vueuse/core';

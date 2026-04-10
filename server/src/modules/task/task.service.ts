@@ -1,4 +1,5 @@
 import prisma from "@/core/prisma";
+import type { Prisma } from "@prisma/client";
 import {
   CreateProjectDtoType,
   UpdateProjectDtoType,
@@ -21,14 +22,164 @@ const userSelect = {
   userEmail: true,
 };
 
+/** 任务/工时附件对外返回字段 */
+const attachmentPublic = {
+  id: true,
+  originalName: true,
+  mimeType: true,
+  size: true,
+  createTime: true,
+} as const;
+
+async function assertAttachmentsOwnedByUser(
+  attachmentIds: number[] | undefined,
+  userId: number,
+  db: Prisma.TransactionClient | typeof prisma = prisma,
+): Promise<void> {
+  if (!attachmentIds?.length) return;
+  const uniq = [...new Set(attachmentIds)];
+  const rows = await db.attachment.findMany({
+    where: { id: { in: uniq }, deletedAt: null },
+    select: { id: true, uploadedById: true },
+  });
+  if (rows.length !== uniq.length) {
+    throw { status: 400, message: "部分附件不存在或已删除" };
+  }
+  for (const r of rows) {
+    if (r.uploadedById !== userId) {
+      throw { status: 403, message: "仅能关联本人上传的附件" };
+    }
+  }
+}
+
+/** 编辑任务：可保留他人已挂在本任务上的附件；新加的须为本人上传 */
+async function assertAttachmentsAllowedForTaskEdit(
+  attachmentIds: number[],
+  taskId: number,
+  userId: number,
+  db: Prisma.TransactionClient | typeof prisma,
+): Promise<void> {
+  if (attachmentIds.length === 0) return;
+  const uniq = [...new Set(attachmentIds)];
+  const rows = await db.attachment.findMany({
+    where: { id: { in: uniq }, deletedAt: null },
+    select: { id: true, uploadedById: true },
+  });
+  if (rows.length !== uniq.length) {
+    throw { status: 400, message: "部分附件不存在或已删除" };
+  }
+  const alreadyOnTask = await db.taskAttachment.findMany({
+    where: { taskId, attachmentId: { in: uniq } },
+    select: { attachmentId: true },
+  });
+  const onTask = new Set(alreadyOnTask.map((x) => x.attachmentId));
+  for (const r of rows) {
+    if (r.uploadedById === userId) continue;
+    if (onTask.has(r.id)) continue;
+    throw { status: 403, message: "无权关联该附件" };
+  }
+}
+
 // =====================================================================
 // Project Service
 // =====================================================================
 
 class ProjectService {
-  async page(dto: ProjectPageDtoType) {
+  /**
+   * 根据部门 parentId 链向上找到根部门 ID（与 organization 模块树结构一致，不依赖 ancestors 字符串格式）
+   */
+  private rootDeptIdFromMap(
+    deptId: number,
+    byId: Map<number, { id: number; parentId: number | null }>,
+  ): number | null {
+    const seen = new Set<number>();
+    let cur: number | null = deptId;
+    while (cur != null && !seen.has(cur)) {
+      seen.add(cur);
+      const node = byId.get(cur);
+      if (!node) return null;
+      if (node.parentId == null) return node.id;
+      cur = node.parentId;
+    }
+    return null;
+  }
+
+  /** 当前用户所属部门对应的全部根组织 ID（跨多个部门时取多个根） */
+  async getOrgIdsForUser(userId: number): Promise<number[]> {
+    const memberships = await prisma.deptMember.findMany({
+      where: { userId },
+      select: { deptId: true },
+    });
+    if (memberships.length === 0) return [];
+
+    const allDepts = await prisma.department.findMany({
+      where: { deletedAt: null },
+      select: { id: true, parentId: true },
+    });
+    const byId = new Map(allDepts.map((d) => [d.id, d]));
+
+    const roots = new Set<number>();
+    for (const m of memberships) {
+      const r = this.rootDeptIdFromMap(m.deptId, byId);
+      if (r != null) roots.add(r);
+    }
+    return Array.from(roots);
+  }
+
+  /** 兼容旧逻辑：取主归属组织（多根时取最小 id，保证稳定） */
+  async getOrgIdByUserId(userId: number): Promise<number | null> {
+    const ids = await this.getOrgIdsForUser(userId);
+    if (ids.length === 0) return null;
+    return ids.sort((a, b) => a - b)[0]!;
+  }
+
+  /** 校验用户是否可访问指定组织下的数据 */
+  async assertUserCanAccessOrg(userId: number, orgId: number | null) {
+    const allowed = await this.getOrgIdsForUser(userId);
+    if (allowed.length === 0) {
+      throw { status: 403, message: "当前账号未关联部门，无权限操作" };
+    }
+    if (orgId == null) {
+      throw { status: 403, message: "资源未绑定组织，无权限操作" };
+    }
+    if (!allowed.includes(orgId)) {
+      throw { status: 403, message: "无权限访问该组织下的数据" };
+    }
+  }
+
+  async assertUserCanAccessProject(userId: number, projectId: number) {
+    const p = await prisma.project.findFirst({
+      where: { id: projectId, deletedAt: null },
+      select: { id: true, orgId: true },
+    });
+    if (!p) throw { status: 404, message: "项目不存在" };
+    await this.assertUserCanAccessOrg(userId, p.orgId);
+  }
+
+  async assertUserCanAccessTask(userId: number, taskId: number) {
+    const task = await prisma.task.findUnique({
+      where: { id: taskId },
+      select: {
+        orgId: true,
+        project: { select: { orgId: true } },
+      },
+    });
+    if (!task) throw { status: 404, message: "任务不存在" };
+    const effectiveOrg = task.orgId ?? task.project?.orgId ?? null;
+    await this.assertUserCanAccessOrg(userId, effectiveOrg);
+  }
+
+  async page(dto: ProjectPageDtoType, userId: number) {
+    const orgIds = await this.getOrgIdsForUser(userId);
+    if (orgIds.length === 0) {
+      return { list: [], total: 0 };
+    }
+
     const { page, pageSize, name, status } = dto;
-    const where: any = {};
+    const where: any = {
+      deletedAt: null,
+      orgId: { in: orgIds },
+    };
     if (name) where.name = { contains: name };
     if (status) where.status = status;
 
@@ -49,10 +200,13 @@ class ProjectService {
     return { list, total };
   }
 
-  async info(id: number) {
+  async info(id: number, userId: number) {
     if (!id || isNaN(id)) return null;
+    const orgIds = await this.getOrgIdsForUser(userId);
+    if (orgIds.length === 0) return null;
+
     return prisma.project.findFirst({
-      where: { id, deletedAt: null },
+      where: { id, deletedAt: null, orgId: { in: orgIds } },
       include: {
         manager: { select: userSelect },
         _count: { select: { tasks: true } },
@@ -112,13 +266,25 @@ class ProjectService {
     });
   }
 
-  async create(dto: CreateProjectDtoType) {
+  async create(dto: CreateProjectDtoType, userId: number) {
+    // orgId 未传时从当前用户部门推导；若显式传入则必须在用户可访问的根组织内
+    let orgId = dto.orgId;
+    const allowed = await this.getOrgIdsForUser(userId);
+    if (orgId != null) {
+      if (allowed.length === 0 || !allowed.includes(orgId)) {
+        throw { status: 403, message: "无权在该组织下创建项目" };
+      }
+    } else {
+      orgId = (await this.getOrgIdByUserId(userId)) ?? undefined;
+    }
+
+    const orgIdVal = orgId ?? undefined;
     return prisma.project.create({
       data: {
         name: dto.name,
         description: dto.description,
         managerId: dto.managerId,
-        orgId: dto.orgId, // 👉 注入 orgId
+        orgId: orgIdVal as any,
         status: dto.status ?? "ACTIVE",
         startDate: dto.startDate ? new Date(dto.startDate) : null,
         endDate: dto.endDate ? new Date(dto.endDate) : null,
@@ -126,23 +292,34 @@ class ProjectService {
     });
   }
 
-  async update(id: number, dto: UpdateProjectDtoType) {
-    const { version, ...updateData } = dto;
+  async update(id: number, dto: UpdateProjectDtoType, userId: number) {
+    await this.assertUserCanAccessProject(userId, id);
+
+    const { version, orgId, startDate, endDate, ...rest } = dto;
+
+    if (orgId != null) {
+      const allowed = await this.getOrgIdsForUser(userId);
+      if (!allowed.includes(orgId)) {
+        throw { status: 403, message: "无权将项目归属到该组织" };
+      }
+    }
 
     // 👉 使用 updateMany 实现基于版本号的乐观锁
+    const updateData: any = { ...rest };
+    if (startDate !== undefined) {
+      updateData.startDate = startDate ? new Date(startDate) : null;
+    }
+    if (endDate !== undefined) {
+      updateData.endDate = endDate ? new Date(endDate) : null;
+    }
+    // orgId 只在显式传入时更新，不传则保持原值
+    if (orgId !== undefined) {
+      updateData.orgId = orgId;
+    }
+
     const result = await prisma.project.updateMany({
-      where: {
-        id,
-        version: version,
-      },
-      data: {
-        ...updateData,
-        startDate: updateData.startDate
-          ? new Date(updateData.startDate)
-          : undefined,
-        endDate: updateData.endDate ? new Date(updateData.endDate) : undefined,
-        version: { increment: 1 }, // 👉 更新成功则版本号 +1
-      },
+      where: { id, version },
+      data: { ...updateData, version: { increment: 1 } },
     });
 
     if (result.count === 0) {
@@ -154,13 +331,17 @@ class ProjectService {
 
     return prisma.project.findUnique({ where: { id } });
   }
-  async delete(id: number) {
+  async delete(id: number, userId: number) {
+    await this.assertUserCanAccessProject(userId, id);
     return prisma.project.delete({ where: { id } });
   }
 
-  async list() {
+  async list(userId: number) {
+    const orgIds = await this.getOrgIdsForUser(userId);
+    if (orgIds.length === 0) return [];
+
     return prisma.project.findMany({
-      where: { status: "ACTIVE" },
+      where: { status: "ACTIVE", deletedAt: null, orgId: { in: orgIds } },
       orderBy: { id: "desc" },
       select: { id: true, name: true, status: true },
     });
@@ -174,9 +355,29 @@ export const projectService = new ProjectService();
 // =====================================================================
 
 class TaskService {
-  async page(dto: TaskPageDtoType) {
+  async page(dto: TaskPageDtoType, userId: number) {
+    const orgIds = await projectService.getOrgIdsForUser(userId);
+    if (orgIds.length === 0) {
+      return { list: [], total: 0 };
+    }
+
     const { page, pageSize, projectId, status, mainAssigneeId, keyword } = dto;
-    const where: any = {};
+    const where: any = {
+      OR: [
+        { orgId: { in: orgIds } },
+        {
+          AND: [
+            { orgId: null },
+            {
+              project: {
+                orgId: { in: orgIds },
+                deletedAt: null,
+              },
+            },
+          ],
+        },
+      ],
+    };
     if (projectId) where.projectId = projectId;
     if (status) where.status = status;
     if (mainAssigneeId) where.mainAssigneeId = mainAssigneeId;
@@ -205,7 +406,14 @@ class TaskService {
     return { list, total };
   }
 
-  async info(id: number) {
+  async info(id: number, userId: number) {
+    try {
+      await projectService.assertUserCanAccessTask(userId, id);
+    } catch (e: any) {
+      if (e.status === 404 || e.status === 403) return null;
+      throw e;
+    }
+
     return prisma.task.findUnique({
       where: { id },
       include: {
@@ -218,52 +426,93 @@ class TaskService {
         },
         testCases: true,
         workLogs: {
-          include: { user: { select: userSelect } },
+          include: {
+            user: { select: userSelect },
+            attachments: {
+              where: { attachment: { deletedAt: null } },
+              orderBy: { sort: "asc" },
+              include: { attachment: { select: attachmentPublic } },
+            },
+          },
           orderBy: { createdAt: "desc" },
+        },
+        attachments: {
+          where: { attachment: { deletedAt: null } },
+          orderBy: { sort: "asc" },
+          include: { attachment: { select: attachmentPublic } },
         },
       },
     });
   }
 
   // 使用事务原子性创建任务（含协助人 + 测试用例）
-  async create(dto: CreateTaskDtoType) {
-    const { coAssigneeIds = [], testCases = [], ...taskData } = dto;
+  async create(dto: CreateTaskDtoType, userId: number) {
+    await projectService.assertUserCanAccessProject(userId, dto.projectId);
+
+    const proj = await prisma.project.findFirst({
+      where: { id: dto.projectId, deletedAt: null },
+      select: { orgId: true },
+    });
+    if (!proj?.orgId) {
+      throw { status: 400, message: "项目未绑定组织，无法创建任务" };
+    }
+
+    const { coAssigneeIds = [], testCases = [], attachmentIds, ...taskData } = dto;
+    await assertAttachmentsOwnedByUser(attachmentIds, userId);
+    if (taskData.orgId != null && taskData.orgId !== proj.orgId) {
+      throw { status: 400, message: "任务组织必须与所属项目一致" };
+    }
+    const mergedOrgId = proj.orgId;
 
     return prisma.$transaction(async (tx) => {
-      // 1. 创建任务主记录
-      const task = await tx.task.create({
-        data: {
-          projectId: taskData.projectId,
-          orgId: taskData.orgId, // 👉 注入 orgId
-          parentId: taskData.parentId, // 👉 注入 parentId
-          type: taskData.type, // 👉 注入 type
-          priority: taskData.priority, // 👉 注入 priority
-          dueDate: taskData.dueDate ? new Date(taskData.dueDate) : null, // 👉 注入 dueDate
-          title: taskData.title,
-          description: taskData.description,
-          managerId: taskData.managerId,
-          mainAssigneeId: taskData.mainAssigneeId,
-          testerId: taskData.testerId,
-          estimatedHours: taskData.estimatedHours,
-          status: "PENDING",
-        },
-      });
+      // Prisma MySQL 驱动不接受 undefined，必须显式控制每个字段
+      const createData: any = {
+        title: taskData.title,
+        status: "PENDING",
+      };
+      if (taskData.projectId !== undefined) createData.projectId = taskData.projectId;
+      if (taskData.managerId !== undefined) createData.managerId = taskData.managerId;
+      if (taskData.mainAssigneeId !== undefined) createData.mainAssigneeId = taskData.mainAssigneeId;
+      if (taskData.testerId !== undefined) createData.testerId = taskData.testerId;
+      if (taskData.estimatedHours !== undefined) createData.estimatedHours = taskData.estimatedHours;
+      if (mergedOrgId !== undefined) createData.orgId = mergedOrgId;
+      if (taskData.parentId !== undefined) createData.parentId = taskData.parentId;
+      if (taskData.type !== undefined) createData.type = taskData.type;
+      if (taskData.priority !== undefined) createData.priority = taskData.priority;
+      if (taskData.dueDate != null) createData.dueDate = new Date(taskData.dueDate);
+      if (taskData.description !== undefined) createData.description = taskData.description;
 
-      // 2. 批量写入协助人中间表
-      if (coAssigneeIds.length > 0) {
+      const task = await tx.task.create({ data: createData });
+
+      // 2. 批量写入协助人中间表（userId 过滤 null，避免 MySQL driver 报错）
+      const validCoAssignees = coAssigneeIds.filter((uid) => uid != null);
+      if (validCoAssignees.length > 0) {
         await tx.taskCoAssignee.createMany({
-          data: coAssigneeIds.map((userId) => ({ taskId: task.id, userId })),
+          data: validCoAssignees.map((userId) => ({ taskId: task.id, userId })),
           skipDuplicates: true,
         });
       }
 
-      // 3. 批量创建测试用例
-      if (testCases.length > 0) {
+      // 3. 批量创建测试用例（过滤掉任何 null 字段）
+      const validTestCases = testCases.filter(
+        (tc) => tc.description != null && tc.expectedResult != null,
+      );
+      if (validTestCases.length > 0) {
         await tx.testCase.createMany({
-          data: testCases.map((tc) => ({
+          data: validTestCases.map((tc) => ({
             taskId: task.id,
             description: tc.description,
             expectedResult: tc.expectedResult,
+          })),
+        });
+      }
+
+      if (attachmentIds?.length) {
+        await tx.taskAttachment.createMany({
+          data: attachmentIds.map((aid, i) => ({
+            taskId: task.id,
+            attachmentId: aid,
+            sort: i,
           })),
         });
       }
@@ -274,14 +523,20 @@ class TaskService {
           mainAssignee: { select: userSelect },
           coAssignees: { include: { user: { select: userSelect } } },
           testCases: true,
+          attachments: {
+            orderBy: { sort: "asc" },
+            include: { attachment: { select: attachmentPublic } },
+          },
         },
       });
     });
   }
 
   // 更新任务（含协助人重置）
-  async update(id: number, dto: UpdateTaskDtoType) {
-    const { version, coAssigneeIds, ...taskData } = dto;
+  async update(id: number, dto: UpdateTaskDtoType, userId: number) {
+    await projectService.assertUserCanAccessTask(userId, id);
+
+    const { version, coAssigneeIds, attachmentIds, ...taskData } = dto;
 
     return prisma.$transaction(async (tx) => {
       // 👉 使用 updateMany 配合 version 实现乐观锁防覆盖
@@ -340,16 +595,42 @@ class TaskService {
         }
       }
 
-      return tx.task.findUnique({ where: { id } });
+      if (attachmentIds !== undefined) {
+        await assertAttachmentsAllowedForTaskEdit(attachmentIds, id, userId, tx);
+        await tx.taskAttachment.deleteMany({ where: { taskId: id } });
+        if (attachmentIds.length > 0) {
+          await tx.taskAttachment.createMany({
+            data: attachmentIds.map((aid, i) => ({
+              taskId: id,
+              attachmentId: aid,
+              sort: i,
+            })),
+          });
+        }
+      }
+
+      return tx.task.findUnique({
+        where: { id },
+        include: {
+          attachments: {
+            where: { attachment: { deletedAt: null } },
+            orderBy: { sort: "asc" },
+            include: { attachment: { select: attachmentPublic } },
+          },
+        },
+      });
     });
   }
 
-  async delete(id: number) {
+  async delete(id: number, userId: number) {
+    await projectService.assertUserCanAccessTask(userId, id);
     return prisma.task.delete({ where: { id } });
   }
 
   // 开始开发（主负责人或协助人将 PENDING → IN_PROGRESS）
   async startWork(taskId: number, userId: number) {
+    await projectService.assertUserCanAccessTask(userId, taskId);
+
     const task = await prisma.task.findUnique({
       where: { id: taskId },
       include: { coAssignees: true },
@@ -373,6 +654,8 @@ class TaskService {
 
   // 填写工时（主负责人或协助人均可）
   async addWorkLog(taskId: number, userId: number, dto: CreateWorkLogDtoType) {
+    await projectService.assertUserCanAccessTask(userId, taskId);
+
     const task = await prisma.task.findUnique({
       where: { id: taskId },
       include: { coAssignees: true },
@@ -385,13 +668,38 @@ class TaskService {
       throw { status: 403, message: "无权限：仅任务负责人可填写工时" };
     }
 
-    return prisma.workLog.create({
-      data: { taskId, userId, hours: dto.hours, content: dto.content },
+    await assertAttachmentsOwnedByUser(dto.attachmentIds, userId);
+
+    return prisma.$transaction(async (tx) => {
+      const log = await tx.workLog.create({
+        data: { taskId, userId, hours: dto.hours, content: dto.content },
+      });
+      if (dto.attachmentIds?.length) {
+        await tx.workLogAttachment.createMany({
+          data: dto.attachmentIds.map((attachmentId, i) => ({
+            workLogId: log.id,
+            attachmentId,
+            sort: i,
+          })),
+        });
+      }
+      return tx.workLog.findUnique({
+        where: { id: log.id },
+        include: {
+          user: { select: userSelect },
+          attachments: {
+            orderBy: { sort: "asc" },
+            include: { attachment: { select: attachmentPublic } },
+          },
+        },
+      });
     });
   }
 
   // 提交测试验收（仅主负责人）
   async submitTest(taskId: number, userId: number, dto: SubmitTestDtoType) {
+    await projectService.assertUserCanAccessTask(userId, taskId);
+
     const task = await prisma.task.findUnique({
       where: { id: taskId },
       include: { testCases: true },
@@ -435,6 +743,8 @@ class TaskService {
 
   // QA 验收审核
   async qaAudit(taskId: number, userId: number, dto: QaAuditDtoType) {
+    await projectService.assertUserCanAccessTask(userId, taskId);
+
     const task = await prisma.task.findUnique({
       where: { id: taskId },
       include: { testCases: true },
@@ -487,6 +797,8 @@ class TaskService {
 
   // 暂停任务 (IN_PROGRESS -> PAUSED)
   async pauseTask(taskId: number, userId: number) {
+    await projectService.assertUserCanAccessTask(userId, taskId);
+
     const task = await prisma.task.findUnique({
       where: { id: taskId },
       include: { coAssignees: true },
@@ -511,6 +823,8 @@ class TaskService {
 
   // 恢复开发 (PAUSED -> IN_PROGRESS)
   async resumeTask(taskId: number, userId: number) {
+    await projectService.assertUserCanAccessTask(userId, taskId);
+
     const task = await prisma.task.findUnique({
       where: { id: taskId },
       include: { coAssignees: true },
@@ -535,6 +849,8 @@ class TaskService {
 
   // 重新打开任务 (REJECTED / COMPLETED -> IN_PROGRESS)
   async reopenTask(taskId: number, userId: number) {
+    await projectService.assertUserCanAccessTask(userId, taskId);
+
     const task = await prisma.task.findUnique({ where: { id: taskId } });
     if (!task) throw { status: 404, message: "任务不存在" };
 
@@ -567,9 +883,30 @@ export const taskService = new TaskService();
 // =====================================================================
 
 class PerformanceService {
-  async stats(dto: PerformancePageDtoType) {
+  async stats(dto: PerformancePageDtoType, userId: number) {
+    const orgIds = await projectService.getOrgIdsForUser(userId);
+    if (orgIds.length === 0) {
+      return { list: [], total: 0 };
+    }
+
     const { page, pageSize, projectId } = dto;
-    const where: any = { status: "COMPLETED" };
+    const where: any = {
+      status: "COMPLETED",
+      OR: [
+        { orgId: { in: orgIds } },
+        {
+          AND: [
+            { orgId: null },
+            {
+              project: {
+                orgId: { in: orgIds },
+                deletedAt: null,
+              },
+            },
+          ],
+        },
+      ],
+    };
     if (projectId) where.projectId = projectId;
 
     const completedTasks = await prisma.task.findMany({

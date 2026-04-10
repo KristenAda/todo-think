@@ -36,8 +36,9 @@ export default ({ mode }: { mode: string }) => {
       },
       host: true
     },
-    // 路径别名
+    // 路径别名（dedupe 避免 @vue-office + vue-demi 预构建后出现多份 Vue，引发 isFunction 等运行时错误）
     resolve: {
+      dedupe: ['vue', 'vue-demi', '@vue/shared'],
       alias: {
         '@': fileURLToPath(new URL('./src', import.meta.url)),
         '@views': resolvePath('src/views'),
@@ -110,7 +111,16 @@ export default ({ mode }: { mode: string }) => {
     ],
     // 依赖预构建：避免运行时重复请求与转换，提升首次加载速度
     optimizeDeps: {
+      // 使用包内 lib/v3/*.mjs 直连，并排除对 UMD 入口的预构建，避免与 Vue 合并 chunk 后出现 defineComponent 内 isFunction 异常
+      exclude: [
+        '@vue-office/pdf',
+        '@vue-office/docx',
+        '@vue-office/excel',
+        '@vue-office/pptx'
+      ],
       include: [
+        'vue',
+        'vue-demi',
         'echarts/core',
         'echarts/charts',
         'echarts/components',

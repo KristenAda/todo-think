@@ -66,9 +66,20 @@ export const systemRoutes: AppRouteRecord = {
       component: '/system/organization',
       meta: {
         title: 'menus.system.organization',
-        icon: 'ri:organization-chart',
+        icon: 'mdi:sitemap',
         keepAlive: true,
         roles: ['R_SUPER', 'R_ADMIN']
+      }
+    },
+    {
+      path: 'attachment',
+      name: 'Attachment',
+      component: '/system/attachment/index',
+      meta: {
+        title: 'menus.system.attachment',
+        icon: 'mdi:paperclip',
+        keepAlive: true,
+        roles: ['admin', 'R_SUPER', 'R_ADMIN']
       }
     },
     {

@@ -74,6 +74,25 @@ let routeInitFailed = false;
 // 路由初始化进行中标记，防止并发请求
 let routeInitInProgress = false;
 
+/** 整页刷新（F5）时只清理一次已恢复的多标签，避免与 setWorktab 重复执行 */
+let reloadWorktabCollapsed = false;
+
+function shouldTreatAsPageReload(): boolean {
+  try {
+    const e = performance.getEntriesByType('navigation')[0] as PerformanceNavigationTiming | undefined;
+    if (e?.type === 'reload') return true;
+  } catch {
+    /* empty */
+  }
+  try {
+    const nav = (performance as unknown as { navigation?: { type?: number } }).navigation;
+    if (nav?.type === 1) return true;
+  } catch {
+    /* empty */
+  }
+  return false;
+}
+
 /**
  * 获取 pendingLoading 状态
  */
@@ -207,6 +226,10 @@ async function handleRouteGuard(
 
   // 6. 处理已匹配的路由
   if (to.matched.length > 0) {
+    if (shouldTreatAsPageReload() && !reloadWorktabCollapsed) {
+      useWorktabStore().clearOpenedForPageReload();
+      reloadWorktabCollapsed = true;
+    }
     setWorktab(to);
     setPageTitle(to);
     next();

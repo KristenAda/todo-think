@@ -1,7 +1,11 @@
 <template>
   <ElSubMenu v-if="hasChildren" :index="item.path || item.meta.title" class="!p-0">
     <template #title>
-      <ArtSvgIcon :icon="item.meta.icon" :color="theme?.iconColor" class="mr-1 text-lg" />
+      <ArtSvgIcon
+        :icon="resolveMenuIconifyIcon(item.meta?.icon)"
+        :color="theme?.iconColor"
+        class="mr-1 text-lg"
+      />
       <span class="text-md">{{ formatMenuTitle(item.meta.title) }}</span>
       <div v-if="item.meta.showBadge" class="art-badge art-badge-horizontal" />
       <div v-if="item.meta.showTextBadge" class="art-text-badge">
@@ -27,7 +31,7 @@
     @click="goPage(item)"
   >
     <ArtSvgIcon
-      :icon="item.meta.icon"
+      :icon="resolveMenuIconifyIcon(item.meta?.icon)"
       :color="theme?.iconColor"
       class="mr-1 text-lg"
       :style="{ color: theme.iconColor }"
@@ -49,6 +53,7 @@
   import { AppRouteRecord } from '@/types/router';
   import { handleMenuJump } from '@/utils/navigation';
   import { formatMenuTitle } from '@/utils/router';
+  import { resolveMenuIconifyIcon } from '@/utils/iconify';
 
   const props = defineProps({
     item: {

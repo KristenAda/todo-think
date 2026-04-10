@@ -17,6 +17,7 @@
     "lint:stylelint": "stylelint  \"**/*.{css,scss,vue}\" --fix",
     "lint:lint-staged": "lint-staged",
     "prepare": "husky",
+    "postinstall": "node node_modules/@vue-office/pdf/lib/script/postinstall.js && node node_modules/@vue-office/docx/lib/script/postinstall.js && node node_modules/@vue-office/excel/lib/script/postinstall.js && node node_modules/@vue-office/pptx/lib/script/postinstall.js",
     "commit": "git-cz",
     "clean:dev": "tsx scripts/clean-dev.ts"
   },
@@ -56,6 +57,10 @@
     "@element-plus/icons-vue": "^2.3.2",
     "@iconify/vue": "^5.0.0",
     "@tailwindcss/vite": "^4.1.14",
+    "@vue-office/docx": "^1.6.3",
+    "@vue-office/excel": "^1.7.14",
+    "@vue-office/pdf": "^2.0.10",
+    "@vue-office/pptx": "^1.0.1",
     "@vue/reactivity": "^3.5.21",
     "@vueuse/core": "^13.9.0",
     "@wangeditor/editor": "^5.1.23",
@@ -77,6 +82,7 @@
     "vue-draggable-plus": "^0.6.0",
     "vue-i18n": "^9.14.0",
     "vue-router": "^4.5.1",
+    "vue-demi": "^0.14.6",
     "xgplayer": "^3.0.20",
     "xlsx": "^0.18.5"
   },
@@ -89,7 +95,7 @@
     "@typescript-eslint/eslint-plugin": "^8.3.0",
     "@typescript-eslint/parser": "^8.3.0",
     "@vitejs/plugin-vue": "^6.0.1",
-    "@vue/compiler-sfc": "^3.0.5",
+    "@vue/compiler-sfc": "^3.5.22",
     "commitizen": "^4.3.0",
     "cz-git": "^1.11.1",
     "eslint": "^9.9.1",
@@ -118,7 +124,6 @@
     "vite": "^7.1.5",
     "vite-plugin-compression": "^0.5.1",
     "vite-plugin-vue-devtools": "^7.7.6",
-    "vue-demi": "^0.14.9",
     "vue-img-cutter": "^3.0.5",
     "vue-tsc": "~2.1.6"
   }

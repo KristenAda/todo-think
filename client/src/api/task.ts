@@ -42,7 +42,7 @@ export function fetchUpdateProject(id: number, data: Api.Task.UpdateProjectParam
 }
 
 export function fetchDeleteProject(id: number) {
-  return request.delete({
+  return request.del({
     url: `${BASE.project}/${id}`
   });
 }
@@ -77,7 +77,7 @@ export function fetchUpdateTask(id: number, data: Api.Task.UpdateTaskParams) {
 }
 
 export function fetchDeleteTask(id: number) {
-  return request.delete({
+  return request.del({
     url: `${BASE.task}/${id}`
   });
 }

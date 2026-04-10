@@ -411,11 +411,15 @@
 
   const userStore = useUserStore();
   const currentUserId = computed(() => userStore.info?.userId ?? 0);
-  const isSuperAdmin = computed(
-    () =>
-      (userStore.info?.roles ?? []).includes('R_SUPER') ||
-      (userStore.info?.roles ?? []).includes('R_ADMIN')
-  );
+  /** 与登录接口 roles（Role.roleCode，如 admin）及模板标识 R_SUPER 对齐 */
+  const isSuperAdmin = computed(() => {
+    const roles = userStore.info?.roles ?? [];
+    return (
+      roles.includes('admin') ||
+      roles.includes('R_SUPER') ||
+      roles.includes('R_ADMIN')
+    );
+  });
 
   // --- 左侧树逻辑 ---
   const treeRef = ref<any>();

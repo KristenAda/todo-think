@@ -84,6 +84,36 @@
         </el-form-item>
         <el-row :gutter="16">
           <el-col :span="12">
+            <el-form-item label="任务类型">
+              <el-select v-model="form.type" placeholder="请选择" style="width:100%">
+                <el-option v-for="t in TYPE_OPTIONS" :key="t.value" :label="t.label" :value="t.value" />
+              </el-select>
+            </el-form-item>
+          </el-col>
+          <el-col :span="12">
+            <el-form-item label="优先级">
+              <el-select v-model="form.priority" placeholder="请选择" style="width:100%">
+                <el-option v-for="p in PRIORITY_OPTIONS" :key="p.value" :label="p.label" :value="p.value" />
+              </el-select>
+            </el-form-item>
+          </el-col>
+        </el-row>
+        <el-row :gutter="16">
+          <el-col :span="12">
+            <el-form-item label="截止日期">
+              <el-date-picker v-model="form.dueDate" type="date" value-format="YYYY-MM-DD" placeholder="选择日期" style="width:100%" />
+            </el-form-item>
+          </el-col>
+          <el-col :span="12">
+            <el-form-item label="管理者">
+              <el-select v-model="form.managerId" placeholder="请选择" clearable style="width:100%">
+                <el-option v-for="u in userList" :key="u.id" :label="u.nickName || u.userName" :value="u.id" />
+              </el-select>
+            </el-form-item>
+          </el-col>
+        </el-row>
+        <el-row :gutter="16">
+          <el-col :span="12">
             <el-form-item label="主要负责人">
               <el-select v-model="form.mainAssigneeId" placeholder="请选择" clearable style="width:100%">
                 <el-option v-for="u in userList" :key="u.id" :label="u.nickName || u.userName" :value="u.id" :disabled="form.coAssigneeIds.includes(u.id)" />
@@ -112,6 +142,12 @@
             </el-form-item>
           </el-col>
         </el-row>
+        <el-form-item label="附件">
+          <TaskAttachmentField
+            ref="taskAttachRef"
+            hint="可选，多文件依次上传（分片+断点续传）；新建或编辑保存时一并写入任务附件集"
+          />
+        </el-form-item>
         <el-form-item label="测试用例">
           <div class="test-case-list">
             <div v-for="(tc, idx) in form.testCases" :key="idx" class="test-case-item">
@@ -139,11 +175,20 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, onMounted } from 'vue';
+import { ref, reactive, onMounted, nextTick } from 'vue';
 import { ElMessage } from 'element-plus';
 import type { FormInstance, FormRules } from 'element-plus';
-import { fetchTaskPage, fetchCreateTask, fetchUpdateTask, fetchDeleteTask, fetchProjectList, fetchOrgMembers } from '@/api/task';
+import {
+  fetchTaskPage,
+  fetchTaskInfo,
+  fetchCreateTask,
+  fetchUpdateTask,
+  fetchDeleteTask,
+  fetchProjectList,
+  fetchOrgMembers
+} from '@/api/task';
 import TaskDetailDrawer from '../detail/TaskDetailDrawer.vue';
+import TaskAttachmentField from '../components/TaskAttachmentField.vue';
 
 const STATUS_OPTIONS: { label: string; value: Api.Task.TaskStatus }[] = [
   { label: '待分配', value: 'PENDING' },
@@ -152,11 +197,26 @@ const STATUS_OPTIONS: { label: string; value: Api.Task.TaskStatus }[] = [
   { label: '验收中', value: 'QA_REVIEW' },
   { label: '打回修改', value: 'REJECTED' },
   { label: '已完成', value: 'COMPLETED' },
+  { label: '已暂停', value: 'PAUSED' },
+  { label: '已取消', value: 'CANCELLED' },
 ];
 const STATUS_TAG: Record<Api.Task.TaskStatus, string> = {
   PENDING: 'info', IN_PROGRESS: '', SELF_TESTING: 'warning',
   QA_REVIEW: 'warning', REJECTED: 'danger', COMPLETED: 'success',
+  PAUSED: 'warning', CANCELLED: 'info',
 };
+const TYPE_OPTIONS: { label: string; value: Api.Task.TaskType }[] = [
+  { label: '需求', value: 'FEATURE' },
+  { label: '缺陷', value: 'BUG' },
+  { label: '技术债/杂项', value: 'CHORE' },
+  { label: '优化', value: 'ENHANCEMENT' },
+];
+const PRIORITY_OPTIONS: { label: string; value: Api.Task.TaskPriority }[] = [
+  { label: '紧急(P0)', value: 'P0' },
+  { label: '高(P1)', value: 'P1' },
+  { label: '中(P2)', value: 'P2' },
+  { label: '低(P3)', value: 'P3' },
+];
 function statusLabel(s: Api.Task.TaskStatus) { return STATUS_OPTIONS.find(o => o.value === s)?.label ?? s; }
 function statusTagType(s: Api.Task.TaskStatus) { return STATUS_TAG[s] ?? 'info'; }
 function initials(u: Api.Task.SimpleUser) { return (u.nickName || u.userName)?.[0]?.toUpperCase() ?? '?'; }
@@ -172,6 +232,7 @@ const total = ref(0);
 const projectList = ref<Api.Task.SimpleProject[]>([]);
 const userList = ref<Api.Task.SimpleUser[]>([]);
 const formRef = ref<FormInstance>();
+const taskAttachRef = ref<InstanceType<typeof TaskAttachmentField> | null>(null);
 
 const query = reactive({
   page: 1, pageSize: 10,
@@ -184,6 +245,10 @@ const form = reactive({
   title: '',
   projectId: undefined as number | undefined,
   description: '',
+  type: 'FEATURE' as Api.Task.TaskType,
+  priority: 'P2' as Api.Task.TaskPriority,
+  dueDate: undefined as string | undefined,
+  managerId: undefined as number | undefined,
   mainAssigneeId: undefined as number | undefined,
   coAssigneeIds: [] as number[],
   testerId: undefined as number | undefined,
@@ -220,23 +285,58 @@ function resetQuery() { query.page = 1; query.projectId = undefined; query.statu
 
 function openCreateDialog() {
   editingId.value = null;
-  Object.assign(form, { title: '', projectId: undefined, description: '', mainAssigneeId: undefined, coAssigneeIds: [], testerId: undefined, estimatedHours: undefined, testCases: [] });
+  Object.assign(form, {
+    title: '', projectId: undefined, description: '',
+    type: 'FEATURE', priority: 'P2', dueDate: undefined, managerId: undefined,
+    mainAssigneeId: undefined, coAssigneeIds: [], testerId: undefined,
+    estimatedHours: undefined, testCases: [],
+  });
   dialogVisible.value = false;
-  nextTick(() => { dialogVisible.value = true; });
+  nextTick(() => {
+    dialogVisible.value = true;
+    taskAttachRef.value?.reset();
+  });
 }
 
-function openEditDialog(row: Api.Task.Task) {
+async function openEditDialog(row: Api.Task.Task) {
   editingId.value = row.id;
   Object.assign(form, {
     title: row.title, projectId: row.projectId, description: row.description ?? '',
+    type: row.type, priority: row.priority,
+    dueDate: row.dueDate ? row.dueDate.slice(0, 10) : undefined,
+    managerId: row.managerId ?? undefined,
     mainAssigneeId: row.mainAssigneeId ?? undefined,
     coAssigneeIds: row.coAssignees.map(ca => ca.userId),
     testerId: row.testerId ?? undefined,
     estimatedHours: row.estimatedHours ?? undefined,
     testCases: [],
   });
+  let detail: Api.Task.Task | null = null;
+  try {
+    detail = await fetchTaskInfo(row.id);
+  } catch {
+    detail = null;
+  }
   dialogVisible.value = false;
-  nextTick(() => { dialogVisible.value = true; });
+  nextTick(() => {
+    dialogVisible.value = true;
+    nextTick(() => {
+      const atts = detail?.attachments;
+      if (atts?.length) {
+        taskAttachRef.value?.setExisting(
+          atts.map((a) => ({
+            linkId: a.id,
+            attachmentId: a.attachmentId,
+            originalName: a.attachment.originalName,
+            mimeType: a.attachment.mimeType,
+            sort: a.sort
+          }))
+        );
+      } else {
+        taskAttachRef.value?.reset();
+      }
+    });
+  });
 }
 
 function openDetail(row: Api.Task.Task) { selectedTaskId.value = row.id; drawerVisible.value = true; }
@@ -248,20 +348,55 @@ async function handleSubmit() {
   submitting.value = true;
   try {
     if (editingId.value) {
+      try {
+        await taskAttachRef.value?.uploadAll();
+      } catch {
+        return;
+      }
+      const editingTask = taskList.value.find(t => t.id === editingId.value);
+      const attachmentIds =
+        taskAttachRef.value?.getAttachmentIdsForSubmit?.() ??
+        taskAttachRef.value?.getAttachmentIds?.() ??
+        [];
       await fetchUpdateTask(editingId.value, {
-        title: form.title, description: form.description || undefined,
-        mainAssigneeId: form.mainAssigneeId ?? null, coAssigneeIds: form.coAssigneeIds,
-        testerId: form.testerId ?? null, estimatedHours: form.estimatedHours ?? null,
+        version: editingTask?.version ?? 0,
+        title: form.title,
+        description: form.description || undefined,
+        type: form.type,
+        priority: form.priority,
+        dueDate: form.dueDate || null,
+        managerId: form.managerId ?? null,
+        mainAssigneeId: form.mainAssigneeId ?? null,
+        coAssigneeIds: form.coAssigneeIds,
+        testerId: form.testerId ?? null,
+        estimatedHours: form.estimatedHours ?? null,
+        attachmentIds
       });
       ElMessage.success('更新成功');
     } else {
+      try {
+        await taskAttachRef.value?.uploadAll();
+      } catch {
+        return;
+      }
+      const attachmentIds = taskAttachRef.value?.getAttachmentIds() ?? [];
       await fetchCreateTask({
-        projectId: form.projectId!, title: form.title, description: form.description || undefined,
-        mainAssigneeId: form.mainAssigneeId ?? null, coAssigneeIds: form.coAssigneeIds,
-        testerId: form.testerId ?? null, estimatedHours: form.estimatedHours ?? null,
+        projectId: form.projectId!,
+        title: form.title,
+        description: form.description || undefined,
+        type: form.type,
+        priority: form.priority,
+        dueDate: form.dueDate || undefined,
+        managerId: form.managerId ?? undefined,
+        mainAssigneeId: form.mainAssigneeId ?? undefined,
+        coAssigneeIds: form.coAssigneeIds,
+        testerId: form.testerId ?? undefined,
+        estimatedHours: form.estimatedHours ?? undefined,
         testCases: form.testCases.filter(tc => tc.description && tc.expectedResult),
+        attachmentIds: attachmentIds.length ? attachmentIds : undefined,
       });
       ElMessage.success('创建成功');
+      taskAttachRef.value?.reset();
     }
     dialogVisible.value = false;
     loadTasks();

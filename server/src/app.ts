@@ -9,11 +9,15 @@ import jwt from "koa-jwt";
 import { loadRoutes } from "./routers";
 import { AuthUtil } from "./core/auth.util";
 import { errorHandler } from "./middlewares/error";
+import { responseDateFormat } from "./middlewares/response.date";
 import { requestLogger } from "./middlewares/logger";
 import logger from "./core/logger";
 import prisma from "./core/prisma";
 
 const app = new Koa();
+
+// 最外层：在路由处理完成后统一格式化响应中的日期字段
+app.use(responseDateFormat);
 
 app.use(cors());
 app.use(bodyParser());

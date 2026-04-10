@@ -4,7 +4,7 @@
       <template #title>
         <div class="menu-icon flex-cc">
           <ArtSvgIcon
-            :icon="item.meta.icon"
+            :icon="resolveMenuIconifyIcon(item.meta?.icon)"
             :color="theme?.iconColor"
             :style="{ color: theme.iconColor }"
           />
@@ -32,7 +32,7 @@
     >
       <div class="menu-icon flex-cc">
         <ArtSvgIcon
-          :icon="item.meta.icon"
+          :icon="resolveMenuIconifyIcon(item.meta?.icon)"
           :color="theme?.iconColor"
           :style="{ color: theme.iconColor }"
         />
@@ -60,6 +60,7 @@
   import { computed } from 'vue';
   import type { AppRouteRecord } from '@/types/router';
   import { formatMenuTitle } from '@/utils/router';
+  import { resolveMenuIconifyIcon } from '@/utils/iconify';
   import { handleMenuJump } from '@/utils/navigation';
   import { useSettingStore } from '@/store/modules/setting';
 

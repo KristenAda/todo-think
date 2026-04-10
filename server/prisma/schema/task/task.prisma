@@ -44,7 +44,7 @@ model Project {
   description String? @db.Text // 项目描述
 
   // 👉 【统一新增的字段】
-  orgId   Int // 归属部门/组织ID（解决数据隔离）
+  orgId   Int? // 归属部门/组织ID（解决数据隔离；nullable：无法确定时设为 null）
   version Int @default(0) // 乐观锁版本号
 
   managerId  Int // 负责人ID
@@ -67,7 +67,7 @@ model Task {
   projectId Int // 所属项目
 
   // 👉 【统一新增的核心业务与安全字段】
-  orgId    Int // 归属部门/组织ID（冗余提升查询性能）
+  orgId    Int? // 归属部门/组织ID（冗余提升查询性能；nullable：无法确定时设为 null）
   version  Int          @default(0) // 乐观锁版本号
   parentId Int? // 父任务ID（支持需求拆解）
   type     TaskType     @default(FEATURE) // 任务类型
@@ -104,6 +104,7 @@ model Task {
   coAssignees TaskCoAssignee[]
   testCases   TestCase[]
   workLogs    WorkLog[]
+  attachments TaskAttachment[]
 
   @@map("task")
 }
@@ -158,5 +159,39 @@ model WorkLog {
   task Task @relation(fields: [taskId], references: [id], onDelete: Cascade)
   user User @relation("WorkLogUser", fields: [userId], references: [id])
 
+  attachments WorkLogAttachment[]
+
   @@map("work_log")
+}
+
+/// 任务级附件（创建任务时关联，挂在任务下）
+model TaskAttachment {
+  id           Int @id @default(autoincrement())
+  taskId       Int
+  attachmentId Int
+  sort         Int @default(0)
+  createdAt    DateTime @default(now())
+
+  task       Task       @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  attachment Attachment @relation(fields: [attachmentId], references: [id], onDelete: Cascade)
+
+  @@unique([taskId, attachmentId])
+  @@index([attachmentId])
+  @@map("task_attachment")
+}
+
+/// 工时登记附件
+model WorkLogAttachment {
+  id           Int @id @default(autoincrement())
+  workLogId    Int
+  attachmentId Int
+  sort         Int @default(0)
+  createdAt    DateTime @default(now())
+
+  workLog    WorkLog    @relation(fields: [workLogId], references: [id], onDelete: Cascade)
+  attachment Attachment @relation(fields: [attachmentId], references: [id], onDelete: Cascade)
+
+  @@unique([workLogId, attachmentId])
+  @@index([attachmentId])
+  @@map("work_log_attachment")
 }
