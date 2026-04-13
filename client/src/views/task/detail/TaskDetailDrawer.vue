@@ -102,41 +102,79 @@
         </div>
       </div>
 
-      <div class="section">
-        <div class="section-title">
-          <art-svg-icon icon="mdi:clipboard-check-outline" />
-          <span>测试用例</span>
+      <div class="section section--test-cases">
+        <div class="section-title section-title--with-meta">
+          <span class="section-title__left">
+            <art-svg-icon icon="mdi:clipboard-check-outline" />
+            <span>测试用例</span>
+          </span>
+          <span v-if="sortedTestCases.length" class="section-title__count"
+            >共 {{ sortedTestCases.length }} 条</span
+          >
         </div>
-        <el-empty v-if="!task.testCases?.length" description="暂无测试用例" :image-size="50" />
-        <div v-else class="test-case-grid">
-          <div v-for="tc in task.testCases" :key="tc.id" class="tc-card">
-            <div class="tc-desc">{{ tc.description }}</div>
-            <div class="tc-expected">预期：{{ tc.expectedResult }}</div>
-            <div class="tc-status-row">
-              <div class="tc-badge">
-                <span class="label">自测</span>
-                <el-tag :type="testTagType(tc.selfTestStatus)" size="small">{{
-                  testLabel(tc.selfTestStatus)
-                }}</el-tag>
+        <el-empty v-if="!sortedTestCases.length" description="暂无测试用例" :image-size="56" />
+        <div v-else class="test-case-list">
+          <div v-for="(tc, idx) in sortedTestCases" :key="tc.id" class="tc-card">
+            <div class="tc-card__toolbar">
+              <span class="tc-card__index">#{{ idx + 1 }}</span>
+              <div class="tc-card__status-chips">
+                <div class="tc-chip">
+                  <span class="tc-chip__label">自测</span>
+                  <el-tag :type="testTagType(tc.selfTestStatus)" size="small" effect="light">{{
+                    testLabel(tc.selfTestStatus)
+                  }}</el-tag>
+                </div>
+                <div class="tc-chip">
+                  <span class="tc-chip__label">QA</span>
+                  <el-tag :type="testTagType(tc.qaStatus)" size="small" effect="light">{{
+                    testLabel(tc.qaStatus)
+                  }}</el-tag>
+                </div>
+                <el-tag
+                  v-if="Number(tc.bugCount) > 0"
+                  type="danger"
+                  size="small"
+                  effect="plain"
+                  class="tc-bug-tag"
+                >
+                  Bug ×{{ tc.bugCount }}
+                </el-tag>
               </div>
-              <div class="tc-badge">
-                <span class="label">QA</span>
-                <el-tag :type="testTagType(tc.qaStatus)" size="small">{{
-                  testLabel(tc.qaStatus)
-                }}</el-tag>
-              </div>
-              <el-tag v-if="tc.bugCount > 0" type="danger" size="small"
-                >Bug x{{ tc.bugCount }}</el-tag
-              >
             </div>
+
+            <div class="tc-card__body">
+              <div class="tc-field">
+                <div class="tc-field__label">
+                  <art-svg-icon icon="mdi:text-box-outline" class="tc-field__icon" />
+                  描述 / 操作步骤
+                </div>
+                <div class="tc-field__value">{{ displayText(tc.description) }}</div>
+              </div>
+              <div class="tc-field tc-field--expected">
+                <div class="tc-field__label">
+                  <art-svg-icon icon="mdi:check-circle-outline" class="tc-field__icon" />
+                  预期结果
+                </div>
+                <div class="tc-field__value">{{ displayText(tc.expectedResult) }}</div>
+              </div>
+              <div v-if="trimText(tc.selfTestRemark)" class="tc-remark tc-remark--self">
+                <span class="tc-remark__label">自测备注</span>
+                <span class="tc-remark__text">{{ tc.selfTestRemark }}</span>
+              </div>
+              <div v-if="trimText(tc.qaRemark)" class="tc-remark tc-remark--qa">
+                <span class="tc-remark__label">QA 备注</span>
+                <span class="tc-remark__text">{{ tc.qaRemark }}</span>
+              </div>
+            </div>
+
             <div
               v-if="(isMainAssignee || isCoAssignee) && task?.status !== 'COMPLETED'"
-              class="tc-self-test"
+              class="tc-card__actions"
             >
               <el-select
                 v-model="selfTestMap[tc.id]"
                 size="small"
-                style="width: 110px"
+                class="tc-card__select"
                 placeholder="自测结果"
               >
                 <el-option label="通过" value="PASSED" />
@@ -145,8 +183,8 @@
               <el-input
                 v-model="selfTestRemarkMap[tc.id]"
                 size="small"
-                placeholder="备注"
-                style="flex: 1"
+                placeholder="自测备注（可选）"
+                class="tc-card__remark-input"
               />
             </div>
           </div>
@@ -241,7 +279,9 @@
         </template>
 
         <el-button
-          v-if="isMainAssignee && task?.status === 'IN_PROGRESS'"
+          v-if="
+            (isMainAssignee || isCoAssignee || isTaskManager) && task?.status === 'IN_PROGRESS'
+          "
           type="info"
           @click="handlePause"
           :loading="actionLoading"
@@ -397,6 +437,16 @@
   const isQA = computed(
     () => !!currentUserId.value && task.value?.testerId === currentUserId.value
   );
+  const isTaskManager = computed(
+    () => !!currentUserId.value && task.value?.managerId === currentUserId.value
+  );
+
+  /** 详情接口可能无序返回，按 id 排序，避免列表顺序抖动 */
+  const sortedTestCases = computed(() => {
+    const list = task.value?.testCases;
+    if (!list?.length) return [];
+    return [...list].sort((a, b) => a.id - b.id);
+  });
 
   /** 工时登记表合计（小时） */
   const workLogsHoursSum = computed(() =>
@@ -447,8 +497,24 @@
   function testLabel(s: Api.Task.TestStatus) {
     return { UNTESTED: '未测试', PASSED: '通过', FAILED: '失败' }[s] ?? s;
   }
-  function testTagType(s: Api.Task.TestStatus) {
-    return { UNTESTED: 'info', PASSED: 'success', FAILED: 'danger' }[s] ?? 'info';
+  function testTagType(
+    s: Api.Task.TestStatus
+  ): 'success' | 'warning' | 'info' | 'danger' {
+    const m: Record<Api.Task.TestStatus, 'success' | 'info' | 'danger'> = {
+      UNTESTED: 'info',
+      PASSED: 'success',
+      FAILED: 'danger'
+    };
+    return m[s] ?? 'info';
+  }
+
+  function displayText(s: string | null | undefined) {
+    const t = s?.trim();
+    return t ? t : '—';
+  }
+
+  function trimText(s: string | null | undefined) {
+    return (s ?? '').trim();
   }
   function initials(u: Api.Task.SimpleUser) {
     return (u.nickName || u.userName)?.[0]?.toUpperCase() ?? '?';
@@ -492,7 +558,8 @@
     try {
       const res = await fetchTaskInfo(props.taskId);
       task.value = res;
-      // 初始化 selfTestMap
+      Object.keys(selfTestMap).forEach((k) => delete selfTestMap[Number(k)]);
+      Object.keys(selfTestRemarkMap).forEach((k) => delete selfTestRemarkMap[Number(k)]);
       (task.value?.testCases ?? []).forEach((tc) => {
         selfTestMap[tc.id] = tc.selfTestStatus;
         selfTestRemarkMap[tc.id] = tc.selfTestRemark ?? '';
@@ -696,6 +763,31 @@
       padding-bottom: 8px;
       border-bottom: 1px solid var(--el-border-color-lighter);
     }
+
+    .section-title--with-meta {
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .section-title__left {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .section-title__count {
+      font-size: 12px;
+      font-weight: 500;
+      color: var(--el-text-color-secondary);
+      padding: 2px 10px;
+      border-radius: 999px;
+      background: var(--el-fill-color-light);
+    }
+  }
+
+  .section--test-cases {
+    margin-top: 4px;
   }
   .user-inline {
     display: flex;
@@ -710,45 +802,161 @@
     margin-left: -6px;
     border: 2px solid #fff;
   }
-  .test-case-grid {
+  .test-case-list {
     display: flex;
     flex-direction: column;
-    gap: 10px;
+    gap: 14px;
   }
+
   .tc-card {
+    border-radius: 12px;
     border: 1px solid var(--el-border-color-lighter);
-    border-radius: 6px;
-    padding: 12px;
-    .tc-desc {
-      font-weight: 500;
-      margin-bottom: 4px;
-    }
-    .tc-expected {
-      font-size: 12px;
-      color: #666;
-      margin-bottom: 8px;
-    }
-    .tc-status-row {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      .tc-badge {
-        display: flex;
-        align-items: center;
-        gap: 4px;
-        .label {
-          font-size: 12px;
-          color: #999;
-        }
-      }
-    }
-    .tc-self-test {
-      display: flex;
-      gap: 8px;
-      margin-top: 10px;
-      padding-top: 10px;
-      border-top: 1px dashed var(--el-border-color-lighter);
-    }
+    background: linear-gradient(
+      145deg,
+      color-mix(in srgb, var(--el-color-primary) 6%, var(--el-bg-color)) 0%,
+      var(--el-bg-color) 48%
+    );
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+    overflow: hidden;
+  }
+
+  .tc-card__toolbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 10px;
+    padding: 10px 14px;
+    background: color-mix(in srgb, var(--el-fill-color-light) 88%, transparent);
+    border-bottom: 1px solid var(--el-border-color-extra-light);
+  }
+
+  .tc-card__index {
+    font-size: 13px;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    color: var(--el-color-primary);
+    letter-spacing: 0.02em;
+  }
+
+  .tc-card__status-chips {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 10px 14px;
+  }
+
+  .tc-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .tc-chip__label {
+    font-size: 12px;
+    color: var(--el-text-color-secondary);
+    font-weight: 500;
+  }
+
+  .tc-bug-tag {
+    font-variant-numeric: tabular-nums;
+  }
+
+  .tc-card__body {
+    padding: 14px 14px 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .tc-field {
+    border-radius: 10px;
+    padding: 10px 12px;
+    background: var(--el-fill-color-blank);
+    border: 1px solid var(--el-border-color-extra-light);
+  }
+
+  .tc-field--expected {
+    border-color: color-mix(in srgb, var(--el-color-success) 22%, var(--el-border-color-lighter));
+    background: color-mix(in srgb, var(--el-color-success) 5%, var(--el-fill-color-blank));
+  }
+
+  .tc-field__label {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--el-text-color-secondary);
+    margin-bottom: 8px;
+    letter-spacing: 0.02em;
+  }
+
+  .tc-field__icon {
+    font-size: 15px;
+    opacity: 0.9;
+  }
+
+  .tc-field__value {
+    font-size: 13px;
+    line-height: 1.65;
+    color: var(--el-text-color-primary);
+    white-space: pre-wrap;
+    word-break: break-word;
+  }
+
+  .tc-remark {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    padding: 8px 10px;
+    border-radius: 8px;
+    font-size: 12px;
+    line-height: 1.5;
+  }
+
+  .tc-remark--self {
+    background: color-mix(in srgb, var(--el-color-info) 8%, var(--el-fill-color-blank));
+    border: 1px dashed color-mix(in srgb, var(--el-color-info) 28%, var(--el-border-color-lighter));
+  }
+
+  .tc-remark--qa {
+    background: color-mix(in srgb, var(--el-color-warning) 8%, var(--el-fill-color-blank));
+    border: 1px dashed color-mix(in srgb, var(--el-color-warning) 28%, var(--el-border-color-lighter));
+  }
+
+  .tc-remark__label {
+    font-weight: 600;
+    color: var(--el-text-color-secondary);
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+  }
+
+  .tc-remark__text {
+    color: var(--el-text-color-regular);
+    white-space: pre-wrap;
+    word-break: break-word;
+  }
+
+  .tc-card__actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 10px;
+    padding: 12px 14px;
+    border-top: 1px dashed var(--el-border-color-lighter);
+    background: color-mix(in srgb, var(--el-fill-color) 96%, transparent);
+  }
+
+  .tc-card__select {
+    width: 120px;
+    flex-shrink: 0;
+  }
+
+  .tc-card__remark-input {
+    flex: 1;
+    min-width: 160px;
   }
   .worklog-list {
     display: flex;

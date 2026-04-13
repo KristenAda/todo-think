@@ -150,7 +150,7 @@
         </el-form-item>
         <el-form-item label="测试用例">
           <div class="test-case-list">
-            <div v-for="(tc, idx) in form.testCases" :key="idx" class="test-case-item">
+            <div v-for="(tc, idx) in form.testCases" :key="tc.id ?? `new-${idx}`" class="test-case-item">
               <span class="tc-index">{{ idx + 1 }}</span>
               <div class="tc-fields">
                 <el-input v-model="tc.description" placeholder="用例描述/操作步骤" size="small" />
@@ -221,11 +221,28 @@ function statusLabel(s: Api.Task.TaskStatus) { return STATUS_OPTIONS.find(o => o
 function statusTagType(s: Api.Task.TaskStatus) { return STATUS_TAG[s] ?? 'info'; }
 function initials(u: Api.Task.SimpleUser) { return (u.nickName || u.userName)?.[0]?.toUpperCase() ?? '?'; }
 
+/** 提交前过滤空行并 trim；新建无 id，编辑保留 id */
+function buildTestCasesForApi(
+  cases: { id?: number; description: string; expectedResult: string }[],
+): Api.Task.TestCaseUpsert[] {
+  const out: Api.Task.TestCaseUpsert[] = [];
+  for (const tc of cases) {
+    const description = tc.description.trim();
+    const expectedResult = tc.expectedResult.trim();
+    if (!description || !expectedResult) continue;
+    if (tc.id != null) out.push({ id: tc.id, description, expectedResult });
+    else out.push({ description, expectedResult });
+  }
+  return out;
+}
+
 const loading = ref(false);
 const submitting = ref(false);
 const dialogVisible = ref(false);
 const drawerVisible = ref(false);
 const editingId = ref<number | null>(null);
+/** 编辑保存时使用的乐观锁版本（来自详情接口） */
+const editingVersion = ref(0);
 const selectedTaskId = ref<number | null>(null);
 const taskList = ref<Api.Task.Task[]>([]);
 const total = ref(0);
@@ -253,7 +270,7 @@ const form = reactive({
   coAssigneeIds: [] as number[],
   testerId: undefined as number | undefined,
   estimatedHours: undefined as number | undefined,
-  testCases: [] as { description: string; expectedResult: string }[],
+  testCases: [] as { id?: number; description: string; expectedResult: string }[],
 });
 
 const rules: FormRules = {
@@ -300,23 +317,33 @@ function openCreateDialog() {
 
 async function openEditDialog(row: Api.Task.Task) {
   editingId.value = row.id;
-  Object.assign(form, {
-    title: row.title, projectId: row.projectId, description: row.description ?? '',
-    type: row.type, priority: row.priority,
-    dueDate: row.dueDate ? row.dueDate.slice(0, 10) : undefined,
-    managerId: row.managerId ?? undefined,
-    mainAssigneeId: row.mainAssigneeId ?? undefined,
-    coAssigneeIds: row.coAssignees.map(ca => ca.userId),
-    testerId: row.testerId ?? undefined,
-    estimatedHours: row.estimatedHours ?? undefined,
-    testCases: [],
-  });
   let detail: Api.Task.Task | null = null;
   try {
     detail = await fetchTaskInfo(row.id);
   } catch {
     detail = null;
   }
+  editingVersion.value = detail?.version ?? row.version ?? 0;
+
+  const base = detail ?? row;
+  Object.assign(form, {
+    title: base.title,
+    projectId: base.projectId,
+    description: base.description ?? '',
+    type: base.type,
+    priority: base.priority,
+    dueDate: base.dueDate ? base.dueDate.slice(0, 10) : undefined,
+    managerId: base.managerId ?? undefined,
+    mainAssigneeId: base.mainAssigneeId ?? undefined,
+    coAssigneeIds: (detail?.coAssignees ?? row.coAssignees).map((ca) => ca.userId),
+    testerId: base.testerId ?? undefined,
+    estimatedHours: base.estimatedHours ?? undefined,
+    testCases: (detail?.testCases ?? []).map((tc) => ({
+      id: tc.id,
+      description: tc.description,
+      expectedResult: tc.expectedResult,
+    })),
+  });
   dialogVisible.value = false;
   nextTick(() => {
     dialogVisible.value = true;
@@ -353,13 +380,12 @@ async function handleSubmit() {
       } catch {
         return;
       }
-      const editingTask = taskList.value.find(t => t.id === editingId.value);
       const attachmentIds =
         taskAttachRef.value?.getAttachmentIdsForSubmit?.() ??
         taskAttachRef.value?.getAttachmentIds?.() ??
         [];
       await fetchUpdateTask(editingId.value, {
-        version: editingTask?.version ?? 0,
+        version: editingVersion.value,
         title: form.title,
         description: form.description || undefined,
         type: form.type,
@@ -370,7 +396,8 @@ async function handleSubmit() {
         coAssigneeIds: form.coAssigneeIds,
         testerId: form.testerId ?? null,
         estimatedHours: form.estimatedHours ?? null,
-        attachmentIds
+        attachmentIds,
+        testCases: buildTestCasesForApi(form.testCases),
       });
       ElMessage.success('更新成功');
     } else {
@@ -392,7 +419,10 @@ async function handleSubmit() {
         coAssigneeIds: form.coAssigneeIds,
         testerId: form.testerId ?? undefined,
         estimatedHours: form.estimatedHours ?? undefined,
-        testCases: form.testCases.filter(tc => tc.description && tc.expectedResult),
+        testCases: buildTestCasesForApi(form.testCases).map((tc) => ({
+          description: tc.description,
+          expectedResult: tc.expectedResult,
+        })),
         attachmentIds: attachmentIds.length ? attachmentIds : undefined,
       });
       ElMessage.success('创建成功');

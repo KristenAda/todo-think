@@ -37,6 +37,14 @@ export const TestCaseInputDto = z.object({
 });
 export type TestCaseInputDtoType = z.infer<typeof TestCaseInputDto>;
 
+/** 更新任务时：带 id 为更新该条，不带 id 为新增；未出现在列表中的旧用例将被删除 */
+export const TestCaseUpsertDto = z.object({
+  id: z.number().int().positive().optional(),
+  description: z.string().min(1, "用例描述不能为空"),
+  expectedResult: z.string().min(1, "预期结果不能为空"),
+});
+export type TestCaseUpsertDtoType = z.infer<typeof TestCaseUpsertDto>;
+
 // ==================== Task DTOs ====================
 
 export const CreateTaskDto = z.object({
@@ -87,6 +95,8 @@ export const UpdateTaskDto = z.object({
     .optional(),
   /** 传入则整体替换任务附件集（空数组表示清空）；不传则不修改附件 */
   attachmentIds: z.array(z.number().int().positive()).max(50).optional(),
+  /** 传入则同步测试用例（空数组表示清空）；不传则不修改 */
+  testCases: z.array(TestCaseUpsertDto).optional(),
 });
 export type UpdateTaskDtoType = z.infer<typeof UpdateTaskDto>;
 

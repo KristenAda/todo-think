@@ -424,7 +424,9 @@ class TaskService {
         coAssignees: {
           include: { user: { select: userSelect } },
         },
-        testCases: true,
+        testCases: {
+          orderBy: { id: "asc" },
+        },
         workLogs: {
           include: {
             user: { select: userSelect },
@@ -536,7 +538,7 @@ class TaskService {
   async update(id: number, dto: UpdateTaskDtoType, userId: number) {
     await projectService.assertUserCanAccessTask(userId, id);
 
-    const { version, coAssigneeIds, attachmentIds, ...taskData } = dto;
+    const { version, coAssigneeIds, attachmentIds, testCases, ...taskData } = dto;
 
     return prisma.$transaction(async (tx) => {
       // 👉 使用 updateMany 配合 version 实现乐观锁防覆盖
@@ -609,9 +611,71 @@ class TaskService {
         }
       }
 
+      // 同步测试用例：按 id 更新/新增，表单中移除的用例删除（保留自测/QA 等状态字段）
+      if (testCases !== undefined) {
+        const normalized = testCases.map((tc) => ({
+          id: tc.id,
+          description: tc.description.trim(),
+          expectedResult: tc.expectedResult.trim(),
+        }));
+        for (const tc of normalized) {
+          if (!tc.description || !tc.expectedResult) {
+            throw {
+              status: 400,
+              message: "测试用例描述与预期结果不能为空",
+            };
+          }
+        }
+
+        if (normalized.length === 0) {
+          await tx.testCase.deleteMany({ where: { taskId: id } });
+        } else {
+          const keptIds = normalized
+            .map((tc) => tc.id)
+            .filter((x): x is number => x != null);
+          await tx.testCase.deleteMany({
+            where: {
+              taskId: id,
+              ...(keptIds.length > 0 ? { id: { notIn: keptIds } } : {}),
+            },
+          });
+          for (const tc of normalized) {
+            if (tc.id != null) {
+              const row = await tx.testCase.findFirst({
+                where: { id: tc.id, taskId: id },
+              });
+              if (!row) {
+                throw {
+                  status: 400,
+                  message: "测试用例不存在或不属于该任务",
+                };
+              }
+              await tx.testCase.update({
+                where: { id: tc.id },
+                data: {
+                  description: tc.description,
+                  expectedResult: tc.expectedResult,
+                },
+              });
+            } else {
+              await tx.testCase.create({
+                data: {
+                  taskId: id,
+                  description: tc.description,
+                  expectedResult: tc.expectedResult,
+                },
+              });
+            }
+          }
+        }
+      }
+
       return tx.task.findUnique({
         where: { id },
         include: {
+          testCases: {
+            orderBy: { id: "asc" },
+          },
           attachments: {
             where: { attachment: { deletedAt: null } },
             orderBy: { sort: "asc" },
