@@ -38,7 +38,7 @@ VALUES (5, NULL, 'Exception', '异常页', '/exception', '/index/index', 'ri:err
 
 INSERT INTO `Menu` (`id`, `parentId`, `name`, `title`, `path`, `component`, `icon`, `type`, `sort`, `isEnable`, `keepAlive`, `isIframe`, `isHide`, `isHideTab`, `isFullPage`, `fixedTab`, `showBadge`, `createTime`, `updateTime`)
 VALUES
-  (10, 1, 'Console',  '控制台',   'console',  '/dashboard/console',   'ri:home-smile-2-line',       2, 1, 1, 0, 0, 0, 0, 0, 1, 0, NOW(), NOW()),
+  (10, 1, 'Console',  '控制台',   'console',  '/analysis/console',   'ri:home-smile-2-line',       2, 1, 1, 0, 0, 0, 0, 0, 1, 0, NOW(), NOW()),
   (11, 1, 'Analysis', '分析页',   'analysis', '/dashboard/analysis',  'ri:align-item-bottom-line',  2, 2, 1, 0, 0, 0, 0, 0, 0, 0, NOW(), NOW()),
   (12, 1, 'Ecommerce','电商页',   'ecommerce','/dashboard/ecommerce', 'ri:bar-chart-box-line',      2, 3, 1, 0, 0, 0, 0, 0, 0, 0, NOW(), NOW());
 

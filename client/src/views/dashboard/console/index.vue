@@ -336,7 +336,7 @@
 
   /* ★ 占满高度、阻止外层滚动 */
   .workbench {
-    padding: 16px;
+    // padding: 16px;
     background: var(--art-main-bg-color);
     height: 100%;
     box-sizing: border-box;
@@ -540,23 +540,43 @@
 
     &--pending {
       border-left-color: $color-pending;
-      .stat-card__value { color: $color-pending; }
-      .stat-card__icon-wrap { background: rgba($color-pending, 0.1); color: $color-pending; }
+      .stat-card__value {
+        color: $color-pending;
+      }
+      .stat-card__icon-wrap {
+        background: rgba($color-pending, 0.1);
+        color: $color-pending;
+      }
     }
     &--qa {
       border-left-color: $color-qa;
-      .stat-card__value { color: $color-qa; }
-      .stat-card__icon-wrap { background: rgba($color-qa, 0.1); color: $color-qa; }
+      .stat-card__value {
+        color: $color-qa;
+      }
+      .stat-card__icon-wrap {
+        background: rgba($color-qa, 0.1);
+        color: $color-qa;
+      }
     }
     &--completed {
       border-left-color: $color-completed;
-      .stat-card__value { color: $color-completed; }
-      .stat-card__icon-wrap { background: rgba($color-completed, 0.1); color: $color-completed; }
+      .stat-card__value {
+        color: $color-completed;
+      }
+      .stat-card__icon-wrap {
+        background: rgba($color-completed, 0.1);
+        color: $color-completed;
+      }
     }
     &--bug {
       border-left-color: $color-bug;
-      .stat-card__value { color: $color-bug; }
-      .stat-card__icon-wrap { background: rgba($color-bug, 0.1); color: $color-bug; }
+      .stat-card__value {
+        color: $color-bug;
+      }
+      .stat-card__icon-wrap {
+        background: rgba($color-bug, 0.1);
+        color: $color-bug;
+      }
     }
   }
 
@@ -575,8 +595,12 @@
     animation: shimmer 1.4s infinite;
   }
   @keyframes shimmer {
-    0% { background-position: 200% 0; }
-    100% { background-position: -200% 0; }
+    0% {
+      background-position: 200% 0;
+    }
+    100% {
+      background-position: -200% 0;
+    }
   }
 
   // ===== 三列看板 =====
@@ -622,9 +646,15 @@
       height: 8px;
       border-radius: 50%;
       flex-shrink: 0;
-      &--pending { background: $color-pending; }
-      &--qa { background: $color-qa; }
-      &--done { background: $color-completed; }
+      &--pending {
+        background: $color-pending;
+      }
+      &--qa {
+        background: $color-qa;
+      }
+      &--done {
+        background: $color-completed;
+      }
     }
     &__hicon {
       font-size: 17px;
@@ -639,12 +669,16 @@
       gap: 10px;
       overflow-y: auto;
 
-      &::-webkit-scrollbar { width: 6px; }
+      &::-webkit-scrollbar {
+        width: 6px;
+      }
       &::-webkit-scrollbar-thumb {
         background: var(--el-border-color);
         border-radius: 3px;
       }
-      &::-webkit-scrollbar-track { background: transparent; }
+      &::-webkit-scrollbar-track {
+        background: transparent;
+      }
     }
 
     &__empty {
@@ -663,7 +697,9 @@
   .empty-icon {
     font-size: 40px;
     color: var(--el-text-color-disabled);
-    &--ok { color: #a7f3d0; }
+    &--ok {
+      color: #a7f3d0;
+    }
   }
 
   // ===== 任务卡片 =====
@@ -686,10 +722,14 @@
         transform: translateY(-2px);
         box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
         border-color: var(--el-border-color);
-        .task-card__action { opacity: 1; }
+        .task-card__action {
+          opacity: 1;
+        }
       }
     }
-    &--qa { border-left: 3px solid $color-qa; }
+    &--qa {
+      border-left: 3px solid $color-qa;
+    }
     &--done {
       opacity: 0.75;
       .task-card__title {
@@ -709,7 +749,9 @@
       text-transform: uppercase;
       letter-spacing: 0.3px;
     }
-    &__proj-icon { font-size: 13px; }
+    &__proj-icon {
+      font-size: 13px;
+    }
     &__title {
       font-size: 14px;
       font-weight: 600;
@@ -746,7 +788,9 @@
         font-size: 14px;
         transition: transform $transition;
       }
-      &:hover .action-icon { transform: translateX(2px); }
+      &:hover .action-icon {
+        transform: translateX(2px);
+      }
     }
   }
 </style>

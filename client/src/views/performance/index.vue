@@ -192,11 +192,11 @@
               : h('div', { class: 'size-9 rounded-full overflow-hidden flex-shrink-0' }, [
                   h(ColorAvatar, { name: displayName || '?', gender: '', size: 36 })
                 ]);
-            return h('div', { class: 'user-cell' }, [
-              avatarNode,
-              h('div', { class: 'ml-2' }, [
-                h('p', { class: 'user-name' }, displayName),
-                h('p', { class: 'user-email' }, row.user.userEmail ?? '')
+            return h('div', { class: 'perf-member-cell' }, [
+              h('div', { class: 'perf-member-cell__avatar' }, [avatarNode]),
+              h('div', { class: 'perf-member-cell__text' }, [
+                h('span', { class: 'perf-member-cell__name' }, displayName),
+                h('span', { class: 'perf-member-cell__email' }, row.user.userEmail ?? '')
               ])
             ]);
           }
@@ -508,25 +508,38 @@
     font-size: 15px;
   }
 
-  .user-cell {
+  /* formatter 渲染在 el-table 内部，无本组件 data-v，须用 :deep 命中 */
+  :deep(.perf-member-cell) {
     display: flex;
     align-items: center;
-    gap: 8px;
+    gap: 12px;
+    line-height: 1.4;
+  }
 
-    .user-name {
-      font-size: 13px;
-      font-weight: 500;
-      color: var(--el-text-color-primary);
-      margin: 0;
-      line-height: 1.4;
-    }
+  :deep(.perf-member-cell__avatar) {
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+  }
 
-    .user-email {
-      font-size: 12px;
-      color: var(--el-text-color-placeholder);
-      margin: 0;
-      line-height: 1.4;
-    }
+  :deep(.perf-member-cell__text) {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  :deep(.perf-member-cell__name) {
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--el-text-color-primary);
+  }
+
+  :deep(.perf-member-cell__email) {
+    font-size: 12px;
+    color: var(--el-text-color-secondary);
+    word-break: break-all;
   }
 
   .text-danger {

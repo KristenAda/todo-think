@@ -15,18 +15,13 @@
       ]"
     >
       <div class="flex-c flex-1 min-w-0 leading-15" style="display: flex">
-        <!-- 系统信息  -->
+        <!-- 仅「顶部菜单」布局无侧栏，此处保留 Logo + 名称；左侧/双列/混合菜单仅在侧栏展示 -->
         <div class="system-info-container flex-c c-p" @click="toHome" v-if="isTopMenu">
           <ArtLogo class="pl-4.5 logo-icon" />
           <div v-if="width >= 1400" class="system-name-wrapper">
             <ArtSystemName size="md" />
           </div>
         </div>
-
-        <ArtLogo
-          class="!hidden pl-3.5 overflow-hidden align-[-0.15em] fill-current"
-          @click="toHome"
-        />
 
         <!-- 菜单按钮 -->
         <ArtIconButton

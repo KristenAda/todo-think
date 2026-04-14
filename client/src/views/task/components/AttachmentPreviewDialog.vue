@@ -96,7 +96,7 @@
   import '@vue-office/docx/lib/index.css';
   import '@vue-office/excel/lib/index.css';
 
-  /** 高于 el-drawer / Element 弹出层层级，避免在任务详情抽屉内打开预览被遮挡 */
+  /** 高于任务详情等 ArtDialog 的 z-index（9000），避免预览被遮挡 */
   const PREVIEW_DIALOG_Z_INDEX = 50000;
 
   // 使用各包 lib/v3/*.mjs（Vue3 ESM），避免走 lib/index.js 的 UMD 经 esbuild 预构建后与 Vue 运行时搅在一起导致 isFunction 未初始化

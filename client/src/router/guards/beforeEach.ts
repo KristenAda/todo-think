@@ -79,7 +79,9 @@ let reloadWorktabCollapsed = false;
 
 function shouldTreatAsPageReload(): boolean {
   try {
-    const e = performance.getEntriesByType('navigation')[0] as PerformanceNavigationTiming | undefined;
+    const e = performance.getEntriesByType('navigation')[0] as
+      | PerformanceNavigationTiming
+      | undefined;
     if (e?.type === 'reload') return true;
   } catch {
     /* empty */

@@ -42,7 +42,9 @@
             }}</span>
           </div>
           <div class="file-card__toolbar">
-            <el-button link type="primary" size="small" @click="previewExisting(ex)"> 预览 </el-button>
+            <el-button link type="primary" size="small" @click="previewExisting(ex)">
+              预览
+            </el-button>
             <el-button link type="danger" size="small" @click="removeExisting(ex.attachmentId)">
               移除
             </el-button>
@@ -171,7 +173,10 @@
   }
 
   function iconZoneStyle(item: TaskFileUploadItem) {
-    return { '--ft-tint': getFileTintRgb(item.file.name, item.file.type) } as Record<string, string>;
+    return { '--ft-tint': getFileTintRgb(item.file.name, item.file.type) } as Record<
+      string,
+      string
+    >;
   }
 
   function fileIconForExisting(ex: ExistingTaskAttachment) {

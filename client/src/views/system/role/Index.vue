@@ -186,7 +186,9 @@
 
   const showDialog = (type: 'add' | 'edit', row?: RoleListItem) => {
     dialogVisible.value = false;
-    nextTick(() => { dialogVisible.value = true; });
+    nextTick(() => {
+      dialogVisible.value = true;
+    });
     dialogType.value = type;
     currentRoleData.value = row;
   };

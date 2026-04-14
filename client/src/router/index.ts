@@ -19,5 +19,5 @@ export function initRouter(app: App<Element>): void {
   app.use(router);
 }
 
-// 主页路径，默认使用菜单第一个有效路径，配置后使用此路径
-export const HOME_PAGE_PATH = '';
+// 主页路径：主控制台（未配置时回退为菜单第一个有效路径）
+export const HOME_PAGE_PATH = '/analysis/console';

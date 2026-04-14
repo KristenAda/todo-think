@@ -1,22 +1,18 @@
 <template>
-  <el-drawer
+  <ArtDialog
     v-model="visible"
-    size="780px"
-    direction="rtl"
-    destroy-on-close
-    :before-close="handleClose"
+    :title="dialogTitle"
+    icon="solar:checklist-bold-duotone"
+    width="70%"
+    :max-height="'calc(90vh - 140px)'"
   >
-    <template #header>
-      <div class="drawer-header">
-        <div class="task-title">{{ task?.title }}</div>
-        <el-tag :type="statusTagType(task?.status)" size="small">{{
-          statusLabel(task?.status)
+    <div v-if="loadingDetail" class="loading-wrap"><el-skeleton :rows="8" animated /></div>
+    <div v-else-if="task" class="task-detail-body">
+      <div class="task-detail-status-row">
+        <el-tag :type="statusTagType(task.status)" size="small">{{
+          statusLabel(task.status)
         }}</el-tag>
       </div>
-    </template>
-
-    <div v-if="loadingDetail" class="loading-wrap"><el-skeleton :rows="8" animated /></div>
-    <div v-else-if="task" class="drawer-body">
       <el-descriptions :column="2" border size="small" class="section">
         <el-descriptions-item label="所属项目">{{ task.project?.name }}</el-descriptions-item>
         <el-descriptions-item label="预估工时">{{
@@ -77,21 +73,30 @@
             :style="attachTintStyle(row.attachment)"
           >
             <div class="attach-line__icon" aria-hidden="true">
-              <ArtSvgIcon :icon="getFileIcon(row.attachment.originalName, row.attachment.mimeType)" />
+              <ArtSvgIcon
+                :icon="getFileIcon(row.attachment.originalName, row.attachment.mimeType)"
+              />
             </div>
             <div class="attach-line__main">
               <span class="fname" :title="row.attachment.originalName">{{
                 row.attachment.originalName
               }}</span>
               <div class="attach-line__meta">
-                <span v-if="getFileExtLabel(row.attachment.originalName)" class="attach-line__ext">{{
-                  getFileExtLabel(row.attachment.originalName)
-                }}</span>
+                <span
+                  v-if="getFileExtLabel(row.attachment.originalName)"
+                  class="attach-line__ext"
+                  >{{ getFileExtLabel(row.attachment.originalName) }}</span
+                >
                 <span class="fsize">{{ formatFileSize(row.attachment.size) }}</span>
               </div>
             </div>
             <div class="attach-line__actions">
-              <el-button link type="primary" size="small" @click="openServerPreview(row.attachment)">
+              <el-button
+                link
+                type="primary"
+                size="small"
+                @click="openServerPreview(row.attachment)"
+              >
                 预览
               </el-button>
               <el-button link type="primary" size="small" @click="downloadAtt(row.attachment)">
@@ -246,7 +251,7 @@
     </div>
 
     <template #footer>
-      <div class="drawer-footer">
+      <div class="task-detail-footer">
         <el-button
           v-if="(isMainAssignee || isCoAssignee) && task?.status === 'PENDING'"
           type="primary"
@@ -279,9 +284,7 @@
         </template>
 
         <el-button
-          v-if="
-            (isMainAssignee || isCoAssignee || isTaskManager) && task?.status === 'IN_PROGRESS'
-          "
+          v-if="(isMainAssignee || isCoAssignee || isTaskManager) && task?.status === 'IN_PROGRESS'"
           type="info"
           @click="handlePause"
           :loading="actionLoading"
@@ -308,7 +311,7 @@
         </el-button>
       </div>
     </template>
-  </el-drawer>
+  </ArtDialog>
 
   <el-dialog v-model="workLogDialogVisible" title="登记工时" width="560px" destroy-on-close>
     <el-form ref="workLogFormRef" :model="workLogForm" :rules="workLogRules" label-width="90px">
@@ -383,7 +386,7 @@
     fetchQaAudit,
     fetchPauseTask,
     fetchResumeTask,
-    fetchReopenTask,
+    fetchReopenTask
   } from '@/api/task';
   import { downloadAttachmentBlob } from '@/api/attachment';
   import {
@@ -405,6 +408,11 @@
 
   const task = ref<Api.Task.Task | null>(null);
   const loadingDetail = ref(false);
+
+  const dialogTitle = computed(() => {
+    if (loadingDetail.value) return '任务详情';
+    return task.value?.title?.trim() || '任务详情';
+  });
   const actionLoading = ref(false);
   const workLogDialogVisible = ref(false);
   const qaPassDialogVisible = ref(false);
@@ -476,7 +484,7 @@
     { label: '打回修改', value: 'REJECTED' },
     { label: '已完成', value: 'COMPLETED' },
     { label: '已暂停', value: 'PAUSED' },
-    { label: '已取消', value: 'CANCELLED' },
+    { label: '已取消', value: 'CANCELLED' }
   ];
   const STATUS_TAG: Record<string, string> = {
     PENDING: 'info',
@@ -486,7 +494,7 @@
     REJECTED: 'danger',
     COMPLETED: 'success',
     PAUSED: 'warning',
-    CANCELLED: 'info',
+    CANCELLED: 'info'
   };
   function statusLabel(s?: string) {
     return STATUS_OPTIONS.find((o) => o.value === s)?.label ?? s ?? '';
@@ -497,9 +505,7 @@
   function testLabel(s: Api.Task.TestStatus) {
     return { UNTESTED: '未测试', PASSED: '通过', FAILED: '失败' }[s] ?? s;
   }
-  function testTagType(
-    s: Api.Task.TestStatus
-  ): 'success' | 'warning' | 'info' | 'danger' {
+  function testTagType(s: Api.Task.TestStatus): 'success' | 'warning' | 'info' | 'danger' {
     const m: Record<Api.Task.TestStatus, 'success' | 'info' | 'danger'> = {
       UNTESTED: 'info',
       PASSED: 'success',
@@ -580,10 +586,6 @@
   watch(workLogDialogVisible, (v) => {
     if (v) nextTick(() => workLogAttachRef.value?.reset());
   });
-
-  function handleClose() {
-    visible.value = false;
-  }
 
   // ==================== 开始开发 ====================
   async function handleStartWork() {
@@ -734,20 +736,14 @@
 </script>
 
 <style scoped lang="scss">
-  .drawer-header {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    .task-title {
-      font-size: 16px;
-      font-weight: 600;
-    }
-  }
   .loading-wrap {
     padding: 24px;
   }
-  .drawer-body {
-    padding: 0 4px 100px;
+  .task-detail-status-row {
+    margin-bottom: 12px;
+  }
+  .task-detail-body {
+    padding: 0 4px 8px;
     display: flex;
     flex-direction: column;
     gap: 20px;
@@ -922,7 +918,8 @@
 
   .tc-remark--qa {
     background: color-mix(in srgb, var(--el-color-warning) 8%, var(--el-fill-color-blank));
-    border: 1px dashed color-mix(in srgb, var(--el-color-warning) 28%, var(--el-border-color-lighter));
+    border: 1px dashed
+      color-mix(in srgb, var(--el-color-warning) 28%, var(--el-border-color-lighter));
   }
 
   .tc-remark__label {
@@ -1131,7 +1128,7 @@
       gap: 4px;
     }
   }
-  .drawer-footer {
+  .task-detail-footer {
     display: flex;
     gap: 10px;
     justify-content: flex-end;
