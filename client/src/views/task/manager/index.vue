@@ -59,8 +59,8 @@
       v-model="dialogVisible"
       :title="editingId ? '编辑任务' : '新建任务'"
       icon="solar:checklist-bold-duotone"
-      width="700px"
-      destroy-on-close
+      width="900px"
+      destroy-on-close·
     >
       <el-form ref="formRef" :model="form" :rules="rules" label-width="110px">
         <el-form-item label="任务名称" prop="title">
@@ -135,77 +135,65 @@
             </el-form-item>
           </el-col>
         </el-row>
-        <el-row :gutter="16">
-          <el-col :span="12">
-            <el-form-item label="管理者">
-              <el-select
-                v-model="form.managerId"
-                placeholder="请选择"
-                clearable
-                style="width: 100%"
+        <el-form-item label="负责人">
+          <div class="task-form-member-field task-form-member-field--block">
+            <div class="task-form-member-tags">
+              <template v-if="mainAssigneeUser || coAssigneeUsers.length">
+                <el-tag
+                  v-if="mainAssigneeUser"
+                  type="primary"
+                  closable
+                  class="task-form-user-tag"
+                  @close="removeMainAssigneeTag"
+                >
+                  <span class="task-form-user-tag-inner">
+                    <el-avatar :size="20" :src="mainAssigneeUser.avatar ?? undefined">{{
+                      initials(mainAssigneeUser)
+                    }}</el-avatar>
+                    <span>{{ userDisplayName(mainAssigneeUser) }}</span>
+                  </span>
+                </el-tag>
+                <el-tag
+                  v-for="u in coAssigneeUsers"
+                  :key="u.id"
+                  type="success"
+                  closable
+                  class="task-form-user-tag"
+                  @close="removeCoAssigneeTag(u.id)"
+                >
+                  <span class="task-form-user-tag-inner">
+                    <el-avatar :size="20" :src="u.avatar ?? undefined">{{ initials(u) }}</el-avatar>
+                    <span>{{ userDisplayName(u) }}</span>
+                  </span>
+                </el-tag>
+              </template>
+              <span v-else class="task-form-member-placeholder">未选择</span>
+            </div>
+            <el-button @click="openAssigneePicker">选择人员</el-button>
+          </div>
+        </el-form-item>
+        <el-form-item label="测试验收人">
+          <div class="task-form-member-field task-form-member-field--block">
+            <div class="task-form-member-tags">
+              <el-tag
+                v-if="testerUser"
+                type="warning"
+                closable
+                class="task-form-user-tag"
+                @close="clearTester"
               >
-                <el-option
-                  v-for="u in userList"
-                  :key="u.id"
-                  :label="u.nickName || u.userName"
-                  :value="u.id"
-                />
-              </el-select>
-            </el-form-item>
-          </el-col>
-          <el-col :span="12">
-            <el-form-item label="主要负责人">
-              <el-select
-                v-model="form.mainAssigneeId"
-                placeholder="请选择"
-                clearable
-                style="width: 100%"
-              >
-                <el-option
-                  v-for="u in userList"
-                  :key="u.id"
-                  :label="u.nickName || u.userName"
-                  :value="u.id"
-                  :disabled="form.coAssigneeIds.includes(u.id)"
-                />
-              </el-select>
-            </el-form-item>
-          </el-col>
-        </el-row>
-        <el-row :gutter="16">
-          <el-col :span="12">
-            <el-form-item label="协助负责人">
-              <el-select
-                v-model="form.coAssigneeIds"
-                multiple
-                collapse-tags
-                collapse-tags-tooltip
-                placeholder="可多选"
-                style="width: 100%"
-              >
-                <el-option
-                  v-for="u in userList"
-                  :key="u.id"
-                  :label="u.nickName || u.userName"
-                  :value="u.id"
-                  :disabled="form.mainAssigneeId === u.id"
-                />
-              </el-select>
-            </el-form-item>
-          </el-col>
-          <el-col :span="12">
-            <el-form-item label="测试验收人">
-              <el-select v-model="form.testerId" placeholder="请选择" clearable style="width: 100%">
-                <el-option
-                  v-for="u in userList"
-                  :key="u.id"
-                  :label="u.nickName || u.userName"
-                  :value="u.id"
-                />
-              </el-select>
-            </el-form-item>
-          </el-col>
-        </el-row>
+                <span class="task-form-user-tag-inner">
+                  <el-avatar :size="20" :src="testerUser.avatar ?? undefined">{{
+                    initials(testerUser)
+                  }}</el-avatar>
+                  <span>{{ userDisplayName(testerUser) }}</span>
+                </span>
+              </el-tag>
+              <span v-else class="task-form-member-placeholder">未选择</span>
+            </div>
+            <el-button @click="openTesterPicker">选择人员</el-button>
+          </div>
+        </el-form-item>
         <el-row :gutter="16">
           <el-col :span="12">
             <el-form-item label="预估工时(h)">
@@ -226,28 +214,49 @@
           />
         </el-form-item>
         <el-form-item v-if="form.workDomain === 'SOFTWARE_DEVELOPMENT'" label="测试用例">
-          <div class="test-case-list">
-            <div
-              v-for="(tc, idx) in form.testCases"
-              :key="tc.id ?? `new-${idx}`"
-              class="test-case-item"
+          <div class="test-case-table-wrap">
+            <el-table
+              :data="form.testCases"
+              border
+              size="small"
+              class="test-case-table"
+              empty-text="暂无测试用例，点击下方添加"
+              :row-key="testCaseRowKey"
             >
-              <span class="tc-index">{{ idx + 1 }}</span>
-              <div class="tc-fields">
-                <el-input v-model="tc.description" placeholder="用例描述/操作步骤" size="small" />
-                <el-input
-                  v-model="tc.expectedResult"
-                  placeholder="预期结果"
-                  size="small"
-                  style="margin-top: 6px"
-                />
-              </div>
-              <el-button circle size="small" type="danger" plain @click="removeTestCase(idx)"
-                >X</el-button
-              >
-            </div>
-            <el-button text type="primary" @click="addTestCase">
-              <art-svg-icon icon="mdi:plus-circle-outline" style="margin-right: 4px" /> 添加测试用例
+              <el-table-column type="index" label="#" width="52" align="center" />
+              <el-table-column label="用例描述 / 操作步骤" min-width="220">
+                <template #default="{ row }">
+                  <el-input
+                    v-model="row.description"
+                    type="textarea"
+                    :autosize="{ minRows: 2, maxRows: 6 }"
+                    placeholder="描述操作步骤或场景"
+                    resize="none"
+                  />
+                </template>
+              </el-table-column>
+              <el-table-column label="预期结果" min-width="200">
+                <template #default="{ row }">
+                  <el-input
+                    v-model="row.expectedResult"
+                    type="textarea"
+                    :autosize="{ minRows: 2, maxRows: 6 }"
+                    placeholder="期望看到的结果"
+                    resize="none"
+                  />
+                </template>
+              </el-table-column>
+              <el-table-column label="操作" width="72" align="center" fixed="right">
+                <template #default="{ $index }">
+                  <el-button type="danger" link size="small" @click="removeTestCase($index)">
+                    删除
+                  </el-button>
+                </template>
+              </el-table-column>
+            </el-table>
+            <el-button class="test-case-table__add" text type="primary" @click="addTestCase">
+              <art-svg-icon icon="mdi:plus-circle-outline" style="margin-right: 4px" />
+              添加测试用例
             </el-button>
           </div>
         </el-form-item>
@@ -255,6 +264,148 @@
       <template #footer>
         <el-button @click="dialogVisible = false">取消</el-button>
         <el-button type="primary" :loading="submitting" @click="handleSubmit">确定</el-button>
+      </template>
+    </ArtDialog>
+
+    <!-- 负责人：ArtDialog + 卡片列表（数据 fetchOrgMembers） -->
+    <ArtDialog
+      v-model="assigneePickerVisible"
+      title="选择负责人"
+      subtitle="勾选参与人员并指定唯一主要负责人"
+      icon="mdi:account-group-outline"
+      width="600px"
+      :z-index="9100"
+      :show-minimize="false"
+      :show-maximize="false"
+    >
+      <div class="task-member-picker">
+        <p class="task-member-picker__hint">
+          勾选左侧复选框加入任务；在已选人员中须指定一位「主要负责人」。
+        </p>
+        <div class="task-member-picker__scroll">
+          <el-radio-group v-model="assigneePickerMainId" class="task-member-picker__radio-group">
+            <div
+              v-for="u in userList"
+              :key="u.id"
+              class="member-pick-card"
+              :class="{ 'member-pick-card--active': assigneePickerSelectedIds.includes(u.id) }"
+            >
+              <el-checkbox
+                class="member-pick-card__check"
+                :model-value="assigneePickerSelectedIds.includes(u.id)"
+                @change="(v: string | number | boolean) => onAssigneeToggle(u.id, v === true)"
+                @click.stop
+              />
+              <el-avatar :size="48" :src="u.avatar ?? undefined" class="member-pick-card__avatar">
+                {{ initials(u) }}
+              </el-avatar>
+              <div class="member-pick-card__body">
+                <div class="member-pick-card__name">{{ userDisplayName(u) }}</div>
+                <div class="member-pick-card__email">{{ displayEmail(u.userEmail) }}</div>
+                <div class="member-pick-card__meta">
+                  <span class="member-pick-card__meta-item">
+                    <art-svg-icon
+                      icon="mdi:gender-male-female"
+                      class="member-pick-card__meta-icon"
+                    />
+                    {{ displayGender(u.userGender) }}
+                  </span>
+                  <span class="member-pick-card__meta-item">
+                    <art-svg-icon icon="mdi:phone-outline" class="member-pick-card__meta-icon" />
+                    {{ displayPhone(u.userPhone) }}
+                  </span>
+                </div>
+              </div>
+              <div
+                class="member-pick-card__side"
+                :class="{
+                  'member-pick-card__side--disabled': !assigneePickerSelectedIds.includes(u.id)
+                }"
+              >
+                <el-radio
+                  :label="u.id"
+                  :disabled="!assigneePickerSelectedIds.includes(u.id)"
+                  @click.stop
+                >
+                  主要负责人
+                </el-radio>
+              </div>
+            </div>
+          </el-radio-group>
+        </div>
+      </div>
+      <template #footer>
+        <el-button @click="assigneePickerVisible = false">取消</el-button>
+        <el-button type="primary" @click="confirmAssigneePicker">确定</el-button>
+      </template>
+    </ArtDialog>
+
+    <!-- 测试验收人：ArtDialog + 卡片单选 -->
+    <ArtDialog
+      v-model="testerPickerVisible"
+      title="选择测试验收人"
+      subtitle="从组织成员中指定，可不选"
+      icon="mdi:clipboard-check-outline"
+      width="600px"
+      :z-index="9100"
+      :show-minimize="false"
+      :show-maximize="false"
+    >
+      <div class="task-member-picker">
+        <div class="task-member-picker__scroll task-member-picker__scroll--tight">
+          <el-radio-group v-model="testerPickerTempId" class="task-member-picker__radio-group">
+            <div
+              class="member-pick-card member-pick-card--tester"
+              :class="{ 'member-pick-card--active': testerPickerTempId === testerNoneSentinel }"
+            >
+              <el-radio class="member-pick-card__radio" :label="testerNoneSentinel" @click.stop />
+              <div class="member-pick-card__icon-slot">
+                <art-svg-icon icon="mdi:account-off-outline" />
+              </div>
+              <div class="member-pick-card__body">
+                <div class="member-pick-card__name">暂不指定</div>
+                <div class="member-pick-card__email">稍后在任务中再指定验收人</div>
+                <div class="member-pick-card__meta">
+                  <span class="member-pick-card__meta-item member-pick-card__meta-item--muted"
+                    >—</span
+                  >
+                </div>
+              </div>
+            </div>
+            <div
+              v-for="u in userList"
+              :key="u.id"
+              class="member-pick-card member-pick-card--tester"
+              :class="{ 'member-pick-card--active': testerPickerTempId === u.id }"
+            >
+              <el-radio class="member-pick-card__radio" :label="u.id" @click.stop />
+              <el-avatar :size="48" :src="u.avatar ?? undefined" class="member-pick-card__avatar">
+                {{ initials(u) }}
+              </el-avatar>
+              <div class="member-pick-card__body">
+                <div class="member-pick-card__name">{{ userDisplayName(u) }}</div>
+                <div class="member-pick-card__email">{{ displayEmail(u.userEmail) }}</div>
+                <div class="member-pick-card__meta">
+                  <span class="member-pick-card__meta-item">
+                    <art-svg-icon
+                      icon="mdi:gender-male-female"
+                      class="member-pick-card__meta-icon"
+                    />
+                    {{ displayGender(u.userGender) }}
+                  </span>
+                  <span class="member-pick-card__meta-item">
+                    <art-svg-icon icon="mdi:phone-outline" class="member-pick-card__meta-icon" />
+                    {{ displayPhone(u.userPhone) }}
+                  </span>
+                </div>
+              </div>
+            </div>
+          </el-radio-group>
+        </div>
+      </div>
+      <template #footer>
+        <el-button @click="testerPickerVisible = false">取消</el-button>
+        <el-button type="primary" @click="confirmTesterPicker">确定</el-button>
       </template>
     </ArtDialog>
 
@@ -268,8 +419,8 @@
 </template>
 
 <script setup lang="ts">
-  import { ref, reactive, onMounted, nextTick, h, watch } from 'vue';
-  import { ElMessage, ElMessageBox, ElTag, ElAvatar, ElTooltip } from 'element-plus';
+  import { ref, reactive, computed, onMounted, nextTick, h, watch } from 'vue';
+  import { ElMessage, ElMessageBox, ElTag, ElAvatar } from 'element-plus';
   import type { FormInstance, FormRules } from 'element-plus';
   import {
     fetchTaskPage,
@@ -319,17 +470,19 @@
     { label: '已暂停', value: 'PAUSED' },
     { label: '已取消', value: 'CANCELLED' }
   ];
-  const STATUS_TAG: Record<Api.Task.TaskStatus, 'primary' | 'success' | 'warning' | 'info' | 'danger'> =
-    {
-      PENDING: 'info',
-      IN_PROGRESS: 'primary',
-      SELF_TESTING: 'warning',
-      QA_REVIEW: 'warning',
-      REJECTED: 'danger',
-      COMPLETED: 'success',
-      PAUSED: 'warning',
-      CANCELLED: 'info'
-    };
+  const STATUS_TAG: Record<
+    Api.Task.TaskStatus,
+    'primary' | 'success' | 'warning' | 'info' | 'danger'
+  > = {
+    PENDING: 'info',
+    IN_PROGRESS: 'primary',
+    SELF_TESTING: 'warning',
+    QA_REVIEW: 'warning',
+    REJECTED: 'danger',
+    COMPLETED: 'success',
+    PAUSED: 'warning',
+    CANCELLED: 'info'
+  };
   const WORK_DOMAIN_OPTIONS: { label: string; value: Api.Task.TaskWorkDomain }[] = [
     { label: '软件开发', value: 'SOFTWARE_DEVELOPMENT' },
     { label: '产品与设计', value: 'PRODUCT_DESIGN' },
@@ -352,11 +505,49 @@
   function statusLabel(s: Api.Task.TaskStatus) {
     return STATUS_OPTIONS.find((o) => o.value === s)?.label ?? s;
   }
-  function statusTagType(s: Api.Task.TaskStatus): 'primary' | 'success' | 'warning' | 'info' | 'danger' {
+  function statusTagType(
+    s: Api.Task.TaskStatus
+  ): 'primary' | 'success' | 'warning' | 'info' | 'danger' {
     return STATUS_TAG[s] ?? 'info';
+  }
+
+  function workDomainLabel(w: Api.Task.TaskWorkDomain) {
+    return WORK_DOMAIN_OPTIONS.find((x) => x.value === w)?.label ?? w;
+  }
+
+  function typeLabel(t: Api.Task.TaskType) {
+    return TYPE_OPTIONS.find((x) => x.value === t)?.label ?? t;
+  }
+
+  function priorityTagType(p: Api.Task.TaskPriority): 'danger' | 'warning' | 'primary' | 'info' {
+    if (p === 'P0') return 'danger';
+    if (p === 'P1') return 'warning';
+    if (p === 'P2') return 'primary';
+    return 'info';
   }
   function initials(u: Api.Task.SimpleUser) {
     return (u.nickName || u.userName)?.[0]?.toUpperCase() ?? '?';
+  }
+
+  function userDisplayName(u: Api.Task.SimpleUser) {
+    return u.nickName || u.userName;
+  }
+
+  /** 选人卡片展示：空邮箱/手机占位 */
+  function displayEmail(v: string | null | undefined) {
+    if (v == null || String(v).trim() === '') return '未填写邮箱';
+    return v;
+  }
+
+  function displayPhone(v: string | null | undefined) {
+    if (v == null || String(v).trim() === '') return '未填写手机';
+    return v;
+  }
+
+  /** 后端存中文「男/女」等，原样展示并兜底 */
+  function displayGender(v: string | null | undefined) {
+    if (v == null || String(v).trim() === '') return '未填写';
+    return v;
   }
 
   /** 提交前过滤空行并 trim；新建无 id，编辑保留 id */
@@ -394,7 +585,6 @@
     pagination,
     searchParams,
     getData,
-    getDataByPage,
     resetSearchParams,
     handleSizeChange,
     handleCurrentChange,
@@ -429,59 +619,79 @@
           formatter: (row) => row.project?.name ?? '-'
         },
         {
+          prop: 'workDomain',
+          label: '任务领域',
+          width: 120,
+          formatter: (row) =>
+            h(ElTag, { type: 'info', size: 'small', effect: 'light' }, () =>
+              workDomainLabel(row.workDomain)
+            )
+        },
+        {
+          prop: 'type',
+          label: '事项类型',
+          width: 110,
+          formatter: (row) =>
+            h(ElTag, { type: 'info', size: 'small', effect: 'light' }, () => typeLabel(row.type))
+        },
+        {
+          prop: 'priority',
+          label: '优先级',
+          width: 100,
+          formatter: (row) =>
+            h(
+              ElTag,
+              { type: priorityTagType(row.priority), size: 'small', effect: 'light' },
+              () => row.priority
+            )
+        },
+        {
           prop: 'status',
           label: '状态',
           width: 110,
           formatter: (row) =>
-            h(ElTag, { type: statusTagType(row.status), size: 'small' }, () => statusLabel(row.status))
+            h(ElTag, { type: statusTagType(row.status), size: 'small' }, () =>
+              statusLabel(row.status)
+            )
         },
         {
-          prop: 'mainAssignee',
-          label: '主负责人',
-          width: 150,
+          prop: 'assignees',
+          label: '负责人',
+          minWidth: 240,
           formatter: (row) => {
-            if (!row.mainAssignee) {
-              return h('span', { class: 'text-muted' }, '未分配');
+            const nodes: any[] = [];
+
+            if (row.mainAssignee) {
+              const u = row.mainAssignee;
+              nodes.push(
+                h('div', { class: 'task-mgr-assignee task-mgr-assignee--main' }, [
+                  h(ElAvatar, { size: 22, src: u.avatar ?? undefined }, () => initials(u)),
+                  h('span', { class: 'task-mgr-assignee__name' }, u.nickName || u.userName)
+                ])
+              );
             }
-            return h('div', { class: 'task-mgr-user-cell' }, [
-              h(ElAvatar, { size: 26, src: row.mainAssignee.avatar ?? undefined }, () =>
-                initials(row.mainAssignee!)
-              ),
-              h(
-                'span',
-                { class: 'task-mgr-user-cell__name' },
-                row.mainAssignee.nickName || row.mainAssignee.userName
-              )
-            ]);
-          }
-        },
-        {
-          prop: 'coAssignees',
-          label: '协助人',
-          width: 150,
-          formatter: (row) => {
-            if (!row.coAssignees?.length) {
-              return h('span', { class: 'text-muted' }, '-');
+
+            if (row.coAssignees?.length) {
+              const max = 6;
+              const list = row.coAssignees.slice(0, max);
+              for (const ca of list) {
+                const u = ca.user;
+                nodes.push(
+                  h('div', { class: 'task-mgr-assignee task-mgr-assignee--co' }, [
+                    h(ElAvatar, { size: 22, src: u.avatar ?? undefined }, () => initials(u)),
+                    h('span', { class: 'task-mgr-assignee__name' }, u.nickName || u.userName)
+                  ])
+                );
+              }
+              if (row.coAssignees.length > max) {
+                nodes.push(
+                  h('span', { class: 'task-mgr-assignee-more' }, `+${row.coAssignees.length - max}`)
+                );
+              }
             }
-            const nodes = row.coAssignees.slice(0, 4).map((ca) =>
-              h(
-                ElTooltip,
-                { content: ca.user.nickName || ca.user.userName, placement: 'top' },
-                {
-                  default: () =>
-                    h(
-                      ElAvatar,
-                      { size: 26, src: ca.user.avatar ?? undefined, class: 'task-mgr-stacked-avatar' },
-                      () => initials(ca.user)
-                    )
-                }
-              )
-            );
-            const more =
-              row.coAssignees.length > 4
-                ? h('span', { class: 'task-mgr-more-count' }, `+${row.coAssignees.length - 4}`)
-                : null;
-            return h('div', { class: 'task-mgr-avatar-group' }, [...nodes, more].filter(Boolean));
+
+            if (!nodes.length) return h('span', { class: 'text-muted' }, '未分配');
+            return h('div', { class: 'task-mgr-assignees' }, nodes);
           }
         },
         {
@@ -518,7 +728,7 @@
   });
 
   function runSearch() {
-    getDataByPage();
+    refreshData();
   }
 
   function taskRowAction(item: ButtonMoreItem, row: Api.Task.Task) {
@@ -560,13 +770,21 @@
     type: 'FEATURE' as Api.Task.TaskType,
     priority: 'P2' as Api.Task.TaskPriority,
     dueDate: undefined as string | undefined,
-    managerId: undefined as number | undefined,
     mainAssigneeId: undefined as number | undefined,
     coAssigneeIds: [] as number[],
     testerId: undefined as number | undefined,
     estimatedHours: undefined as number | undefined,
-    testCases: [] as { id?: number; description: string; expectedResult: string }[]
+    testCases: [] as {
+      id?: number;
+      description: string;
+      expectedResult: string;
+      /** 本地新增行稳定 key，不参与提交 */
+      _clientKey?: number;
+    }[]
   });
+
+  /** 测试用例表格行：无后端 id 时递增，避免删行后 row-key 错乱 */
+  const testCaseClientKey = ref(0);
 
   const rules: FormRules = {
     title: [{ required: true, message: '请输入任务名称', trigger: 'blur' }],
@@ -581,6 +799,110 @@
       }
     }
   );
+
+  /** 测试验收人弹窗中「暂不指定」的占位值（与真实 userId 区分） */
+  const testerNoneSentinel = -1;
+
+  const assigneePickerVisible = ref(false);
+  /** 弹窗内已勾选的人员 id */
+  const assigneePickerSelectedIds = ref<number[]>([]);
+  /** 弹窗内指定的主要负责人 id，须在 selectedIds 中 */
+  const assigneePickerMainId = ref<number | undefined>(undefined);
+
+  const testerPickerVisible = ref(false);
+  const testerPickerTempId = ref<number>(testerNoneSentinel);
+
+  const mainAssigneeUser = computed(() =>
+    form.mainAssigneeId != null
+      ? (userList.value.find((u) => u.id === form.mainAssigneeId) ?? null)
+      : null
+  );
+
+  const coAssigneeUsers = computed(() =>
+    form.coAssigneeIds
+      .map((id) => userList.value.find((u) => u.id === id))
+      .filter((u): u is Api.Task.SimpleUser => !!u)
+  );
+
+  const testerUser = computed(() =>
+    form.testerId != null ? (userList.value.find((u) => u.id === form.testerId) ?? null) : null
+  );
+
+  function onAssigneeToggle(id: number, checked: boolean) {
+    const set = new Set(assigneePickerSelectedIds.value);
+    if (checked) {
+      set.add(id);
+      if (assigneePickerMainId.value == null) assigneePickerMainId.value = id;
+    } else {
+      set.delete(id);
+      if (assigneePickerMainId.value === id) {
+        assigneePickerMainId.value = set.size > 0 ? [...set][0] : undefined;
+      }
+    }
+    assigneePickerSelectedIds.value = [...set];
+  }
+
+  function openAssigneePicker() {
+    const ids = [
+      ...(form.mainAssigneeId != null ? [form.mainAssigneeId] : []),
+      ...form.coAssigneeIds
+    ];
+    const uniq = [...new Set(ids)];
+    assigneePickerSelectedIds.value = uniq;
+    assigneePickerMainId.value = form.mainAssigneeId;
+    if (uniq.length && (form.mainAssigneeId == null || !uniq.includes(form.mainAssigneeId))) {
+      assigneePickerMainId.value = uniq[0];
+    }
+    assigneePickerVisible.value = true;
+  }
+
+  function confirmAssigneePicker() {
+    const ids = assigneePickerSelectedIds.value;
+    if (!ids.length) {
+      form.mainAssigneeId = undefined;
+      form.coAssigneeIds = [];
+      assigneePickerVisible.value = false;
+      return;
+    }
+    const main = assigneePickerMainId.value;
+    if (main == null || !ids.includes(main)) {
+      ElMessage.warning('请从已选人员中指定主要负责人');
+      return;
+    }
+    form.mainAssigneeId = main;
+    form.coAssigneeIds = ids.filter((i) => i !== main);
+    assigneePickerVisible.value = false;
+  }
+
+  /** 移除主要负责人时，若有协助负责人则顺移为新的主要负责人 */
+  function removeMainAssigneeTag() {
+    if (form.coAssigneeIds.length) {
+      const [next, ...rest] = form.coAssigneeIds;
+      form.mainAssigneeId = next;
+      form.coAssigneeIds = rest;
+    } else {
+      form.mainAssigneeId = undefined;
+    }
+  }
+
+  function removeCoAssigneeTag(id: number) {
+    form.coAssigneeIds = form.coAssigneeIds.filter((i) => i !== id);
+  }
+
+  function clearTester() {
+    form.testerId = undefined;
+  }
+
+  function openTesterPicker() {
+    testerPickerTempId.value = form.testerId ?? testerNoneSentinel;
+    testerPickerVisible.value = true;
+  }
+
+  function confirmTesterPicker() {
+    form.testerId =
+      testerPickerTempId.value === testerNoneSentinel ? undefined : testerPickerTempId.value;
+    testerPickerVisible.value = false;
+  }
 
   async function loadProjects() {
     const res = await fetchProjectList();
@@ -603,7 +925,6 @@
       type: 'FEATURE',
       priority: 'P2',
       dueDate: undefined,
-      managerId: undefined,
       mainAssigneeId: undefined,
       coAssigneeIds: [],
       testerId: undefined,
@@ -637,7 +958,6 @@
       type: base.type,
       priority: base.priority,
       dueDate: base.dueDate ? base.dueDate.slice(0, 10) : undefined,
-      managerId: base.managerId ?? undefined,
       mainAssigneeId: base.mainAssigneeId ?? undefined,
       coAssigneeIds: (detail?.coAssignees ?? row.coAssignees).map((ca) => ca.userId),
       testerId: base.testerId ?? undefined,
@@ -678,8 +998,18 @@
     selectedTaskId.value = row.id;
     drawerVisible.value = true;
   }
+
+  function testCaseRowKey(row: { id?: number; _clientKey?: number }) {
+    return row.id != null ? `id-${row.id}` : `new-${row._clientKey ?? 0}`;
+  }
+
   function addTestCase() {
-    form.testCases.push({ description: '', expectedResult: '' });
+    testCaseClientKey.value += 1;
+    form.testCases.push({
+      description: '',
+      expectedResult: '',
+      _clientKey: testCaseClientKey.value
+    });
   }
   function removeTestCase(idx: number) {
     form.testCases.splice(idx, 1);
@@ -707,7 +1037,6 @@
           type: form.type,
           priority: form.priority,
           dueDate: form.dueDate || null,
-          managerId: form.managerId ?? null,
           mainAssigneeId: form.mainAssigneeId ?? null,
           coAssigneeIds: form.coAssigneeIds,
           testerId: form.testerId ?? null,
@@ -732,7 +1061,6 @@
           type: form.type,
           priority: form.priority,
           dueDate: form.dueDate || undefined,
-          managerId: form.managerId ?? undefined,
           mainAssigneeId: form.mainAssigneeId ?? undefined,
           coAssigneeIds: form.coAssigneeIds,
           testerId: form.testerId ?? undefined,
@@ -786,29 +1114,250 @@
       align-items: center;
     }
   }
-  .test-case-list {
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-  }
-  .test-case-item {
+  .task-form-member-field {
     display: flex;
     align-items: flex-start;
-    gap: 10px;
-    .tc-index {
-      min-width: 22px;
-      height: 22px;
-      border-radius: 50%;
-      background: var(--el-color-primary);
-      color: #fff;
-      font-size: 12px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      margin-top: 4px;
+    gap: 12px;
+    flex-wrap: wrap;
+    width: 100%;
+  }
+
+  .task-form-member-field--block {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .task-form-member-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    align-items: center;
+    flex: 1;
+    min-width: 0;
+    min-height: 32px;
+  }
+
+  .task-form-member-placeholder {
+    font-size: 13px;
+    color: var(--el-text-color-placeholder);
+    line-height: 32px;
+  }
+
+  .task-form-user-tag :deep(.el-tag__content) {
+    display: inline-flex;
+    align-items: center;
+  }
+
+  .task-form-user-tag-inner {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .test-case-table-wrap {
+    width: 100%;
+  }
+
+  .test-case-table {
+    width: 100%;
+    border-radius: 8px;
+    overflow: hidden;
+
+    :deep(.el-table__cell) {
+      vertical-align: top;
+      padding: 10px 12px;
     }
-    .tc-fields {
-      flex: 1;
+
+    :deep(.el-textarea__inner) {
+      box-shadow: none;
+    }
+  }
+
+  .test-case-table__add {
+    margin-top: 10px;
+  }
+
+  /* —— 选人 ArtDialog：卡片列表（slot 仍带本组件 scoped） —— */
+  .task-member-picker {
+    margin: -4px 0 0;
+  }
+
+  .task-member-picker__hint {
+    margin: 0 0 14px;
+    padding: 10px 14px;
+    font-size: 13px;
+    line-height: 1.55;
+    color: var(--el-text-color-regular);
+    background: linear-gradient(
+      120deg,
+      var(--el-color-primary-light-9) 0%,
+      var(--el-fill-color-light) 100%
+    );
+    border-radius: 10px;
+    border: 1px solid var(--el-color-primary-light-7);
+  }
+
+  .task-member-picker__scroll {
+    max-height: min(52vh, 440px);
+    overflow-y: auto;
+    padding: 2px 6px 8px 2px;
+    margin-right: -4px;
+
+    &--tight {
+      max-height: min(56vh, 480px);
+    }
+
+    &::-webkit-scrollbar {
+      width: 6px;
+    }
+    &::-webkit-scrollbar-thumb {
+      background: var(--el-border-color-darker);
+      border-radius: 6px;
+    }
+  }
+
+  .task-member-picker__radio-group {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    width: 100%;
+    align-items: stretch;
+  }
+
+  .member-pick-card {
+    display: grid;
+    grid-template-columns: auto 48px minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 12px 14px;
+    padding: 14px 16px;
+    border-radius: 14px;
+    border: 1px solid var(--el-border-color-lighter);
+    background: var(--art-main-bg-color, var(--el-bg-color));
+    box-shadow:
+      0 1px 2px rgba(0, 0, 0, 0.04),
+      0 0 0 1px rgba(255, 255, 255, 0.06) inset;
+    transition:
+      border-color 0.2s ease,
+      box-shadow 0.2s ease,
+      transform 0.15s ease;
+
+    &:hover {
+      border-color: var(--el-color-primary-light-5);
+      box-shadow: 0 6px 20px rgba(0, 0, 0, 0.06);
+    }
+
+    &--active {
+      border-color: var(--el-color-primary-light-3);
+      box-shadow:
+        0 4px 18px rgba(0, 0, 0, 0.07),
+        0 0 0 1px var(--el-color-primary-light-7) inset;
+    }
+
+    &--tester {
+      grid-template-columns: auto 48px minmax(0, 1fr);
+    }
+  }
+
+  .member-pick-card__check {
+    align-self: center;
+
+    :deep(.el-checkbox__inner) {
+      border-radius: 6px;
+    }
+  }
+
+  .member-pick-card__radio {
+    margin: 0 !important;
+    height: auto !important;
+    align-self: center;
+
+    :deep(.el-radio__label) {
+      display: none;
+    }
+  }
+
+  .member-pick-card__avatar {
+    flex-shrink: 0;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+    border: 2px solid var(--el-border-color-extra-light);
+  }
+
+  .member-pick-card__icon-slot {
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--el-fill-color);
+    color: var(--el-text-color-secondary);
+    font-size: 24px;
+    border: 2px dashed var(--el-border-color-lighter);
+  }
+
+  .member-pick-card__body {
+    min-width: 0;
+  }
+
+  .member-pick-card__name {
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--el-text-color-primary);
+    letter-spacing: 0.01em;
+    line-height: 1.35;
+  }
+
+  .member-pick-card__email {
+    margin-top: 4px;
+    font-size: 12px;
+    color: var(--el-text-color-secondary);
+    line-height: 1.4;
+    word-break: break-all;
+  }
+
+  .member-pick-card__meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px 18px;
+    margin-top: 8px;
+  }
+
+  .member-pick-card__meta-item {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 12px;
+    color: var(--el-text-color-secondary);
+
+    &--muted {
+      color: var(--el-text-color-placeholder);
+    }
+  }
+
+  .member-pick-card__meta-icon {
+    font-size: 15px;
+    opacity: 0.88;
+    color: var(--el-color-primary);
+  }
+
+  .member-pick-card__side {
+    align-self: center;
+    padding-left: 4px;
+
+    :deep(.el-radio) {
+      margin-right: 0;
+      height: auto;
+      white-space: nowrap;
+    }
+
+    :deep(.el-radio__label) {
+      font-size: 13px;
+      font-weight: 500;
+      padding-left: 8px;
+    }
+
+    &--disabled {
+      opacity: 0.38;
+      pointer-events: none;
     }
   }
 </style>
@@ -874,6 +1423,66 @@
       margin-left: 4px;
       line-height: 26px;
       flex-shrink: 0;
+    }
+
+    .task-mgr-assignees {
+      display: inline-flex;
+      flex-wrap: wrap;
+      gap: 8px 12px;
+      align-items: center;
+      line-height: 1.2;
+    }
+
+    .task-mgr-assignee {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 3px 10px 3px 3px;
+      border-radius: 999px;
+      border: 1px solid var(--el-border-color-extra-light);
+      background: var(--el-fill-color-blank);
+      box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+    }
+
+    .task-mgr-assignee--main {
+      border-color: var(--el-color-primary-light-7);
+      background: var(--el-color-primary-light-9);
+      color: var(--el-color-primary);
+    }
+
+    .task-mgr-assignee--co {
+      border-color: var(--el-color-success-light-7);
+      background: var(--el-color-success-light-9);
+      color: var(--el-color-success);
+    }
+
+    .task-mgr-assignee__name {
+      max-width: 140px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      font-size: 12px;
+      font-weight: 600;
+      line-height: 1;
+      color: var(--el-text-color-primary);
+    }
+
+    .task-mgr-assignee--main .task-mgr-assignee__name {
+      color: var(--el-color-primary);
+    }
+
+    .task-mgr-assignee--co .task-mgr-assignee__name {
+      color: var(--el-color-success);
+    }
+
+    .task-mgr-assignee-more {
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--el-text-color-secondary);
+      padding: 2px 6px;
+      border-radius: 999px;
+      background: var(--el-fill-color-light);
+      border: 1px solid var(--el-border-color-lighter);
     }
   }
 </style>

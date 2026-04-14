@@ -452,8 +452,9 @@
   const isQA = computed(
     () => !!currentUserId.value && task.value?.testerId === currentUserId.value
   );
+  /** 任务“管理者”上升到项目层面：项目负责人可管理项目下任务 */
   const isTaskManager = computed(
-    () => !!currentUserId.value && task.value?.managerId === currentUserId.value
+    () => !!currentUserId.value && task.value?.project?.managerId === currentUserId.value
   );
 
   const taskSupportsTestCases = computed(
@@ -521,9 +522,10 @@
     { label: '已暂停', value: 'PAUSED' },
     { label: '已取消', value: 'CANCELLED' }
   ];
-  const STATUS_TAG: Record<string, string> = {
+  type ElTagType = 'primary' | 'success' | 'warning' | 'info' | 'danger';
+  const STATUS_TAG: Record<string, ElTagType> = {
     PENDING: 'info',
-    IN_PROGRESS: '',
+    IN_PROGRESS: 'primary',
     SELF_TESTING: 'warning',
     QA_REVIEW: 'warning',
     REJECTED: 'danger',
@@ -534,7 +536,7 @@
   function statusLabel(s?: string) {
     return STATUS_OPTIONS.find((o) => o.value === s)?.label ?? s ?? '';
   }
-  function statusTagType(s?: string) {
+  function statusTagType(s?: string): ElTagType {
     return STATUS_TAG[s ?? ''] ?? 'info';
   }
   function testLabel(s: Api.Task.TestStatus) {

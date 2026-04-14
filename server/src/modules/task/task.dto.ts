@@ -65,7 +65,6 @@ export const CreateTaskDto = z.object({
   dueDate: z.string().optional().nullable(), // 👉 新增字段
   title: z.string().min(1, "任务名称不能为空").max(200),
   description: z.string().optional(),
-  managerId: z.number().int().positive().optional().nullable(),
   mainAssigneeId: z.number().int().positive().optional().nullable(),
   testerId: z.number().int().positive().optional().nullable(),
   coAssigneeIds: z.array(z.number().int().positive()).optional().default([]),
@@ -85,7 +84,6 @@ export const UpdateTaskDto = z.object({
   dueDate: z.string().optional().nullable(), // 👉 新增字段
   title: z.string().min(1).max(200).optional(),
   description: z.string().optional(),
-  managerId: z.number().int().positive().optional().nullable(),
   mainAssigneeId: z.number().int().positive().optional().nullable(),
   testerId: z.number().int().positive().optional().nullable(),
   coAssigneeIds: z.array(z.number().int().positive()).optional(),

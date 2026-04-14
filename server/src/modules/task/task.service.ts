@@ -27,6 +27,13 @@ const userSelect = {
   userEmail: true,
 };
 
+/** 组织成员列表（选人弹窗）额外带手机号、性别 */
+const orgMemberUserSelect = {
+  ...userSelect,
+  userPhone: true,
+  userGender: true,
+};
+
 /** 任务/工时附件对外返回字段 */
 const attachmentPublic = {
   id: true,
@@ -233,7 +240,7 @@ class ProjectService {
     if (myDeptIds.length === 0) {
       return prisma.user.findMany({
         where: { deletedAt: null },
-        select: userSelect,
+        select: orgMemberUserSelect,
         orderBy: { id: "asc" },
       });
     }
@@ -266,7 +273,7 @@ class ProjectService {
 
     return prisma.user.findMany({
       where: { id: { in: memberUserIds }, deletedAt: null },
-      select: userSelect,
+      select: orgMemberUserSelect,
       orderBy: { id: "asc" },
     });
   }
@@ -348,7 +355,7 @@ class ProjectService {
     return prisma.project.findMany({
       where: { status: "ACTIVE", deletedAt: null, orgId: { in: orgIds } },
       orderBy: { id: "desc" },
-      select: { id: true, name: true, status: true },
+      select: { id: true, name: true, status: true, managerId: true },
     });
   }
 }
@@ -396,7 +403,7 @@ class TaskService {
         take: pageSize,
         orderBy: { id: "desc" },
         include: {
-          project: { select: { id: true, name: true } },
+          project: { select: { id: true, name: true, managerId: true } },
           manager: { select: userSelect },
           mainAssignee: { select: userSelect },
           tester: { select: userSelect },
@@ -422,7 +429,7 @@ class TaskService {
     return prisma.task.findUnique({
       where: { id },
       include: {
-        project: { select: { id: true, name: true } },
+        project: { select: { id: true, name: true, managerId: true } },
         manager: { select: userSelect },
         mainAssignee: { select: userSelect },
         tester: { select: userSelect },
@@ -478,7 +485,6 @@ class TaskService {
         status: "PENDING",
       };
       if (taskData.projectId !== undefined) createData.projectId = taskData.projectId;
-      if (taskData.managerId !== undefined) createData.managerId = taskData.managerId;
       if (taskData.mainAssigneeId !== undefined) createData.mainAssigneeId = taskData.mainAssigneeId;
       if (taskData.testerId !== undefined) createData.testerId = taskData.testerId;
       if (taskData.estimatedHours !== undefined) createData.estimatedHours = taskData.estimatedHours;
@@ -599,9 +605,6 @@ class TaskService {
           ...(taskData.title !== undefined && { title: taskData.title }),
           ...(taskData.description !== undefined && {
             description: taskData.description,
-          }),
-          ...(taskData.managerId !== undefined && {
-            managerId: taskData.managerId,
           }),
           ...(taskData.mainAssigneeId !== undefined && {
             mainAssigneeId: taskData.mainAssigneeId,
@@ -923,14 +926,15 @@ class TaskService {
 
     const task = await prisma.task.findUnique({
       where: { id: taskId },
-      include: { coAssignees: true },
+      include: { coAssignees: true, project: { select: { managerId: true } } },
     });
     if (!task) throw { status: 404, message: "任务不存在" };
 
     const isMainAssignee = task.mainAssigneeId === userId;
     const isCoAssignee = task.coAssignees.some((ca) => ca.userId === userId);
-    if (!isMainAssignee && !isCoAssignee && task.managerId !== userId) {
-      throw { status: 403, message: "无权限：仅任务负责人或管理员可暂停任务" };
+    const isProjectManager = task.project?.managerId === userId;
+    if (!isMainAssignee && !isCoAssignee && !isProjectManager) {
+      throw { status: 403, message: "无权限：仅任务负责人或项目负责人可暂停任务" };
     }
 
     if (task.status !== "IN_PROGRESS") {
