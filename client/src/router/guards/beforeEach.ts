@@ -277,6 +277,8 @@ function isStaticRoute(path: string): boolean {
       const regex = new RegExp(`^${pattern}$`);
 
       if (regex.test(targetPath)) {
+        // 标记为需要登录的“静态路由”不参与白名单放行
+        if (route?.meta?.requiresAuth) return false;
         return true;
       }
       if (route.children && route.children.length > 0) {
@@ -338,11 +340,25 @@ async function handleDynamicRoutes(
 
     // 8. 验证目标路径权限
     const { homePath } = useCommon();
-    const { path: validatedPath, hasPermission } = RoutePermissionValidator.validatePath(
+    let { path: validatedPath, hasPermission } = RoutePermissionValidator.validatePath(
       to.path,
       menuList,
       homePath.value || '/'
     );
+
+    /**
+     * 修复：F5 刷新后跳首页
+     * - 部分菜单的 path 与实际路由存在轻微差异（例如隐藏路由、详情页、参数路由）
+     * - 路由已注册成功后，再以 router.resolve 校验一次是否能匹配到真实路由
+     * - 若能匹配到，优先保持用户刷新前所在页面
+     */
+    if (!hasPermission) {
+      const resolved = router.resolve({ path: to.path, query: to.query, hash: to.hash });
+      if (resolved.matched.length > 0) {
+        hasPermission = true;
+        validatedPath = to.path;
+      }
+    }
 
     // 初始化成功，重置进行中标记
     routeInitInProgress = false;

@@ -223,7 +223,7 @@
       refreshData();
     } catch (error) {
       if (error !== 'cancel') {
-        ElMessage.error('删除失败');
+        // 失败提示由 request 统一处理，这里避免重复弹窗
       }
     }
   };

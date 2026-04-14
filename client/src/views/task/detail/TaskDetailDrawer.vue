@@ -633,7 +633,7 @@
       emit('refresh');
       loadDetail();
     } catch (e: any) {
-      ElMessage.error(e?.response?.data?.message ?? '操作失败');
+      // 失败提示由 request 统一处理，这里避免重复弹窗
     } finally {
       actionLoading.value = false;
     }
@@ -662,7 +662,7 @@
       workLogAttachRef.value?.reset();
       loadDetail();
     } catch (e: any) {
-      ElMessage.error(e?.response?.data?.message ?? '操作失败');
+      // 失败提示由 request 统一处理，这里避免重复弹窗
     } finally {
       actionLoading.value = false;
     }
@@ -690,7 +690,7 @@
       emit('refresh');
       loadDetail();
     } catch (e: any) {
-      ElMessage.error(e?.response?.data?.message ?? '提交失败');
+      // 失败提示由 request 统一处理，这里避免重复弹窗
     } finally {
       actionLoading.value = false;
     }
@@ -728,7 +728,7 @@
       emit('refresh');
       loadDetail();
     } catch (e: any) {
-      ElMessage.error(e?.response?.data?.message ?? '操作失败');
+      // 失败提示由 request 统一处理，这里避免重复弹窗
     } finally {
       actionLoading.value = false;
     }
@@ -743,7 +743,7 @@
       emit('refresh');
       loadDetail();
     } catch (e: any) {
-      ElMessage.error(e?.response?.data?.message ?? '操作失败');
+      // 失败提示由 request 统一处理，这里避免重复弹窗
     } finally {
       actionLoading.value = false;
     }
@@ -758,7 +758,7 @@
       emit('refresh');
       loadDetail();
     } catch (e: any) {
-      ElMessage.error(e?.response?.data?.message ?? '操作失败');
+      // 失败提示由 request 统一处理，这里避免重复弹窗
     } finally {
       actionLoading.value = false;
     }
@@ -773,7 +773,7 @@
       emit('refresh');
       loadDetail();
     } catch (e: any) {
-      ElMessage.error(e?.response?.data?.message ?? '操作失败');
+      // 失败提示由 request 统一处理，这里避免重复弹窗
     } finally {
       actionLoading.value = false;
     }

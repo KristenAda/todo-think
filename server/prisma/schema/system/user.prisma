@@ -37,6 +37,10 @@ model User {
 
   attachments    Attachment[]    @relation("AttachmentUploader")
   uploadSessions UploadSession[] @relation("UploadSessionUser")
+
+  // ===== 站内消息反向关联 =====
+  sentMessages     Message[] @relation("MessageSender")
+  receivedMessages Message[] @relation("MessageReceiver")
 }
 
 // ==========================================

@@ -1,5 +1,6 @@
 import prisma from "@/core/prisma";
 import type { Prisma } from "@prisma/client";
+import { messageService } from "@/modules/message/message.service";
 import {
   CreateProjectDtoType,
   UpdateProjectDtoType,
@@ -291,7 +292,7 @@ class ProjectService {
     }
 
     const orgIdVal = orgId ?? undefined;
-    return prisma.project.create({
+    const created = await prisma.project.create({
       data: {
         name: dto.name,
         description: dto.description,
@@ -302,12 +303,35 @@ class ProjectService {
         endDate: dto.endDate ? new Date(dto.endDate) : null,
       },
     });
+
+    // ===== 站内消息推送：创建项目（只推给项目负责人）=====
+    try {
+      if (dto.managerId && dto.managerId !== userId) {
+        await messageService.sendRealTimeMessage(
+          {
+            receiverId: dto.managerId,
+            messageType: "TASK",
+            title: "你被指定为项目负责人",
+            content: `项目「${created.name}」已创建，你是负责人。`,
+            extra: { biz: "project", action: "created", projectId: created.id },
+          },
+          userId,
+        );
+      }
+    } catch {}
+
+    return created;
   }
 
   async update(id: number, dto: UpdateProjectDtoType, userId: number) {
     await this.assertUserCanAccessProject(userId, id);
 
     const { version, orgId, startDate, endDate, ...rest } = dto;
+
+    const before = await prisma.project.findFirst({
+      where: { id, deletedAt: null },
+      select: { id: true, name: true, managerId: true },
+    });
 
     if (orgId != null) {
       const allowed = await this.getOrgIdsForUser(userId);
@@ -341,7 +365,32 @@ class ProjectService {
       };
     }
 
-    return prisma.project.findUnique({ where: { id } });
+    const updated = await prisma.project.findUnique({ where: { id } });
+
+    // ===== 站内消息推送：项目负责人变更（只推给新负责人；不推给被替换的人）=====
+    try {
+      const nextManagerId = dto.managerId;
+      const prevManagerId = before?.managerId;
+      if (
+        nextManagerId !== undefined &&
+        nextManagerId != null &&
+        nextManagerId !== prevManagerId &&
+        nextManagerId !== userId
+      ) {
+        await messageService.sendRealTimeMessage(
+          {
+            receiverId: nextManagerId,
+            messageType: "TASK",
+            title: "项目负责人变更",
+            content: `你已成为项目「${before?.name ?? updated?.name ?? ""}」的新负责人。`,
+            extra: { biz: "project", action: "managerChanged", projectId: id },
+          },
+          userId,
+        );
+      }
+    } catch {}
+
+    return updated;
   }
   async delete(id: number, userId: number) {
     await this.assertUserCanAccessProject(userId, id);
@@ -465,7 +514,7 @@ class TaskService {
 
     const proj = await prisma.project.findFirst({
       where: { id: dto.projectId, deletedAt: null },
-      select: { orgId: true },
+      select: { orgId: true, name: true },
     });
     if (!proj?.orgId) {
       throw { status: 400, message: "项目未绑定组织，无法创建任务" };
@@ -478,7 +527,7 @@ class TaskService {
     }
     const mergedOrgId = proj.orgId;
 
-    return prisma.$transaction(async (tx) => {
+    const createdTask = await prisma.$transaction(async (tx) => {
       // Prisma MySQL 驱动不接受 undefined，必须显式控制每个字段
       const createData: any = {
         title: taskData.title,
@@ -547,6 +596,51 @@ class TaskService {
         },
       });
     });
+
+    /**
+     * 站内消息推送（创建任务）：
+     * - 仅推给相关执行人：主负责人/协助人/验收人
+     * - 去重 + 排除创建人，避免自我通知
+     * - 写库成功后再推送，不影响事务一致性
+     */
+    try {
+      const receiverIds = new Set<number>();
+      const mainId = (createdTask as any)?.mainAssigneeId as number | null | undefined;
+      const testerId = (createdTask as any)?.testerId as number | null | undefined;
+      const coIds = ((createdTask as any)?.coAssignees ?? []).map((x: any) => x.userId as number);
+
+      if (mainId) receiverIds.add(mainId);
+      if (testerId) receiverIds.add(testerId);
+      for (const cid of coIds) {
+        if (cid) receiverIds.add(cid);
+      }
+      receiverIds.delete(userId);
+
+      const projectName = proj.name;
+      const taskTitle = (createdTask as any)?.title ?? dto.title;
+
+      await Promise.allSettled(
+        Array.from(receiverIds).map((receiverId) =>
+          messageService.sendRealTimeMessage(
+            {
+              receiverId,
+              messageType: "TASK",
+              title: "你有一个新任务",
+              content: `任务「${taskTitle}」已创建并分配给你（项目：${projectName}）。`,
+              extra: {
+                biz: "task",
+                action: "created",
+                taskId: (createdTask as any)?.id,
+                projectId: dto.projectId,
+              },
+            },
+            userId,
+          ),
+        ),
+      );
+    } catch {}
+
+    return createdTask;
   }
 
   // 更新任务（含协助人重置）
@@ -555,10 +649,19 @@ class TaskService {
 
     const { version, coAssigneeIds, attachmentIds, testCases, ...taskData } = dto;
 
-    return prisma.$transaction(async (tx) => {
+    const updatedTask = await prisma.$transaction(async (tx) => {
       const existing = await tx.task.findFirst({
         where: { id, version },
-        select: { workDomain: true },
+        select: {
+          id: true,
+          title: true,
+          projectId: true,
+          workDomain: true,
+          mainAssigneeId: true,
+          testerId: true,
+          coAssignees: { select: { userId: true } },
+          project: { select: { name: true } },
+        },
       });
       if (!existing) {
         throw {
@@ -626,6 +729,36 @@ class TaskService {
           message: "当前任务状态或信息已被他人修改，请刷新后重试",
         };
       }
+
+      // ===== 计算“新执行人集合”（用于推送新增/变更，不推送被移除）=====
+      const prevMainAssigneeId = existing.mainAssigneeId ?? null;
+      const prevTesterId = existing.testerId ?? null;
+      const prevCoIds = new Set<number>((existing.coAssignees ?? []).map((x) => x.userId));
+
+      const nextMainAssigneeId =
+        taskData.mainAssigneeId !== undefined ? taskData.mainAssigneeId ?? null : prevMainAssigneeId;
+      const nextTesterId =
+        taskData.testerId !== undefined ? taskData.testerId ?? null : prevTesterId;
+      const nextCoIds =
+        coAssigneeIds !== undefined ? new Set<number>(coAssigneeIds) : prevCoIds;
+
+      const notifyUserIds = new Set<number>();
+
+      // 主负责人变更：只通知“新主负责人”
+      if (prevMainAssigneeId !== nextMainAssigneeId && nextMainAssigneeId) {
+        notifyUserIds.add(nextMainAssigneeId);
+      }
+      // 验收人变更：只通知“新验收人”
+      if (prevTesterId !== nextTesterId && nextTesterId) {
+        notifyUserIds.add(nextTesterId);
+      }
+      // 协助人变更：只通知“新增协助人”
+      if (coAssigneeIds !== undefined) {
+        for (const cid of nextCoIds) {
+          if (!prevCoIds.has(cid)) notifyUserIds.add(cid);
+        }
+      }
+      notifyUserIds.delete(userId);
 
       // 重置协助人列表
       if (coAssigneeIds !== undefined) {
@@ -731,6 +864,70 @@ class TaskService {
         },
       });
     });
+
+    /**
+     * 站内消息推送（更新指派）：
+     * - 推送给所有任务相关人员：主负责人/协助人/验收人（不推送被移除的人；排除操作者）
+     * - 为了避免影响主流程，推送失败不抛错
+     */
+    try {
+      // 重新查询一次“变更后”的关键字段，确保推送内容准确
+      const latest = await prisma.task.findUnique({
+        where: { id },
+        select: {
+          id: true,
+          title: true,
+          projectId: true,
+          mainAssigneeId: true,
+          testerId: true,
+          coAssignees: { select: { userId: true } },
+          project: { select: { name: true } },
+        },
+      });
+      if (latest) {
+        const receiverIds = new Set<number>();
+
+        // 只要本次更新触及“执行相关字段”，就通知所有当前相关人员
+        const shouldNotify =
+          taskData.mainAssigneeId !== undefined ||
+          taskData.testerId !== undefined ||
+          coAssigneeIds !== undefined;
+        if (!shouldNotify) return updatedTask;
+
+        if (latest.mainAssigneeId) receiverIds.add(latest.mainAssigneeId);
+        if (latest.testerId) receiverIds.add(latest.testerId);
+        for (const ca of latest.coAssignees ?? []) receiverIds.add(ca.userId);
+
+        receiverIds.delete(userId);
+
+        const projectName = latest.project?.name ?? "";
+        const taskTitle = latest.title ?? "";
+
+        await Promise.allSettled(
+          Array.from(receiverIds).map((receiverId) =>
+            messageService.sendRealTimeMessage(
+              {
+                receiverId,
+                messageType: "TASK",
+                title: "任务指派已更新",
+                content: projectName
+                  ? `任务「${taskTitle}」的执行信息已更新（项目：${projectName}）。`
+                  : `任务「${taskTitle}」的执行信息已更新。`,
+                extra: {
+                  biz: "task",
+                  action: "assigneeUpdated",
+                  taskId: latest.id,
+                  projectId: latest.projectId,
+                },
+              },
+              userId,
+            ),
+          ),
+        );
+      }
+    } catch {}
+
+    return updatedTask;
   }
 
   async delete(id: number, userId: number) {
@@ -813,7 +1010,10 @@ class TaskService {
 
     const task = await prisma.task.findUnique({
       where: { id: taskId },
-      include: { testCases: true },
+      include: {
+        testCases: true,
+        project: { select: { name: true } },
+      },
     });
     if (!task) throw { status: 404, message: "任务不存在" };
 
@@ -852,10 +1052,45 @@ class TaskService {
         });
       }
       // 将任务状态推进到 QA_REVIEW
-      return tx.task.update({
+      const updated = await tx.task.update({
         where: { id: taskId },
         data: { status: "QA_REVIEW" },
       });
+
+      // ===== 站内消息推送：任务提测（推给主负责人/协助人/验收人）=====
+      try {
+        const receiverIds = new Set<number>();
+        if (task.mainAssigneeId) receiverIds.add(task.mainAssigneeId);
+        if (task.testerId) receiverIds.add(task.testerId);
+        const coRows = await tx.taskCoAssignee.findMany({
+          where: { taskId },
+          select: { userId: true },
+        });
+        for (const r of coRows) receiverIds.add(r.userId);
+        receiverIds.delete(userId);
+
+        await Promise.allSettled(
+          Array.from(receiverIds).map((receiverId) =>
+            messageService.sendRealTimeMessage(
+              {
+                receiverId,
+                messageType: "TASK",
+                title: "任务已提测",
+                content: `任务「${task.title}」已提交验收（项目：${task.project?.name ?? ""}）。`,
+                extra: {
+                  biz: "task",
+                  action: "submittedForQa",
+                  taskId,
+                  projectId: task.projectId,
+                },
+              },
+              userId,
+            ),
+          ),
+        );
+      } catch {}
+
+      return updated;
     });
   }
 
@@ -865,7 +1100,11 @@ class TaskService {
 
     const task = await prisma.task.findUnique({
       where: { id: taskId },
-      include: { testCases: true },
+      include: {
+        testCases: true,
+        coAssignees: true,
+        project: { select: { name: true } },
+      },
     });
     if (!task) throw { status: 404, message: "任务不存在" };
 
@@ -901,19 +1140,81 @@ class TaskService {
 
       if (hasFailure) {
         // 有用例失败 → 打回
-        return tx.task.update({
+        const updated = await tx.task.update({
           where: { id: taskId },
           data: { status: "REJECTED" },
         });
+
+        // ===== 站内消息推送：QA 打回（推给主负责人/协助人/验收人）=====
+        try {
+          const receiverIds = new Set<number>();
+          if (task.mainAssigneeId) receiverIds.add(task.mainAssigneeId);
+          if (task.testerId) receiverIds.add(task.testerId);
+          for (const ca of task.coAssignees ?? []) receiverIds.add(ca.userId);
+          receiverIds.delete(userId);
+
+          await Promise.allSettled(
+            Array.from(receiverIds).map((receiverId) =>
+              messageService.sendRealTimeMessage(
+                {
+                  receiverId,
+                  messageType: "TASK",
+                  title: "任务被打回",
+                  content: `任务「${task.title}」QA 验收未通过，已打回（项目：${task.project?.name ?? ""}）。`,
+                  extra: {
+                    biz: "task",
+                    action: "qaRejected",
+                    taskId,
+                    projectId: task.projectId,
+                  },
+                },
+                userId,
+              ),
+            ),
+          );
+        } catch {}
+
+        return updated;
       } else {
         // 全部通过 → 完成，必须填写实际工时
         if (!dto.actualHours) {
           throw { status: 400, message: "验收通过时必须填写实际工时" };
         }
-        return tx.task.update({
+        const updated = await tx.task.update({
           where: { id: taskId },
           data: { status: "COMPLETED", actualHours: dto.actualHours },
         });
+
+        // ===== 站内消息推送：QA 通过（推给主负责人/协助人/验收人）=====
+        try {
+          const receiverIds = new Set<number>();
+          if (task.mainAssigneeId) receiverIds.add(task.mainAssigneeId);
+          if (task.testerId) receiverIds.add(task.testerId);
+          for (const ca of task.coAssignees ?? []) receiverIds.add(ca.userId);
+          receiverIds.delete(userId);
+
+          await Promise.allSettled(
+            Array.from(receiverIds).map((receiverId) =>
+              messageService.sendRealTimeMessage(
+                {
+                  receiverId,
+                  messageType: "TASK",
+                  title: "任务验收通过",
+                  content: `任务「${task.title}」已验收通过并完成（项目：${task.project?.name ?? ""}）。`,
+                  extra: {
+                    biz: "task",
+                    action: "qaPassed",
+                    taskId,
+                    projectId: task.projectId,
+                  },
+                },
+                userId,
+              ),
+            ),
+          );
+        } catch {}
+
+        return updated;
       }
     });
   }
@@ -941,10 +1242,36 @@ class TaskService {
       throw { status: 400, message: `当前状态（${task.status}）无法暂停` };
     }
 
-    return prisma.task.update({
+    const updated = await prisma.task.update({
       where: { id: taskId },
       data: { status: "PAUSED", version: { increment: 1 } },
     });
+
+    // ===== 站内消息推送：暂停（推给主负责人/协助人/验收人；排除操作者）=====
+    try {
+      const receiverIds = new Set<number>();
+      if (task.mainAssigneeId) receiverIds.add(task.mainAssigneeId);
+      if (task.testerId) receiverIds.add(task.testerId);
+      for (const ca of task.coAssignees ?? []) receiverIds.add(ca.userId);
+      receiverIds.delete(userId);
+
+      await Promise.allSettled(
+        Array.from(receiverIds).map((receiverId) =>
+          messageService.sendRealTimeMessage(
+            {
+              receiverId,
+              messageType: "TASK",
+              title: "任务已暂停",
+              content: `任务「${task.title}」已被暂停。`,
+              extra: { biz: "task", action: "paused", taskId, projectId: task.projectId },
+            },
+            userId,
+          ),
+        ),
+      );
+    } catch {}
+
+    return updated;
   }
 
   // 恢复开发 (PAUSED -> IN_PROGRESS)
@@ -967,17 +1294,46 @@ class TaskService {
       throw { status: 400, message: `当前状态不是暂停中，无法恢复` };
     }
 
-    return prisma.task.update({
+    const updated = await prisma.task.update({
       where: { id: taskId },
       data: { status: "IN_PROGRESS", version: { increment: 1 } },
     });
+
+    // ===== 站内消息推送：恢复开发（推给主负责人/协助人/验收人；排除操作者）=====
+    try {
+      const receiverIds = new Set<number>();
+      if (task.mainAssigneeId) receiverIds.add(task.mainAssigneeId);
+      if (task.testerId) receiverIds.add(task.testerId);
+      for (const ca of task.coAssignees ?? []) receiverIds.add(ca.userId);
+      receiverIds.delete(userId);
+
+      await Promise.allSettled(
+        Array.from(receiverIds).map((receiverId) =>
+          messageService.sendRealTimeMessage(
+            {
+              receiverId,
+              messageType: "TASK",
+              title: "任务已恢复开发",
+              content: `任务「${task.title}」已恢复开发。`,
+              extra: { biz: "task", action: "resumed", taskId, projectId: task.projectId },
+            },
+            userId,
+          ),
+        ),
+      );
+    } catch {}
+
+    return updated;
   }
 
   // 重新打开任务 (REJECTED / COMPLETED -> IN_PROGRESS)
   async reopenTask(taskId: number, userId: number) {
     await projectService.assertUserCanAccessTask(userId, taskId);
 
-    const task = await prisma.task.findUnique({ where: { id: taskId } });
+    const task = await prisma.task.findUnique({
+      where: { id: taskId },
+      include: { coAssignees: true },
+    });
     if (!task) throw { status: 404, message: "任务不存在" };
 
     if (task.status !== "REJECTED" && task.status !== "COMPLETED") {
@@ -987,7 +1343,7 @@ class TaskService {
       };
     }
 
-    return prisma.$transaction(async (tx) => {
+    const updated = await prisma.$transaction(async (tx) => {
       if (taskSupportsTestCases(task.workDomain)) {
         await tx.testCase.updateMany({
           where: { taskId },
@@ -1000,6 +1356,32 @@ class TaskService {
         data: { status: "IN_PROGRESS", version: { increment: 1 } },
       });
     });
+
+    // ===== 站内消息推送：重新打开（推给主负责人/协助人/验收人；排除操作者）=====
+    try {
+      const receiverIds = new Set<number>();
+      if (task.mainAssigneeId) receiverIds.add(task.mainAssigneeId);
+      if (task.testerId) receiverIds.add(task.testerId);
+      for (const ca of task.coAssignees ?? []) receiverIds.add(ca.userId);
+      receiverIds.delete(userId);
+
+      await Promise.allSettled(
+        Array.from(receiverIds).map((receiverId) =>
+          messageService.sendRealTimeMessage(
+            {
+              receiverId,
+              messageType: "TASK",
+              title: "任务已重新打开",
+              content: `任务「${task.title}」已被重新打开并进入开发状态。`,
+              extra: { biz: "task", action: "reopened", taskId, projectId: task.projectId },
+            },
+            userId,
+          ),
+        ),
+      );
+    } catch {}
+
+    return updated;
   }
 }
 

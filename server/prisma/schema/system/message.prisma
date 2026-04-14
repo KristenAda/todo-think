@@ -1,0 +1,66 @@
+// ==========================================
+// 站内消息表 (Message) - message.prisma
+// 说明：
+// - 表名/字段名使用 snake_case（通过 @@map/@map 映射），符合主流 MySQL 命名规范
+// - senderId 允许为空：支持系统消息/机器人消息（无明确发送者）
+// ==========================================
+
+/// 消息类型
+enum MessageType {
+  /// 系统通知（如：版本更新、公告）
+  SYSTEM
+  /// 任务通知（如：任务指派、状态变化）
+  TASK
+  /// 普通私信（点对点）
+  DIRECT
+}
+
+/// 站内消息
+model Message {
+  /// 主键ID
+  id Int @id @default(autoincrement()) @map("id")
+
+  /// 消息标题（可为空；用于通知类消息的短标题）
+  title String? @db.VarChar(200) @map("title")
+
+  /// 消息内容（正文）
+  content String @db.LongText @map("content")
+
+  /// 消息类型（SYSTEM/TASK/DIRECT）
+  messageType MessageType @default(SYSTEM) @map("message_type")
+
+  /// 发送者用户ID（系统消息可为空）
+  senderId Int? @map("sender_id")
+
+  /// 接收者用户ID
+  receiverId Int @map("receiver_id")
+
+  /// 是否已读
+  isRead Boolean @default(false) @map("is_read")
+
+  /// 已读时间（首次标记已读时写入）
+  readTime DateTime? @map("read_time")
+
+  /// 扩展数据（可选；用于携带业务跳转信息等，JSON）
+  extra Json? @map("extra")
+
+  /// 创建时间
+  createTime DateTime @default(now()) @map("create_time")
+
+  /// 更新时间
+  updateTime DateTime @updatedAt @map("update_time")
+
+  /// 软删除时间（为空表示未删除）
+  deletedAt DateTime? @map("deleted_at")
+
+  /// 发送者（可为空）
+  sender User? @relation("MessageSender", fields: [senderId], references: [id])
+
+  /// 接收者
+  receiver User @relation("MessageReceiver", fields: [receiverId], references: [id])
+
+  @@index([receiverId, isRead, createTime], map: "idx_message_receiver_read_time")
+  @@index([senderId, createTime], map: "idx_message_sender_time")
+  @@map("message")
+}
+

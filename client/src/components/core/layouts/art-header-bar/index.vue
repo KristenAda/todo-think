@@ -113,7 +113,10 @@
           class="notice-button relative"
           @click="visibleNotice"
         >
-          <div class="absolute top-2 right-2 size-1.5 !bg-danger rounded-full"></div>
+          <div
+            v-show="hasUnreadMessage"
+            class="absolute top-2 right-2 size-1.5 !bg-danger rounded-full"
+          ></div>
         </ArtIconButton>
 
         <!-- 聊天按钮 -->
@@ -173,6 +176,8 @@
   import { useSettingStore } from '@/store/modules/setting';
   import { useUserStore } from '@/store/modules/user';
   import { useMenuStore } from '@/store/modules/menu';
+  import { useMessageStore } from '@/store/modules/message';
+  import { storeToRefs } from 'pinia';
   import AppConfig from '@/config';
   import { languageOptions } from '@/locales';
   import { mittBus } from '@/utils/sys';
@@ -193,6 +198,7 @@
   const settingStore = useSettingStore();
   const userStore = useUserStore();
   const menuStore = useMenuStore();
+  const messageStore = useMessageStore();
 
   // 顶部栏功能配置
   const {
@@ -215,6 +221,7 @@
 
   const { language } = storeToRefs(userStore);
   const { menuList } = storeToRefs(menuStore);
+  const { hasUnread: hasUnreadMessage } = storeToRefs(messageStore);
 
   const showNotice = ref(false);
   const notice = ref(null);

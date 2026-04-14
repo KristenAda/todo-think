@@ -64,6 +64,12 @@ export const staticRoutes: AppRouteRecordRaw[] = [
     name: 'Outside',
     meta: { title: 'menus.outside.title' },
     children: [
+      {
+        path: '/outside/message-center',
+        name: 'MessageCenter',
+        component: () => import('@/views/message-center/index.vue'),
+        meta: { title: '站内消息', requiresAuth: true }
+      },
       // iframe 内嵌页面
       {
         path: '/outside/iframe/:path',

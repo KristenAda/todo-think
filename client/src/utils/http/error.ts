@@ -99,6 +99,7 @@ export class HttpError extends Error {
  */
 const getErrorMessage = (status: number): string => {
   const errorMap: Record<number, string> = {
+    [ApiStatus.error]: 'httpMsg.badRequest',
     [ApiStatus.unauthorized]: 'httpMsg.unauthorized',
     [ApiStatus.forbidden]: 'httpMsg.forbidden',
     [ApiStatus.notFound]: 'httpMsg.notFound',
@@ -138,9 +139,12 @@ export function handleError(error: AxiosError<ErrorResponse>): never {
   }
 
   // 处理 HTTP 状态码错误
-  const message = statusCode
-    ? getErrorMessage(statusCode)
-    : errorMessage || $t('httpMsg.requestFailed');
+  // 业务错误优先展示后端返回的 message（尤其是 4xx）
+  // 仅当确认为服务端/网关错误（5xx 等）时，才使用通用“服务器内部错误”等文案
+  const message =
+    statusCode && statusCode >= 500
+      ? getErrorMessage(statusCode)
+      : errorMessage || (statusCode ? getErrorMessage(statusCode) : $t('httpMsg.requestFailed'));
   throw new HttpError(message, statusCode || ApiStatus.error, {
     data: error.response.data,
     url: requestConfig?.url,
