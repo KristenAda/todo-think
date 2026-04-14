@@ -14,6 +14,10 @@
         }}</el-tag>
       </div>
       <el-descriptions :column="2" border size="small" class="section">
+        <el-descriptions-item label="任务领域">{{
+          workDomainLabel(task.workDomain)
+        }}</el-descriptions-item>
+        <el-descriptions-item label="事项类型">{{ typeLabel(task.type) }}</el-descriptions-item>
         <el-descriptions-item label="所属项目">{{ task.project?.name }}</el-descriptions-item>
         <el-descriptions-item label="预估工时">{{
           task.estimatedHours != null ? task.estimatedHours + 'h' : '-'
@@ -107,7 +111,7 @@
         </div>
       </div>
 
-      <div class="section section--test-cases">
+      <div v-if="taskSupportsTestCases" class="section section--test-cases">
         <div class="section-title section-title--with-meta">
           <span class="section-title__left">
             <art-svg-icon icon="mdi:clipboard-check-outline" />
@@ -266,7 +270,11 @@
         </el-button>
 
         <el-button
-          v-if="isMainAssignee && ['IN_PROGRESS', 'REJECTED'].includes(task?.status ?? '')"
+          v-if="
+            taskSupportsTestCases &&
+            isMainAssignee &&
+            ['IN_PROGRESS', 'REJECTED'].includes(task?.status ?? '')
+          "
           type="warning"
           @click="handleSubmitTest"
           :loading="actionLoading"
@@ -274,7 +282,7 @@
           <art-svg-icon icon="mdi:send-check-outline" style="margin-right: 4px" /> 提交验收
         </el-button>
 
-        <template v-if="isQA && task?.status === 'QA_REVIEW'">
+        <template v-if="taskSupportsTestCases && isQA && task?.status === 'QA_REVIEW'">
           <el-button type="danger" @click="handleQaAudit('reject')" :loading="actionLoading">
             <art-svg-icon icon="mdi:close-circle-outline" style="margin-right: 4px" /> 打回修改
           </el-button>
@@ -379,7 +387,6 @@
   import type { FormInstance, FormRules } from 'element-plus';
   import {
     fetchTaskInfo,
-    fetchUpdateTask,
     fetchStartWork,
     fetchAddWorkLog,
     fetchSubmitTest,
@@ -448,6 +455,34 @@
   const isTaskManager = computed(
     () => !!currentUserId.value && task.value?.managerId === currentUserId.value
   );
+
+  const taskSupportsTestCases = computed(
+    () => (task.value?.workDomain ?? 'GENERAL') === 'SOFTWARE_DEVELOPMENT'
+  );
+
+  const WORK_DOMAIN_LABEL: Record<Api.Task.TaskWorkDomain, string> = {
+    SOFTWARE_DEVELOPMENT: '软件开发',
+    PRODUCT_DESIGN: '产品与设计',
+    OPERATIONS_SUPPORT: '运维与实施',
+    DATA_ANALYTICS: '数据分析',
+    GENERAL: '综合与其他'
+  };
+
+  function workDomainLabel(w?: Api.Task.TaskWorkDomain) {
+    if (!w) return '—';
+    return WORK_DOMAIN_LABEL[w] ?? w;
+  }
+
+  function typeLabel(t?: Api.Task.TaskType) {
+    const m: Record<Api.Task.TaskType, string> = {
+      FEATURE: '需求',
+      BUG: '缺陷',
+      CHORE: '技术债/杂项',
+      ENHANCEMENT: '优化'
+    };
+    if (!t) return '—';
+    return m[t] ?? t;
+  }
 
   /** 详情接口可能无序返回，按 id 排序，避免列表顺序抖动 */
   const sortedTestCases = computed(() => {
@@ -633,6 +668,10 @@
 
   // ==================== 提交验收 ====================
   async function handleSubmitTest() {
+    if (!taskSupportsTestCases.value) {
+      ElMessage.warning('当前任务领域不支持测试用例与提测流程');
+      return;
+    }
     if (!task.value?.testCases?.length) {
       ElMessage.warning('请先添加测试用例');
       return;
@@ -662,6 +701,10 @@
   }
 
   async function handleQaAudit(action: 'pass' | 'reject') {
+    if (!taskSupportsTestCases.value) {
+      ElMessage.warning('当前任务领域不支持 QA 验收流程');
+      return;
+    }
     if (!task.value?.testCases?.length) {
       ElMessage.warning('暂无用例可验收');
       return;

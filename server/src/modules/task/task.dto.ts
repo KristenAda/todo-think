@@ -47,10 +47,19 @@ export type TestCaseUpsertDtoType = z.infer<typeof TestCaseUpsertDto>;
 
 // ==================== Task DTOs ====================
 
+const taskWorkDomainEnum = z.enum([
+  "SOFTWARE_DEVELOPMENT",
+  "PRODUCT_DESIGN",
+  "OPERATIONS_SUPPORT",
+  "DATA_ANALYTICS",
+  "GENERAL",
+]);
+
 export const CreateTaskDto = z.object({
   projectId: z.number().int().positive("项目ID无效"),
   orgId: z.number().int().positive("归属组织ID无效").optional().nullable(), // 👉 未传时由 Controller 自动推导
   parentId: z.number().int().positive().optional().nullable(), // 👉 新增字段
+  workDomain: taskWorkDomainEnum.default("GENERAL"),
   type: z.enum(["FEATURE", "BUG", "CHORE", "ENHANCEMENT"]).default("FEATURE"), // 👉 新增字段
   priority: z.enum(["P0", "P1", "P2", "P3"]).default("P2"), // 👉 新增字段
   dueDate: z.string().optional().nullable(), // 👉 新增字段
@@ -70,6 +79,7 @@ export type CreateTaskDtoType = z.infer<typeof CreateTaskDto>;
 export const UpdateTaskDto = z.object({
   version: z.number().int().nonnegative("更新时必须提供数据版本号以确保一致性"), // 👉 新增版本号校验
   parentId: z.number().int().positive().optional().nullable(), // 👉 新增字段
+  workDomain: taskWorkDomainEnum.optional(),
   type: z.enum(["FEATURE", "BUG", "CHORE", "ENHANCEMENT"]).optional(), // 👉 新增字段
   priority: z.enum(["P0", "P1", "P2", "P3"]).optional(), // 👉 新增字段
   dueDate: z.string().optional().nullable(), // 👉 新增字段

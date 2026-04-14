@@ -10,7 +10,16 @@ enum TaskType {
   ENHANCEMENT // 优化
 }
 
-// 👉 【新增】任务优先级枚举
+/// 任务领域（仅 SOFTWARE_DEVELOPMENT 启用测试用例与提测/验收）
+enum TaskWorkDomain {
+  SOFTWARE_DEVELOPMENT // 软件开发
+  PRODUCT_DESIGN // 产品与设计
+  OPERATIONS_SUPPORT // 运维与实施
+  DATA_ANALYTICS // 数据分析
+  GENERAL // 综合与其他
+}
+
+// 任务优先级
 enum TaskPriority {
   P0 // 紧急/最高
   P1 // 高
@@ -70,8 +79,9 @@ model Task {
   orgId    Int? // 归属部门/组织ID（冗余提升查询性能；nullable：无法确定时设为 null）
   version  Int          @default(0) // 乐观锁版本号
   parentId Int? // 父任务ID（支持需求拆解）
-  type     TaskType     @default(FEATURE) // 任务类型
-  priority TaskPriority @default(P2) // 任务优先级
+  type       TaskType       @default(FEATURE) // 事项类型（需求/缺陷等）
+  workDomain TaskWorkDomain @default(GENERAL) // 任务领域（仅软件开发可走测试用例）
+  priority   TaskPriority   @default(P2) // 任务优先级
   dueDate  DateTime? // 计划完成/截止时间
 
   title       String     @db.VarChar(200) // 任务名称

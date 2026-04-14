@@ -77,15 +77,15 @@
         >
           <ArtLogo v-if="!isDualMenu" class="logo" />
 
-          <p
+          <div
+            class="header-system-name"
             :class="{ 'is-dual-menu-name': isDualMenu }"
             :style="{
-              color: getMenuTheme.systemNameColor,
               opacity: !menuOpen ? 0 : 1
             }"
           >
-            {{ AppConfig.systemInfo.name }}
-          </p>
+            <ArtSystemName size="md" />
+          </div>
         </div>
 
         <ElMenu
@@ -130,7 +130,6 @@
 </template>
 
 <script setup lang="ts">
-  import AppConfig from '@/config';
   import { useSettingStore } from '@/store/modules/setting';
   import { MenuTypeEnum, MenuWidth } from '@/enums/appEnum';
   import { useMenuStore } from '@/store/modules/menu';

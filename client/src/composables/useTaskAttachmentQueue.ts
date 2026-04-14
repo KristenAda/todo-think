@@ -17,6 +17,8 @@ export interface ExistingTaskAttachment {
   attachmentId: number;
   originalName: string;
   mimeType: string | null;
+  /** 字节，来自服务端；无则展示为 — */
+  size?: number;
   sort: number;
 }
 

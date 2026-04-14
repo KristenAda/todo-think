@@ -94,11 +94,7 @@
         keyword: undefined as string | undefined
       },
       columnsFactory: () => [
-        {
-          prop: 'id',
-          label: 'ID',
-          width: 80
-        },
+        { type: 'globalIndex', width: 60, label: '序号' },
         {
           prop: 'originalName',
           label: '文件名',

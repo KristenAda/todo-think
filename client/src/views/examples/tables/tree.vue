@@ -201,10 +201,7 @@
         userEmail: ''
       },
       columnsFactory: () => [
-        {
-          prop: 'id',
-          label: 'ID'
-        },
+        { type: 'globalIndex', width: 60, label: '序号' },
         {
           prop: 'nickName',
           label: '昵称'

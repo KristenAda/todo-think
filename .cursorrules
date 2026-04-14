@@ -163,3 +163,32 @@
 3. ALWAYS use Cursor's native file editing, diff, and apply capabilities to modify code. 
 4. When you need to update code, simply output the updated code blocks in standard Markdown format within the chat, and let me use the native "Apply" button to merge the changes.
 5. Do not attempt to bypass this rule by creating temporary files for text processing.
+
+
+在处理 Prisma Schema 相关任务时，必须严格遵守以下规范：
+
+## 1. 命名与映射 (Naming & Mapping)
+- **代码侧 (TS)**：Model 名和字段名必须使用 `camelCase`（小驼峰）。
+- **数据库侧 (MySQL)**：物理表名和字段名必须使用 `snake_case`（下划线命名）。
+- **强制映射**：
+  - 必须为每个字段添加 `@map("snake_case_name")`。
+  - 必须为每个 Model 添加 `@@map("snake_case_plural_name")`，表名通常建议使用复数形式。
+
+## 2. 数据库注释 (Documentation)
+- **必须**使用 `///`（三斜杠）为每个 Model 和每个非显而易见的字段添加描述。
+- 这些注释必须写在 Model 或字段的上方，以便 Prisma 将其同步为 MySQL 的 `COMMENT`。
+
+## 3. 示例样板 (Example)
+当你创建一个新 Model 时，应参考此结构：
+/// 用户账户表
+model UserAccount {
+  id        Int      @id @default(autoincrement())
+  /// 用户名
+  userName  String   @unique @map("user_name") @db.VarChar(50)
+  /// 加密后的密码
+  password  String   @map("password") @db.VarChar(255)
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("user_accounts")
+}

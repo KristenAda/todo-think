@@ -106,11 +106,7 @@
       },
       excludeParams: ['daterange'],
       columnsFactory: () => [
-        {
-          prop: 'roleId',
-          label: '角色ID',
-          width: 100
-        },
+        { type: 'globalIndex', width: 60, label: '序号' },
         {
           prop: 'roleName',
           label: '角色名称',

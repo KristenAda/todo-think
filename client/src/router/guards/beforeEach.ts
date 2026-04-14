@@ -177,17 +177,8 @@ async function handleRouteGuard(
     NProgress.start();
   }
 
-  // 1. 【核心修复】：检查是否是白名单页面
-  if (to.path === RoutesAlias.Login || isStaticRoute(to.path)) {
-    console.log('1 :>> ', 1);
-    console.log('to.path === RoutesAlias.Login :>> ', to.path === RoutesAlias.Login);
-    if (userStore.isLogin && to.path === RoutesAlias.Login) {
-      // 破除 404 陷阱关键点：用户主动通过 URL 访问登录页，视为想要重新登录或切换账号。
-      // 直接清理旧的登录状态并放行，坚决不要踢回首页去触发后续的连环错误。
-      userStore.logOut();
-      next();
-      return;
-    }
+  // 1. 【核心修复】：检查是否是白名单页面（含 /login 重定向至 /auth/login；已登录访问登录页不退出）
+  if (to.path === RoutesAlias.Login || to.path === '/login' || isStaticRoute(to.path)) {
     next();
     return;
   }

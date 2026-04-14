@@ -13,6 +13,11 @@ import {
   PerformancePageDtoType,
 } from "./task.dto";
 
+/** 仅软件开发类任务启用测试用例与提测/验收流程 */
+function taskSupportsTestCases(workDomain: string): boolean {
+  return workDomain === "SOFTWARE_DEVELOPMENT";
+}
+
 // 用户基础信息 select
 const userSelect = {
   id: true,
@@ -479,6 +484,7 @@ class TaskService {
       if (taskData.estimatedHours !== undefined) createData.estimatedHours = taskData.estimatedHours;
       if (mergedOrgId !== undefined) createData.orgId = mergedOrgId;
       if (taskData.parentId !== undefined) createData.parentId = taskData.parentId;
+      if (taskData.workDomain !== undefined) createData.workDomain = taskData.workDomain;
       if (taskData.type !== undefined) createData.type = taskData.type;
       if (taskData.priority !== undefined) createData.priority = taskData.priority;
       if (taskData.dueDate != null) createData.dueDate = new Date(taskData.dueDate);
@@ -495,11 +501,14 @@ class TaskService {
         });
       }
 
-      // 3. 批量创建测试用例（过滤掉任何 null 字段）
+      // 3. 批量创建测试用例（仅软件开发；其它领域忽略入参）
       const validTestCases = testCases.filter(
         (tc) => tc.description != null && tc.expectedResult != null,
       );
-      if (validTestCases.length > 0) {
+      if (
+        taskSupportsTestCases(taskData.workDomain ?? "GENERAL") &&
+        validTestCases.length > 0
+      ) {
         await tx.testCase.createMany({
           data: validTestCases.map((tc) => ({
             taskId: task.id,
@@ -541,7 +550,33 @@ class TaskService {
     const { version, coAssigneeIds, attachmentIds, testCases, ...taskData } = dto;
 
     return prisma.$transaction(async (tx) => {
-      // 👉 使用 updateMany 配合 version 实现乐观锁防覆盖
+      const existing = await tx.task.findFirst({
+        where: { id, version },
+        select: { workDomain: true },
+      });
+      if (!existing) {
+        throw {
+          status: 409,
+          message: "当前任务状态或信息已被他人修改，请刷新后重试",
+        };
+      }
+
+      const nextWorkDomain =
+        taskData.workDomain !== undefined
+          ? taskData.workDomain
+          : existing.workDomain;
+
+      if (
+        testCases !== undefined &&
+        !taskSupportsTestCases(nextWorkDomain) &&
+        testCases.length > 0
+      ) {
+        throw {
+          status: 400,
+          message: "仅软件开发类任务可维护测试用例",
+        };
+      }
+
       const updateResult = await tx.task.updateMany({
         where: {
           id,
@@ -550,6 +585,9 @@ class TaskService {
         data: {
           ...(taskData.parentId !== undefined && {
             parentId: taskData.parentId,
+          }),
+          ...(taskData.workDomain !== undefined && {
+            workDomain: taskData.workDomain,
           }),
           ...(taskData.type !== undefined && { type: taskData.type }),
           ...(taskData.priority !== undefined && {
@@ -575,7 +613,7 @@ class TaskService {
             estimatedHours: taskData.estimatedHours,
           }),
           ...(taskData.status !== undefined && { status: taskData.status }),
-          version: { increment: 1 }, // 👉 更新成功则版本号 +1
+          version: { increment: 1 },
         },
       });
 
@@ -611,63 +649,69 @@ class TaskService {
         }
       }
 
-      // 同步测试用例：按 id 更新/新增，表单中移除的用例删除（保留自测/QA 等状态字段）
+      // 测试用例：仅软件开发可维护；否则清空（非空入参已在上方拒绝）
       if (testCases !== undefined) {
-        const normalized = testCases.map((tc) => ({
-          id: tc.id,
-          description: tc.description.trim(),
-          expectedResult: tc.expectedResult.trim(),
-        }));
-        for (const tc of normalized) {
-          if (!tc.description || !tc.expectedResult) {
-            throw {
-              status: 400,
-              message: "测试用例描述与预期结果不能为空",
-            };
-          }
-        }
-
-        if (normalized.length === 0) {
-          await tx.testCase.deleteMany({ where: { taskId: id } });
-        } else {
-          const keptIds = normalized
-            .map((tc) => tc.id)
-            .filter((x): x is number => x != null);
-          await tx.testCase.deleteMany({
-            where: {
-              taskId: id,
-              ...(keptIds.length > 0 ? { id: { notIn: keptIds } } : {}),
-            },
-          });
+        if (taskSupportsTestCases(nextWorkDomain)) {
+          const normalized = testCases.map((tc) => ({
+            id: tc.id,
+            description: tc.description.trim(),
+            expectedResult: tc.expectedResult.trim(),
+          }));
           for (const tc of normalized) {
-            if (tc.id != null) {
-              const row = await tx.testCase.findFirst({
-                where: { id: tc.id, taskId: id },
-              });
-              if (!row) {
-                throw {
-                  status: 400,
-                  message: "测试用例不存在或不属于该任务",
-                };
-              }
-              await tx.testCase.update({
-                where: { id: tc.id },
-                data: {
-                  description: tc.description,
-                  expectedResult: tc.expectedResult,
-                },
-              });
-            } else {
-              await tx.testCase.create({
-                data: {
-                  taskId: id,
-                  description: tc.description,
-                  expectedResult: tc.expectedResult,
-                },
-              });
+            if (!tc.description || !tc.expectedResult) {
+              throw {
+                status: 400,
+                message: "测试用例描述与预期结果不能为空",
+              };
             }
           }
+
+          if (normalized.length === 0) {
+            await tx.testCase.deleteMany({ where: { taskId: id } });
+          } else {
+            const keptIds = normalized
+              .map((tc) => tc.id)
+              .filter((x): x is number => x != null);
+            await tx.testCase.deleteMany({
+              where: {
+                taskId: id,
+                ...(keptIds.length > 0 ? { id: { notIn: keptIds } } : {}),
+              },
+            });
+            for (const tc of normalized) {
+              if (tc.id != null) {
+                const row = await tx.testCase.findFirst({
+                  where: { id: tc.id, taskId: id },
+                });
+                if (!row) {
+                  throw {
+                    status: 400,
+                    message: "测试用例不存在或不属于该任务",
+                  };
+                }
+                await tx.testCase.update({
+                  where: { id: tc.id },
+                  data: {
+                    description: tc.description,
+                    expectedResult: tc.expectedResult,
+                  },
+                });
+              } else {
+                await tx.testCase.create({
+                  data: {
+                    taskId: id,
+                    description: tc.description,
+                    expectedResult: tc.expectedResult,
+                  },
+                });
+              }
+            }
+          }
+        } else {
+          await tx.testCase.deleteMany({ where: { taskId: id } });
         }
+      } else if (!taskSupportsTestCases(nextWorkDomain)) {
+        await tx.testCase.deleteMany({ where: { taskId: id } });
       }
 
       return tx.task.findUnique({
@@ -770,6 +814,13 @@ class TaskService {
     });
     if (!task) throw { status: 404, message: "任务不存在" };
 
+    if (!taskSupportsTestCases(task.workDomain)) {
+      throw {
+        status: 400,
+        message: "仅软件开发类任务支持提测与测试用例验收流程",
+      };
+    }
+
     // 严格权限校验：仅主负责人
     if (task.mainAssigneeId !== userId) {
       throw { status: 403, message: "仅主要负责人才可提交验收" };
@@ -814,6 +865,13 @@ class TaskService {
       include: { testCases: true },
     });
     if (!task) throw { status: 404, message: "任务不存在" };
+
+    if (!taskSupportsTestCases(task.workDomain)) {
+      throw {
+        status: 400,
+        message: "仅软件开发类任务支持 QA 验收流程",
+      };
+    }
 
     // 权限校验：仅测试验收人
     if (task.testerId !== userId) {
@@ -926,11 +984,12 @@ class TaskService {
     }
 
     return prisma.$transaction(async (tx) => {
-      // 重新打开时，需要将所有关联的测试用例状态重置为 UNTESTED，强制要求重新走自测与QA流程
-      await tx.testCase.updateMany({
-        where: { taskId },
-        data: { selfTestStatus: "UNTESTED", qaStatus: "UNTESTED" },
-      });
+      if (taskSupportsTestCases(task.workDomain)) {
+        await tx.testCase.updateMany({
+          where: { taskId },
+          data: { selfTestStatus: "UNTESTED", qaStatus: "UNTESTED" },
+        });
+      }
 
       return tx.task.update({
         where: { id: taskId },

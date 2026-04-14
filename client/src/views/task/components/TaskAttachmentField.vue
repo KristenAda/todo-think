@@ -16,7 +16,7 @@
       </template>
     </el-upload>
     <p v-if="hint" class="hint">{{ hint }}</p>
-    <div v-if="activeExisting.length || items.length" class="file-grid">
+    <div v-if="activeExisting.length || items.length" class="file-list">
       <div
         v-for="ex in activeExisting"
         :key="'ex-' + ex.attachmentId"
@@ -25,29 +25,53 @@
         :style="existingIconZoneStyle(ex)"
       >
         <div class="file-card__surface">
-          <div class="file-card__icon-zone">
+          <div class="file-card__icon-zone" aria-hidden="true">
             <ArtSvgIcon :icon="fileIconForExisting(ex)" class="file-card__type-icon" />
             <div class="file-card__state file-card__state--ok">
               <ArtSvgIcon icon="mdi:check-decagram" />
             </div>
           </div>
-          <div class="file-card__body">
-            <div class="file-card__name-row">
-              <span class="file-card__name" :title="ex.originalName">{{
-                truncateName(ex.originalName, 22)
-              }}</span>
+          <div class="file-card__right">
+            <div class="file-card__detail">
+              <p class="file-card__title" :title="ex.originalName">
+                {{ truncateName(ex.originalName, 52) }}
+              </p>
+              <div class="file-card__spec-row">
+                <span class="file-card__spec-part">
+                  <span class="file-card__spec-key">类型</span>
+                  <span class="file-card__spec-val file-card__spec-val--accent">{{
+                    typeValue(ex.originalName, ex.mimeType)
+                  }}</span>
+                </span>
+                <span class="file-card__spec-sep" aria-hidden="true">·</span>
+                <span class="file-card__spec-part">
+                  <span class="file-card__spec-key">大小</span>
+                  <span class="file-card__spec-val">{{ sizeValue(ex.size) }}</span>
+                </span>
+              </div>
             </div>
-            <span v-if="getFileExtLabel(ex.originalName)" class="file-card__ext-pill">{{
-              getFileExtLabel(ex.originalName)
-            }}</span>
-          </div>
-          <div class="file-card__toolbar">
-            <el-button link type="primary" size="small" @click="previewExisting(ex)">
-              预览
-            </el-button>
-            <el-button link type="danger" size="small" @click="removeExisting(ex.attachmentId)">
-              移除
-            </el-button>
+            <div class="file-card__actions">
+              <el-button
+                class="file-card__action-btn"
+                text
+                type="primary"
+                size="small"
+                @click="previewExisting(ex)"
+              >
+                <art-svg-icon icon="mdi:eye-outline" class="file-card__action-ico" />
+                预览
+              </el-button>
+              <el-button
+                class="file-card__action-btn file-card__action-btn--danger"
+                text
+                type="danger"
+                size="small"
+                @click="removeExisting(ex.attachmentId)"
+              >
+                <art-svg-icon icon="mdi:trash-can-outline" class="file-card__action-ico" />
+                移除
+              </el-button>
+            </div>
           </div>
         </div>
       </div>
@@ -59,14 +83,14 @@
         :style="iconZoneStyle(item)"
       >
         <div class="file-card__surface">
-          <div class="file-card__icon-zone">
+          <div class="file-card__icon-zone" aria-hidden="true">
             <ArtSvgIcon :icon="fileIconFor(item)" class="file-card__type-icon" />
             <div v-if="item.status === 'uploading'" class="file-card__upload-mask">
               <el-progress
                 type="circle"
                 :percentage="item.percent"
-                :width="54"
-                :stroke-width="4"
+                :width="26"
+                :stroke-width="2"
                 :status="progressStatus(item)"
               />
             </div>
@@ -77,35 +101,49 @@
               <ArtSvgIcon icon="mdi:alert-circle" />
             </div>
           </div>
-          <div class="file-card__body">
-            <div class="file-card__name-row">
-              <span class="file-card__name" :title="item.file.name">{{
-                truncateName(item.file.name, 22)
-              }}</span>
+          <div class="file-card__right">
+            <div class="file-card__detail">
+              <p class="file-card__title" :title="item.file.name">
+                {{ truncateName(item.file.name, 52) }}
+              </p>
+              <div class="file-card__spec-row">
+                <span class="file-card__spec-part">
+                  <span class="file-card__spec-key">类型</span>
+                  <span class="file-card__spec-val file-card__spec-val--accent">{{
+                    typeValue(item.file.name, item.file.type || null)
+                  }}</span>
+                </span>
+                <span class="file-card__spec-sep" aria-hidden="true">·</span>
+                <span class="file-card__spec-part">
+                  <span class="file-card__spec-key">大小</span>
+                  <span class="file-card__spec-val">{{ sizeValue(item.file.size) }}</span>
+                </span>
+              </div>
             </div>
-            <span v-if="getFileExtLabel(item.file.name)" class="file-card__ext-pill">{{
-              getFileExtLabel(item.file.name)
-            }}</span>
-          </div>
-          <div class="file-card__toolbar">
-            <el-button
-              v-if="item.status === 'done' && item.attachmentId"
-              link
-              type="primary"
-              size="small"
-              @click="preview(item)"
-            >
-              预览
-            </el-button>
-            <el-button
-              v-if="item.status !== 'uploading'"
-              link
-              type="danger"
-              size="small"
-              @click="removeItem(item.id)"
-            >
-              移除
-            </el-button>
+            <div class="file-card__actions">
+              <el-button
+                v-if="item.status === 'done' && item.attachmentId"
+                class="file-card__action-btn"
+                text
+                type="primary"
+                size="small"
+                @click="preview(item)"
+              >
+                <art-svg-icon icon="mdi:eye-outline" class="file-card__action-ico" />
+                预览
+              </el-button>
+              <el-button
+                v-if="item.status !== 'uploading'"
+                class="file-card__action-btn file-card__action-btn--danger"
+                text
+                type="danger"
+                size="small"
+                @click="removeItem(item.id)"
+              >
+                <art-svg-icon icon="mdi:trash-can-outline" class="file-card__action-ico" />
+                移除
+              </el-button>
+            </div>
           </div>
         </div>
       </div>
@@ -121,7 +159,7 @@
 </template>
 
 <script setup lang="ts">
-  import type { UploadFile, UploadFiles } from 'element-plus';
+  import type { UploadFile } from 'element-plus';
   import {
     useTaskAttachmentQueue,
     type TaskFileUploadItem,
@@ -135,7 +173,7 @@
     getFileExtLabel
   } from '@/utils/fileTypeIcon';
 
-  const props = withDefaults(
+  withDefaults(
     defineProps<{
       disabled?: boolean;
       triggerText?: string;
@@ -189,13 +227,35 @@
     } as Record<string, string>;
   }
 
-  function onFileChange(uploadFile: UploadFile, _uploadFiles: UploadFiles) {
+  function onFileChange(uploadFile: UploadFile) {
     const raw = uploadFile.raw;
     if (raw) addFiles([raw]);
   }
 
-  function truncateName(name: string, max = 22) {
+  function truncateName(name: string, max = 52) {
     return name.length <= max ? name : `${name.slice(0, max)}…`;
+  }
+
+  function formatBytes(n: number): string {
+    if (!Number.isFinite(n) || n < 0) return '—';
+    if (n < 1024) return `${n} B`;
+    if (n < 1024 * 1024) return `${(n / 1024).toFixed(n < 10240 ? 1 : 0)} KB`;
+    return `${(n / (1024 * 1024)).toFixed(1)} MB`;
+  }
+
+  function sizeValue(bytes: number | undefined) {
+    if (bytes == null) return '—';
+    return formatBytes(bytes);
+  }
+
+  function typeValue(fileName: string, mimeType: string | null) {
+    const ext = getFileExtLabel(fileName);
+    if (ext) return ext;
+    if (mimeType) {
+      const sub = mimeType.split('/')[1];
+      if (sub) return sub.toUpperCase();
+    }
+    return '未知';
   }
 
   function progressStatus(item: TaskFileUploadItem) {
@@ -236,89 +296,120 @@
   }
 
   .trigger-btn {
-    border: 1px dashed var(--el-border-color);
-    background: var(--el-fill-color-light);
+    border: 1px dashed color-mix(in srgb, var(--el-color-primary) 28%, var(--el-border-color));
+    background: linear-gradient(
+      165deg,
+      color-mix(in srgb, var(--el-color-primary) 6%, var(--el-bg-color)) 0%,
+      var(--el-fill-color-light) 100%
+    );
+    color: var(--el-text-color-primary);
     transition:
-      border-color 0.2s,
-      background 0.2s,
-      box-shadow 0.2s;
+      border-color 0.22s ease,
+      background 0.22s ease,
+      box-shadow 0.22s ease,
+      transform 0.18s ease;
 
     &:hover:not(:disabled) {
-      border-color: var(--el-color-primary-light-5);
-      background: var(--el-color-primary-light-9);
-      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.06);
+      border-color: color-mix(in srgb, var(--el-color-primary) 45%, transparent);
+      background: linear-gradient(
+        165deg,
+        var(--el-color-primary-light-9) 0%,
+        color-mix(in srgb, var(--el-color-primary) 8%, var(--el-bg-color)) 100%
+      );
+      box-shadow:
+        0 4px 18px color-mix(in srgb, var(--el-color-primary) 12%, transparent),
+        0 1px 2px rgba(0, 0, 0, 0.04);
+      transform: translateY(-1px);
     }
 
     &__icon {
       margin-right: 6px;
       font-size: 18px;
       vertical-align: -3px;
+      opacity: 0.92;
     }
   }
 
   .hint {
     margin: 10px 0 0;
     font-size: 12px;
-    line-height: 1.5;
+    line-height: 1.55;
     color: var(--el-text-color-secondary);
+    letter-spacing: 0.02em;
   }
 
-  .file-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(148px, 1fr));
-    gap: 14px;
-    margin-top: 14px;
+  .file-list {
+    display: flex;
+    flex-direction: column;
+    gap: 7px;
+    margin-top: 10px;
   }
 
   .file-card {
     --ft-tint: 120, 144, 156;
 
     &__surface {
+      box-sizing: border-box;
       display: flex;
-      flex-direction: column;
-      height: 100%;
-      padding: 10px 10px 8px;
-      border-radius: 14px;
-      background: var(--el-bg-color);
-      border: 1px solid var(--el-border-color-lighter);
+      flex-direction: row;
+      align-items: center;
+      gap: 0;
+      max-height: 80px;
+      padding: 5px 8px;
+      border-radius: 10px;
+      overflow: hidden;
+      background: linear-gradient(
+        145deg,
+        color-mix(in srgb, rgb(var(--ft-tint)) 5%, var(--el-bg-color)) 0%,
+        var(--el-bg-color) 48%,
+        var(--el-bg-color) 100%
+      );
+      border: 1px solid color-mix(in srgb, rgb(var(--ft-tint)) 18%, var(--el-border-color-lighter));
       box-shadow:
+        0 1px 0 rgba(255, 255, 255, 0.06) inset,
         0 1px 2px rgba(0, 0, 0, 0.04),
-        0 4px 12px rgba(0, 0, 0, 0.03);
+        0 8px 20px rgba(0, 0, 0, 0.04);
       transition:
-        transform 0.2s ease,
-        box-shadow 0.2s ease,
-        border-color 0.2s ease;
+        border-color 0.25s ease,
+        box-shadow 0.25s ease,
+        transform 0.2s ease;
 
       &:hover {
-        transform: translateY(-2px);
+        border-color: color-mix(in srgb, rgb(var(--ft-tint)) 38%, var(--el-border-color-lighter));
         box-shadow:
-          0 4px 16px rgba(0, 0, 0, 0.07),
-          0 2px 4px rgba(0, 0, 0, 0.04);
-        border-color: rgba(var(--ft-tint), 0.35);
+          0 1px 0 rgba(255, 255, 255, 0.08) inset,
+          0 3px 10px rgba(0, 0, 0, 0.05),
+          0 12px 28px color-mix(in srgb, rgb(var(--ft-tint)) 12%, transparent);
+        transform: translateY(-1px);
       }
     }
 
     &__icon-zone {
       position: relative;
-      width: 100%;
-      height: 76px;
-      border-radius: 12px;
+      flex: 0 0 34px;
+      width: 34px;
+      height: 34px;
+      border-radius: 8px;
       display: flex;
       align-items: center;
       justify-content: center;
-      background: linear-gradient(
-        155deg,
-        rgba(var(--ft-tint), 0.16) 0%,
-        rgba(var(--ft-tint), 0.06) 100%
+      background: radial-gradient(
+        120% 120% at 30% 20%,
+        rgba(var(--ft-tint), 0.22) 0%,
+        rgba(var(--ft-tint), 0.07) 55%,
+        rgba(var(--ft-tint), 0.04) 100%
       );
-      border: 1px solid rgba(var(--ft-tint), 0.2);
+      border: 1px solid color-mix(in srgb, rgb(var(--ft-tint)) 28%, transparent);
+      box-shadow:
+        0 1px 0 rgba(255, 255, 255, 0.1) inset,
+        0 3px 10px color-mix(in srgb, rgb(var(--ft-tint)) 10%, transparent);
       overflow: hidden;
     }
 
     &__type-icon {
-      font-size: 38px;
+      font-size: 17px;
       color: rgb(var(--ft-tint));
-      filter: drop-shadow(0 1px 1px rgba(0, 0, 0, 0.06));
+      filter: drop-shadow(0 1px 2px color-mix(in srgb, rgb(var(--ft-tint)) 20%, transparent));
     }
 
     &__upload-mask {
@@ -327,21 +418,21 @@
       display: flex;
       align-items: center;
       justify-content: center;
-      background: rgba(255, 255, 255, 0.72);
-      backdrop-filter: blur(4px);
+      background: color-mix(in srgb, var(--el-bg-color) 72%, transparent);
+      backdrop-filter: blur(6px);
     }
 
     :deep(.file-card__upload-mask .el-progress--circle) {
-      filter: drop-shadow(0 2px 6px rgba(0, 0, 0, 0.08));
+      filter: drop-shadow(0 2px 8px rgba(0, 0, 0, 0.08));
     }
 
     &__state {
       position: absolute;
-      top: 6px;
-      right: 6px;
-      font-size: 18px;
+      top: 1px;
+      right: 1px;
+      font-size: 10px;
       line-height: 1;
-      filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.12));
+      filter: drop-shadow(0 1px 3px rgba(0, 0, 0, 0.12));
 
       &--ok {
         color: var(--el-color-success);
@@ -352,52 +443,156 @@
       }
     }
 
-    &__body {
-      margin-top: 10px;
-      text-align: center;
-      min-height: 40px;
+    /* 右侧：严格上下结构 — 上块信息、下块操作 */
+    &__right {
+      flex: 1;
+      min-width: 0;
+      min-height: 0;
+      max-height: 70px;
+      margin-left: 8px;
+      display: flex;
+      flex-direction: column;
+      border-radius: 8px;
+      overflow: hidden;
+      background: color-mix(in srgb, var(--el-fill-color-blank) 88%, var(--el-bg-color));
+      border: 1px solid var(--el-border-color-extra-light);
+      box-shadow: 0 1px 0 rgba(255, 255, 255, 0.04) inset;
     }
 
-    &__name-row {
+    &__detail {
+      flex: 1 1 auto;
+      min-height: 0;
+      padding: 4px 8px 3px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      justify-content: center;
+      border-bottom: 1px solid var(--el-border-color-extra-light);
+      background: linear-gradient(
+        180deg,
+        color-mix(in srgb, rgb(var(--ft-tint)) 4%, transparent) 0%,
+        transparent 72%
+      );
+    }
+
+    &__title {
+      margin: 0;
+      font-size: 12.5px;
+      font-weight: 600;
+      line-height: 1.3;
+      letter-spacing: -0.01em;
+      color: var(--el-text-color-primary);
       display: -webkit-box;
-      -webkit-line-clamp: 2;
+      -webkit-line-clamp: 1;
+      line-clamp: 1;
       -webkit-box-orient: vertical;
       overflow: hidden;
-      line-height: 1.35;
     }
 
-    &__name {
-      font-size: 12.5px;
-      font-weight: 500;
-      color: var(--el-text-color-primary);
-      letter-spacing: 0.01em;
+    /* 类型与大小同一行：标签+值横向排列，中间分隔符 */
+    &__spec-row {
+      display: flex;
+      flex-direction: row;
+      flex-wrap: nowrap;
+      align-items: center;
+      gap: 6px;
+      min-width: 0;
+      font-size: 11px;
+      line-height: 1.25;
     }
 
-    &__ext-pill {
-      display: inline-block;
-      margin-top: 6px;
-      padding: 1px 8px;
+    &__spec-part {
+      display: inline-flex;
+      flex-direction: row;
+      align-items: baseline;
+      gap: 3px;
+      min-width: 0;
+      flex: 0 1 auto;
+      overflow: hidden;
+    }
+
+    &__spec-key {
+      flex-shrink: 0;
       font-size: 10px;
       font-weight: 600;
-      letter-spacing: 0.04em;
-      color: rgb(var(--ft-tint));
-      background: rgba(var(--ft-tint), 0.1);
-      border-radius: 999px;
-      border: 1px solid rgba(var(--ft-tint), 0.2);
+      color: var(--el-text-color-placeholder);
+      letter-spacing: 0.06em;
     }
 
-    &__toolbar {
+    &__spec-val {
+      font-weight: 600;
+      color: var(--el-text-color-regular);
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    &__spec-val--accent {
+      color: rgb(var(--ft-tint));
+    }
+
+    &__spec-sep {
+      flex-shrink: 0;
+      color: var(--el-text-color-placeholder);
+      opacity: 0.55;
+      font-weight: 500;
+      transform: translateY(-0.5px);
+    }
+
+    &__actions {
+      flex-shrink: 0;
       display: flex;
-      flex-wrap: wrap;
-      justify-content: center;
-      gap: 2px;
-      margin-top: 8px;
-      padding-top: 6px;
-      border-top: 1px solid var(--el-border-color-extra-light);
+      flex-wrap: nowrap;
+      align-items: center;
+      justify-content: flex-end;
+      gap: 0;
+      padding: 2px 6px 3px;
+      background: linear-gradient(
+        180deg,
+        color-mix(in srgb, var(--el-fill-color-light) 55%, transparent) 0%,
+        var(--el-fill-color-blank) 100%
+      );
+    }
+
+    &__action-ico {
+      margin-right: 2px;
+      font-size: 12px;
+      vertical-align: -2px;
+      opacity: 0.92;
+    }
+
+    :deep(.file-card__action-btn) {
+      margin: 0;
+      padding: 2px 7px;
+      height: auto;
+      min-height: 0;
+      border-radius: 5px;
+      font-size: 12px;
+      font-weight: 500;
+      letter-spacing: 0.02em;
+      transition:
+        background 0.18s ease,
+        color 0.18s ease;
+
+      &:hover {
+        background: color-mix(in srgb, var(--el-color-primary) 12%, transparent);
+      }
+    }
+
+    :deep(.file-card__action-btn--danger:hover) {
+      background: color-mix(in srgb, var(--el-color-danger) 10%, transparent);
     }
   }
 
   html.dark .file-card__upload-mask {
-    background: rgba(0, 0, 0, 0.45);
+    background: color-mix(in srgb, var(--el-bg-color) 55%, transparent);
+  }
+
+  html.dark .file-card__right {
+    background: color-mix(in srgb, var(--el-fill-color-dark) 35%, var(--el-bg-color));
+  }
+
+  html.dark .file-card__actions {
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.04) 0%, rgba(0, 0, 0, 0.12) 100%);
   }
 </style>

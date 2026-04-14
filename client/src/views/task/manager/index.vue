@@ -1,115 +1,58 @@
 <template>
-  <div class="task-manager-wrapper">
+  <div class="task-manager-wrapper art-full-height">
     <div class="search-bar">
       <div class="bar-left">
         <el-select
-          v-model="query.projectId"
+          v-model="searchParams.projectId"
           placeholder="选择项目"
           clearable
           style="width: 200px"
-          @change="loadTasks"
+          @change="runSearch"
         >
           <el-option v-for="p in projectList" :key="p.id" :label="p.name" :value="p.id" />
         </el-select>
         <el-input
-          v-model="query.keyword"
+          v-model="searchParams.keyword"
           placeholder="搜索任务名称..."
           clearable
           style="width: 220px"
-          @keyup.enter="loadTasks"
-          @clear="loadTasks"
+          @keyup.enter="runSearch"
+          @clear="runSearch"
         />
         <el-select
-          v-model="query.status"
+          v-model="searchParams.status"
           placeholder="任务状态"
           clearable
           style="width: 160px"
-          @change="loadTasks"
+          @change="runSearch"
         >
           <el-option v-for="s in STATUS_OPTIONS" :key="s.value" :label="s.label" :value="s.value" />
         </el-select>
-        <el-button type="primary" @click="loadTasks">搜索</el-button>
-        <el-button @click="resetQuery">重置</el-button>
+        <el-button type="primary" @click="runSearch">搜索</el-button>
+        <el-button @click="resetSearchParams">重置</el-button>
       </div>
-      <div class="bar-right">
-        <el-button type="primary" @click="openCreateDialog">+ 新建任务</el-button>
-      </div>
+      <div class="bar-right" />
     </div>
 
-    <div class="table-card">
-      <el-table v-loading="loading" :data="taskList" stripe row-key="id">
-        <el-table-column prop="title" label="任务名称" min-width="180" show-overflow-tooltip />
-        <el-table-column label="所属项目" width="160">
-          <template #default="{ row }"
-            ><span>{{ row.project?.name ?? '-' }}</span></template
-          >
-        </el-table-column>
-        <el-table-column label="状态" width="110">
-          <template #default="{ row }">
-            <el-tag :type="statusTagType(row.status)" size="small">{{
-              statusLabel(row.status)
-            }}</el-tag>
-          </template>
-        </el-table-column>
-        <el-table-column label="主负责人" width="150">
-          <template #default="{ row }">
-            <div v-if="row.mainAssignee" class="user-cell">
-              <el-avatar :size="26" :src="row.mainAssignee.avatar ?? undefined">{{
-                initials(row.mainAssignee)
-              }}</el-avatar>
-              <span>{{ row.mainAssignee.nickName || row.mainAssignee.userName }}</span>
-            </div>
-            <span v-else class="text-muted">未分配</span>
-          </template>
-        </el-table-column>
-        <el-table-column label="协助人" width="150">
-          <template #default="{ row }">
-            <div class="avatar-group" v-if="row.coAssignees?.length">
-              <el-tooltip
-                v-for="ca in row.coAssignees.slice(0, 4)"
-                :key="ca.id"
-                :content="ca.user.nickName || ca.user.userName"
-                placement="top"
-              >
-                <el-avatar :size="26" :src="ca.user.avatar ?? undefined" class="stacked-avatar">{{
-                  initials(ca.user)
-                }}</el-avatar>
-              </el-tooltip>
-              <span v-if="row.coAssignees.length > 4" class="more-count"
-                >+{{ row.coAssignees.length - 4 }}</span
-              >
-            </div>
-            <span v-else class="text-muted">-</span>
-          </template>
-        </el-table-column>
-        <el-table-column label="预估工时" width="95" align="center">
-          <template #default="{ row }">{{
-            row.estimatedHours != null ? row.estimatedHours + 'h' : '-'
-          }}</template>
-        </el-table-column>
-        <el-table-column label="操作" width="160" fixed="right">
-          <template #default="{ row }">
-            <el-button link type="primary" @click="openDetail(row)">详情</el-button>
-            <el-button link type="primary" @click="openEditDialog(row)">编辑</el-button>
-            <el-popconfirm title="确认删除该任务？" @confirm="handleDelete(row.id)">
-              <template #reference><el-button link type="danger">删除</el-button></template>
-            </el-popconfirm>
-          </template>
-        </el-table-column>
-      </el-table>
-      <div class="pagination-bar">
-        <el-pagination
-          v-model:current-page="query.page"
-          v-model:page-size="query.pageSize"
-          :total="total"
-          :page-sizes="[10, 20, 50]"
-          layout="total,sizes,prev,pager,next"
-          background
-          @size-change="loadTasks"
-          @current-change="loadTasks"
-        />
-      </div>
-    </div>
+    <ElCard class="art-table-card" shadow="never" style="margin-top: 12px">
+      <ArtTableHeader v-model:columns="columnChecks" :loading="loading" @refresh="refreshData">
+        <template #left>
+          <ElSpace wrap>
+            <ElButton type="primary" @click="openCreateDialog" v-ripple>+ 新建任务</ElButton>
+          </ElSpace>
+        </template>
+      </ArtTableHeader>
+
+      <ArtTable
+        row-key="id"
+        :loading="loading"
+        :data="data"
+        :columns="columns"
+        :pagination="pagination"
+        @pagination:size-change="handleSizeChange"
+        @pagination:current-change="handleCurrentChange"
+      />
+    </ElCard>
 
     <!-- 新建/编辑弹窗 -->
     <ArtDialog
@@ -143,7 +86,19 @@
         </el-form-item>
         <el-row :gutter="16">
           <el-col :span="12">
-            <el-form-item label="任务类型">
+            <el-form-item label="任务领域">
+              <el-select v-model="form.workDomain" placeholder="请选择" style="width: 100%">
+                <el-option
+                  v-for="w in WORK_DOMAIN_OPTIONS"
+                  :key="w.value"
+                  :label="w.label"
+                  :value="w.value"
+                />
+              </el-select>
+            </el-form-item>
+          </el-col>
+          <el-col :span="12">
+            <el-form-item label="事项类型">
               <el-select v-model="form.type" placeholder="请选择" style="width: 100%">
                 <el-option
                   v-for="t in TYPE_OPTIONS"
@@ -154,6 +109,8 @@
               </el-select>
             </el-form-item>
           </el-col>
+        </el-row>
+        <el-row :gutter="16">
           <el-col :span="12">
             <el-form-item label="优先级">
               <el-select v-model="form.priority" placeholder="请选择" style="width: 100%">
@@ -166,8 +123,6 @@
               </el-select>
             </el-form-item>
           </el-col>
-        </el-row>
-        <el-row :gutter="16">
           <el-col :span="12">
             <el-form-item label="截止日期">
               <el-date-picker
@@ -179,6 +134,8 @@
               />
             </el-form-item>
           </el-col>
+        </el-row>
+        <el-row :gutter="16">
           <el-col :span="12">
             <el-form-item label="管理者">
               <el-select
@@ -196,8 +153,6 @@
               </el-select>
             </el-form-item>
           </el-col>
-        </el-row>
-        <el-row :gutter="16">
           <el-col :span="12">
             <el-form-item label="主要负责人">
               <el-select
@@ -216,6 +171,8 @@
               </el-select>
             </el-form-item>
           </el-col>
+        </el-row>
+        <el-row :gutter="16">
           <el-col :span="12">
             <el-form-item label="协助负责人">
               <el-select
@@ -236,8 +193,6 @@
               </el-select>
             </el-form-item>
           </el-col>
-        </el-row>
-        <el-row :gutter="16">
           <el-col :span="12">
             <el-form-item label="测试验收人">
               <el-select v-model="form.testerId" placeholder="请选择" clearable style="width: 100%">
@@ -250,6 +205,8 @@
               </el-select>
             </el-form-item>
           </el-col>
+        </el-row>
+        <el-row :gutter="16">
           <el-col :span="12">
             <el-form-item label="预估工时(h)">
               <el-input-number
@@ -268,7 +225,7 @@
             hint="可选，多文件依次上传（分片+断点续传）；新建或编辑保存时一并写入任务附件集"
           />
         </el-form-item>
-        <el-form-item label="测试用例">
+        <el-form-item v-if="form.workDomain === 'SOFTWARE_DEVELOPMENT'" label="测试用例">
           <div class="test-case-list">
             <div
               v-for="(tc, idx) in form.testCases"
@@ -305,14 +262,14 @@
       v-if="drawerVisible"
       v-model="drawerVisible"
       :task-id="selectedTaskId!"
-      @refresh="loadTasks"
+      @refresh="refreshData"
     />
   </div>
 </template>
 
 <script setup lang="ts">
-  import { ref, reactive, onMounted, nextTick } from 'vue';
-  import { ElMessage } from 'element-plus';
+  import { ref, reactive, onMounted, nextTick, h, watch } from 'vue';
+  import { ElMessage, ElMessageBox, ElTag, ElAvatar, ElTooltip } from 'element-plus';
   import type { FormInstance, FormRules } from 'element-plus';
   import {
     fetchTaskPage,
@@ -323,8 +280,34 @@
     fetchProjectList,
     fetchOrgMembers
   } from '@/api/task';
+  import { useTable } from '@/hooks/core/useTable';
+  import { ButtonMoreItem } from '@/components/core/forms/art-button-more/index.vue';
+  import ArtButtonMore from '@/components/core/forms/art-button-more/index.vue';
   import TaskDetailDrawer from '../detail/TaskDetailDrawer.vue';
   import TaskAttachmentField from '../components/TaskAttachmentField.vue';
+
+  /** 将任务分页接口转为 useTable 可用的 PaginatedResponse，并修正记录类型推导 */
+  async function fetchTaskPageForTable(params: Api.Task.TaskPageParams) {
+    const sanitized: Api.Task.TaskPageParams = {
+      ...params,
+      keyword: params.keyword?.trim() || undefined
+    };
+    const res = await fetchTaskPage(sanitized);
+    if (!res) {
+      return {
+        records: [] as Api.Task.Task[],
+        total: 0,
+        current: params.page ?? 1,
+        size: params.pageSize ?? 10
+      };
+    }
+    return {
+      records: res.list,
+      total: res.total,
+      current: res.page,
+      size: res.pageSize
+    };
+  }
 
   const STATUS_OPTIONS: { label: string; value: Api.Task.TaskStatus }[] = [
     { label: '待分配', value: 'PENDING' },
@@ -336,16 +319,24 @@
     { label: '已暂停', value: 'PAUSED' },
     { label: '已取消', value: 'CANCELLED' }
   ];
-  const STATUS_TAG: Record<Api.Task.TaskStatus, string> = {
-    PENDING: 'info',
-    IN_PROGRESS: '',
-    SELF_TESTING: 'warning',
-    QA_REVIEW: 'warning',
-    REJECTED: 'danger',
-    COMPLETED: 'success',
-    PAUSED: 'warning',
-    CANCELLED: 'info'
-  };
+  const STATUS_TAG: Record<Api.Task.TaskStatus, 'primary' | 'success' | 'warning' | 'info' | 'danger'> =
+    {
+      PENDING: 'info',
+      IN_PROGRESS: 'primary',
+      SELF_TESTING: 'warning',
+      QA_REVIEW: 'warning',
+      REJECTED: 'danger',
+      COMPLETED: 'success',
+      PAUSED: 'warning',
+      CANCELLED: 'info'
+    };
+  const WORK_DOMAIN_OPTIONS: { label: string; value: Api.Task.TaskWorkDomain }[] = [
+    { label: '软件开发', value: 'SOFTWARE_DEVELOPMENT' },
+    { label: '产品与设计', value: 'PRODUCT_DESIGN' },
+    { label: '运维与实施', value: 'OPERATIONS_SUPPORT' },
+    { label: '数据分析', value: 'DATA_ANALYTICS' },
+    { label: '综合与其他', value: 'GENERAL' }
+  ];
   const TYPE_OPTIONS: { label: string; value: Api.Task.TaskType }[] = [
     { label: '需求', value: 'FEATURE' },
     { label: '缺陷', value: 'BUG' },
@@ -361,7 +352,7 @@
   function statusLabel(s: Api.Task.TaskStatus) {
     return STATUS_OPTIONS.find((o) => o.value === s)?.label ?? s;
   }
-  function statusTagType(s: Api.Task.TaskStatus) {
+  function statusTagType(s: Api.Task.TaskStatus): 'primary' | 'success' | 'warning' | 'info' | 'danger' {
     return STATUS_TAG[s] ?? 'info';
   }
   function initials(u: Api.Task.SimpleUser) {
@@ -383,7 +374,6 @@
     return out;
   }
 
-  const loading = ref(false);
   const submitting = ref(false);
   const dialogVisible = ref(false);
   const drawerVisible = ref(false);
@@ -391,25 +381,182 @@
   /** 编辑保存时使用的乐观锁版本（来自详情接口） */
   const editingVersion = ref(0);
   const selectedTaskId = ref<number | null>(null);
-  const taskList = ref<Api.Task.Task[]>([]);
-  const total = ref(0);
   const projectList = ref<Api.Task.SimpleProject[]>([]);
   const userList = ref<Api.Task.SimpleUser[]>([]);
   const formRef = ref<FormInstance>();
   const taskAttachRef = ref<InstanceType<typeof TaskAttachmentField> | null>(null);
 
-  const query = reactive({
-    page: 1,
-    pageSize: 10,
-    projectId: undefined as number | undefined,
-    status: undefined as Api.Task.TaskStatus | undefined,
-    keyword: ''
+  const {
+    columns,
+    columnChecks,
+    data,
+    loading,
+    pagination,
+    searchParams,
+    getData,
+    getDataByPage,
+    resetSearchParams,
+    handleSizeChange,
+    handleCurrentChange,
+    refreshData,
+    refreshRemove,
+    refreshCreate,
+    refreshUpdate
+  } = useTable({
+    core: {
+      apiFn: fetchTaskPageForTable,
+      paginationKey: { current: 'page', size: 'pageSize' },
+      apiParams: {
+        page: 1,
+        pageSize: 10,
+        projectId: undefined as number | undefined,
+        status: undefined as Api.Task.TaskStatus | undefined,
+        keyword: ''
+      },
+      immediate: false,
+      columnsFactory: () => [
+        { type: 'globalIndex', width: 60, label: '序号' },
+        {
+          prop: 'title',
+          label: '任务名称',
+          minWidth: 180,
+          showOverflowTooltip: true
+        },
+        {
+          prop: 'project',
+          label: '所属项目',
+          width: 160,
+          formatter: (row) => row.project?.name ?? '-'
+        },
+        {
+          prop: 'status',
+          label: '状态',
+          width: 110,
+          formatter: (row) =>
+            h(ElTag, { type: statusTagType(row.status), size: 'small' }, () => statusLabel(row.status))
+        },
+        {
+          prop: 'mainAssignee',
+          label: '主负责人',
+          width: 150,
+          formatter: (row) => {
+            if (!row.mainAssignee) {
+              return h('span', { class: 'text-muted' }, '未分配');
+            }
+            return h('div', { class: 'task-mgr-user-cell' }, [
+              h(ElAvatar, { size: 26, src: row.mainAssignee.avatar ?? undefined }, () =>
+                initials(row.mainAssignee!)
+              ),
+              h(
+                'span',
+                { class: 'task-mgr-user-cell__name' },
+                row.mainAssignee.nickName || row.mainAssignee.userName
+              )
+            ]);
+          }
+        },
+        {
+          prop: 'coAssignees',
+          label: '协助人',
+          width: 150,
+          formatter: (row) => {
+            if (!row.coAssignees?.length) {
+              return h('span', { class: 'text-muted' }, '-');
+            }
+            const nodes = row.coAssignees.slice(0, 4).map((ca) =>
+              h(
+                ElTooltip,
+                { content: ca.user.nickName || ca.user.userName, placement: 'top' },
+                {
+                  default: () =>
+                    h(
+                      ElAvatar,
+                      { size: 26, src: ca.user.avatar ?? undefined, class: 'task-mgr-stacked-avatar' },
+                      () => initials(ca.user)
+                    )
+                }
+              )
+            );
+            const more =
+              row.coAssignees.length > 4
+                ? h('span', { class: 'task-mgr-more-count' }, `+${row.coAssignees.length - 4}`)
+                : null;
+            return h('div', { class: 'task-mgr-avatar-group' }, [...nodes, more].filter(Boolean));
+          }
+        },
+        {
+          prop: 'estimatedHours',
+          label: '预估工时',
+          width: 95,
+          align: 'center',
+          formatter: (row) => (row.estimatedHours != null ? `${row.estimatedHours}h` : '-')
+        },
+        {
+          prop: 'operation',
+          label: '操作',
+          width: 100,
+          fixed: 'right',
+          formatter: (row) =>
+            h('div', [
+              h(ArtButtonMore, {
+                list: [
+                  { key: 'detail', label: '详情', icon: 'ri:file-list-3-line' },
+                  { key: 'edit', label: '编辑任务', icon: 'ri:edit-2-line' },
+                  {
+                    key: 'delete',
+                    label: '删除任务',
+                    icon: 'ri:delete-bin-4-line',
+                    color: '#f56c6c'
+                  }
+                ],
+                onClick: (item: ButtonMoreItem) => taskRowAction(item, row)
+              })
+            ])
+        }
+      ]
+    }
   });
+
+  function runSearch() {
+    getDataByPage();
+  }
+
+  function taskRowAction(item: ButtonMoreItem, row: Api.Task.Task) {
+    switch (item.key) {
+      case 'detail':
+        openDetail(row);
+        break;
+      case 'edit':
+        openEditDialog(row);
+        break;
+      case 'delete':
+        confirmDeleteTask(row);
+        break;
+    }
+  }
+
+  async function confirmDeleteTask(row: Api.Task.Task) {
+    try {
+      await ElMessageBox.confirm(`确定删除任务「${row.title}」吗？此操作不可恢复。`, '删除确认', {
+        confirmButtonText: '确定',
+        cancelButtonText: '取消',
+        type: 'warning'
+      });
+      await fetchDeleteTask(row.id);
+      ElMessage.success('删除成功');
+      await refreshRemove();
+    } catch (e) {
+      if (e !== 'cancel') {
+        /* http 拦截器已处理 */
+      }
+    }
+  }
 
   const form = reactive({
     title: '',
     projectId: undefined as number | undefined,
     description: '',
+    workDomain: 'GENERAL' as Api.Task.TaskWorkDomain,
     type: 'FEATURE' as Api.Task.TaskType,
     priority: 'P2' as Api.Task.TaskPriority,
     dueDate: undefined as string | undefined,
@@ -426,18 +573,14 @@
     projectId: [{ required: true, message: '请选择项目', trigger: 'change' }]
   };
 
-  async function loadTasks() {
-    loading.value = true;
-    try {
-      const res = await fetchTaskPage({ ...query, keyword: query.keyword || undefined });
-      if (res) {
-        taskList.value = res.list;
-        total.value = res.total;
+  watch(
+    () => form.workDomain,
+    (domain) => {
+      if (domain !== 'SOFTWARE_DEVELOPMENT') {
+        form.testCases = [];
       }
-    } finally {
-      loading.value = false;
     }
-  }
+  );
 
   async function loadProjects() {
     const res = await fetchProjectList();
@@ -450,20 +593,13 @@
     if (res) userList.value = res;
   }
 
-  function resetQuery() {
-    query.page = 1;
-    query.projectId = undefined;
-    query.status = undefined;
-    query.keyword = '';
-    loadTasks();
-  }
-
   function openCreateDialog() {
     editingId.value = null;
     Object.assign(form, {
       title: '',
       projectId: undefined,
       description: '',
+      workDomain: 'GENERAL',
       type: 'FEATURE',
       priority: 'P2',
       dueDate: undefined,
@@ -492,10 +628,12 @@
     editingVersion.value = detail?.version ?? row.version ?? 0;
 
     const base = detail ?? row;
+    const wd = base.workDomain ?? 'GENERAL';
     Object.assign(form, {
       title: base.title,
       projectId: base.projectId,
       description: base.description ?? '',
+      workDomain: wd,
       type: base.type,
       priority: base.priority,
       dueDate: base.dueDate ? base.dueDate.slice(0, 10) : undefined,
@@ -504,11 +642,14 @@
       coAssigneeIds: (detail?.coAssignees ?? row.coAssignees).map((ca) => ca.userId),
       testerId: base.testerId ?? undefined,
       estimatedHours: base.estimatedHours ?? undefined,
-      testCases: (detail?.testCases ?? []).map((tc) => ({
-        id: tc.id,
-        description: tc.description,
-        expectedResult: tc.expectedResult
-      }))
+      testCases:
+        wd === 'SOFTWARE_DEVELOPMENT'
+          ? (detail?.testCases ?? []).map((tc) => ({
+              id: tc.id,
+              description: tc.description,
+              expectedResult: tc.expectedResult
+            }))
+          : []
     });
     dialogVisible.value = false;
     nextTick(() => {
@@ -522,6 +663,7 @@
               attachmentId: a.attachmentId,
               originalName: a.attachment.originalName,
               mimeType: a.attachment.mimeType,
+              size: a.attachment.size,
               sort: a.sort
             }))
           );
@@ -561,6 +703,7 @@
           version: editingVersion.value,
           title: form.title,
           description: form.description || undefined,
+          workDomain: form.workDomain,
           type: form.type,
           priority: form.priority,
           dueDate: form.dueDate || null,
@@ -573,6 +716,7 @@
           testCases: buildTestCasesForApi(form.testCases)
         });
         ElMessage.success('更新成功');
+        await refreshUpdate();
       } else {
         try {
           await taskAttachRef.value?.uploadAll();
@@ -584,6 +728,7 @@
           projectId: form.projectId!,
           title: form.title,
           description: form.description || undefined,
+          workDomain: form.workDomain,
           type: form.type,
           priority: form.priority,
           dueDate: form.dueDate || undefined,
@@ -600,9 +745,9 @@
         });
         ElMessage.success('创建成功');
         taskAttachRef.value?.reset();
+        await refreshCreate();
       }
       dialogVisible.value = false;
-      loadTasks();
     } catch {
       /* http 拦截器已处理 */
     } finally {
@@ -610,14 +755,8 @@
     }
   }
 
-  async function handleDelete(id: number) {
-    await fetchDeleteTask(id);
-    ElMessage.success('删除成功');
-    loadTasks();
-  }
-
   onMounted(() => {
-    loadTasks();
+    getData();
     loadProjects();
     loadUsers();
   });
@@ -647,40 +786,6 @@
       align-items: center;
     }
   }
-  .table-card {
-    background: var(--default-box-color);
-    border-radius: 8px;
-    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.06);
-    padding: 16px 20px;
-  }
-  .pagination-bar {
-    margin-top: 16px;
-    display: flex;
-    justify-content: flex-end;
-  }
-  .user-cell {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    font-size: 13px;
-  }
-  .text-muted {
-    color: var(--el-text-color-placeholder);
-    font-size: 13px;
-  }
-  .avatar-group {
-    display: flex;
-    align-items: center;
-  }
-  .stacked-avatar {
-    margin-left: -8px;
-    border: 2px solid var(--default-box-color);
-  }
-  .more-count {
-    font-size: 12px;
-    color: var(--el-text-color-secondary);
-    margin-left: 4px;
-  }
   .test-case-list {
     display: flex;
     flex-direction: column;
@@ -704,6 +809,71 @@
     }
     .tc-fields {
       flex: 1;
+    }
+  }
+</style>
+
+<!-- formatter(h) 挂载在表格内部，节点无 SFC scoped 的 data-v，样式须放在非 scoped 且限定在页面根下 -->
+<style lang="scss">
+  .task-manager-wrapper {
+    .task-mgr-user-cell {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      min-height: 26px;
+      font-size: 13px;
+      line-height: 1;
+      vertical-align: middle;
+    }
+
+    .task-mgr-user-cell .el-avatar {
+      flex-shrink: 0;
+    }
+
+    .task-mgr-user-cell__name {
+      line-height: 26px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .text-muted {
+      color: var(--el-text-color-placeholder);
+      font-size: 13px;
+      line-height: 26px;
+    }
+
+    .task-mgr-avatar-group {
+      display: inline-flex;
+      align-items: center;
+      flex-wrap: nowrap;
+      min-height: 26px;
+      line-height: 1;
+      vertical-align: middle;
+    }
+
+    .task-mgr-avatar-group .el-tooltip__trigger {
+      display: inline-flex;
+      align-items: center;
+      line-height: 0;
+    }
+
+    .task-mgr-stacked-avatar {
+      margin-left: -8px;
+      border: 2px solid var(--default-box-color);
+      flex-shrink: 0;
+    }
+
+    .task-mgr-avatar-group > :first-child .task-mgr-stacked-avatar {
+      margin-left: 0;
+    }
+
+    .task-mgr-more-count {
+      font-size: 12px;
+      color: var(--el-text-color-secondary);
+      margin-left: 4px;
+      line-height: 26px;
+      flex-shrink: 0;
     }
   }
 </style>
