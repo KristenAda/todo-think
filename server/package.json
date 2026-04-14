@@ -9,6 +9,8 @@
     "build": "node scripts/build.js",
     "start": "node dist/app.js",
     "db:sync": "prisma migrate dev --name auto_sync",
+    "db:sync:withComment": "prisma migrate dev --name auto_sync --create-only && node scripts/prismaMysqlComments.js && prisma migrate dev",
+    "db:comment:apply": "node scripts/prismaMysqlApplyComments.js",
     "db:migrate": "prisma migrate dev"
   },
   "keywords": [],
@@ -26,6 +28,7 @@
     "koa": "^3.1.1",
     "koa-jwt": "^4.0.4",
     "koa-ratelimit": "^6.0.0",
+    "mysql2": "^3.22.0",
     "winston": "^3.19.0",
     "winston-daily-rotate-file": "^5.0.0",
     "ws": "^8.20.0",

@@ -304,7 +304,9 @@
     editData.value = null;
     lockMenuType.value = true;
     dialogVisible.value = false;
-    nextTick(() => { dialogVisible.value = true; });
+    nextTick(() => {
+      dialogVisible.value = true;
+    });
   };
 
   /**
@@ -315,7 +317,9 @@
     editData.value = row;
     lockMenuType.value = true;
     dialogVisible.value = false;
-    nextTick(() => { dialogVisible.value = true; });
+    nextTick(() => {
+      dialogVisible.value = true;
+    });
   };
 
   /**
@@ -334,7 +338,7 @@
       getMenuList();
     } catch (error) {
       if (error !== 'cancel') {
-        // 失败提示由 request 统一处理，这里避免重复弹窗
+        ElMessage.error('删除失败');
       }
     }
   };
