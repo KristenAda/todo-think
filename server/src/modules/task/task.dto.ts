@@ -140,6 +140,12 @@ export const CreateWorkLogDto = z.object({
 });
 export type CreateWorkLogDtoType = z.infer<typeof CreateWorkLogDto>;
 
+export const CreateTaskCommentDto = z.object({
+  content: z.string().trim().min(1, "评论内容不能为空").max(2000),
+  attachmentIds: z.array(z.number().int().positive()).max(20).optional(),
+});
+export type CreateTaskCommentDtoType = z.infer<typeof CreateTaskCommentDto>;
+
 // ==================== 状态流转 DTOs ====================
 
 export const SubmitTestDto = z.object({
@@ -151,7 +157,8 @@ export const SubmitTestDto = z.object({
         selfTestRemark: z.string().optional(),
       })
     )
-    .min(1, "至少提交一条用例结果"),
+    .optional()
+    .default([]),
 });
 export type SubmitTestDtoType = z.infer<typeof SubmitTestDto>;
 
@@ -164,8 +171,13 @@ export const QaAuditDto = z.object({
         qaRemark: z.string().optional(),
       })
     )
-    .min(1, "至少提交一条验收结果"),
+    .optional()
+    .default([]),
   actualHours: z.number().positive().optional(), // 全部通过时必传
+  /** 非软件开发任务用于显式表示验收结论 */
+  decision: z.enum(["pass", "reject"]).optional(),
+  /** 任务级打回原因 */
+  qaRejectReason: z.string().trim().min(1).max(500).optional(),
 });
 export type QaAuditDtoType = z.infer<typeof QaAuditDto>;
 

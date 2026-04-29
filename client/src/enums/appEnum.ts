@@ -49,7 +49,9 @@ export enum MenuThemeEnum {
   /** 亮色主题 */
   LIGHT = 'light',
   /** 设计主题 */
-  DESIGN = 'design'
+  DESIGN = 'design',
+  /** 现代极简主题 */
+  MODERN_MINIMAL = 'modern-minimal'
 }
 
 /**

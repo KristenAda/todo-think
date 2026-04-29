@@ -96,6 +96,7 @@ model Task {
   // 工时
   estimatedHours Float? // 预期工时（小时）
   actualHours    Float? // 实际工时（小时）
+  qaRejectReason String? @db.Text // 最近一次验收打回原因（任务级）
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -114,6 +115,8 @@ model Task {
   coAssignees TaskCoAssignee[]
   testCases   TestCase[]
   workLogs    WorkLog[]
+  comments    TaskComment[]
+  timelines   TaskTimeline[]
   attachments TaskAttachment[]
 
   @@map("task")
@@ -204,4 +207,57 @@ model WorkLogAttachment {
   @@unique([workLogId, attachmentId])
   @@index([attachmentId])
   @@map("work_log_attachment")
+}
+
+/// 任务评论
+model TaskComment {
+  id        Int      @id @default(autoincrement())
+  taskId    Int
+  userId    Int
+  content   String   @db.Text
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  task        Task                    @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  user        User                    @relation("TaskCommentUser", fields: [userId], references: [id])
+  attachments TaskCommentAttachment[]
+
+  @@index([taskId, createdAt])
+  @@map("task_comment")
+}
+
+/// 任务评论附件
+model TaskCommentAttachment {
+  id           Int      @id @default(autoincrement())
+  commentId    Int
+  attachmentId Int
+  sort         Int      @default(0)
+  createdAt    DateTime @default(now())
+
+  comment    TaskComment @relation(fields: [commentId], references: [id], onDelete: Cascade)
+  attachment Attachment  @relation(fields: [attachmentId], references: [id], onDelete: Cascade)
+
+  @@unique([commentId, attachmentId])
+  @@index([attachmentId])
+  @@map("task_comment_attachment")
+}
+
+/// 任务时间线事件
+model TaskTimeline {
+  id          Int      @id @default(autoincrement())
+  taskId       Int
+  eventType    String   @db.VarChar(40)
+  title        String   @db.VarChar(120)
+  content      String?  @db.Text
+  fromStatus   TaskStatus?
+  toStatus     TaskStatus?
+  operatorId   Int?
+  payload      Json?
+  createdAt    DateTime @default(now())
+
+  task      Task  @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  operator  User? @relation("TaskTimelineOperator", fields: [operatorId], references: [id])
+
+  @@index([taskId, createdAt])
+  @@map("task_timeline")
 }

@@ -9,6 +9,7 @@ import {
   UpdateTaskDtoType,
   TaskPageDtoType,
   CreateWorkLogDtoType,
+  CreateTaskCommentDtoType,
   SubmitTestDtoType,
   QaAuditDtoType,
   PerformancePageDtoType,
@@ -91,6 +92,33 @@ async function assertAttachmentsAllowedForTaskEdit(
     if (onTask.has(r.id)) continue;
     throw { status: 403, message: "无权关联该附件" };
   }
+}
+
+async function appendTaskTimeline(
+  db: Prisma.TransactionClient | typeof prisma,
+  params: {
+    taskId: number;
+    eventType: string;
+    title: string;
+    content?: string;
+    operatorId?: number;
+    fromStatus?: any;
+    toStatus?: any;
+    payload?: any;
+  }
+) {
+  await db.taskTimeline.create({
+    data: {
+      taskId: params.taskId,
+      eventType: params.eventType,
+      title: params.title,
+      content: params.content,
+      operatorId: params.operatorId,
+      fromStatus: params.fromStatus,
+      toStatus: params.toStatus,
+      payload: params.payload,
+    },
+  });
 }
 
 // =====================================================================
@@ -499,6 +527,23 @@ class TaskService {
           },
           orderBy: { createdAt: "desc" },
         },
+        comments: {
+          include: {
+            user: { select: userSelect },
+            attachments: {
+              where: { attachment: { deletedAt: null } },
+              orderBy: { sort: "asc" },
+              include: { attachment: { select: attachmentPublic } },
+            },
+          },
+          orderBy: { createdAt: "desc" },
+        },
+        timelines: {
+          include: {
+            operator: { select: userSelect },
+          },
+          orderBy: { createdAt: "desc" },
+        },
         attachments: {
           where: { attachment: { deletedAt: null } },
           orderBy: { sort: "asc" },
@@ -582,6 +627,15 @@ class TaskService {
           })),
         });
       }
+
+      await appendTaskTimeline(tx, {
+        taskId: task.id,
+        eventType: "TASK_CREATED",
+        title: "创建任务",
+        content: `任务已创建${taskData.mainAssigneeId ? "并指定负责人" : ""}`,
+        operatorId: userId,
+        toStatus: "PENDING",
+      });
 
       return tx.task.findUnique({
         where: { id: task.id },
@@ -950,14 +1004,23 @@ class TaskService {
     if (!isMainAssignee && !isCoAssignee) {
       throw { status: 403, message: "无权限：仅任务负责人可开始开发" };
     }
-    if (task.status !== "PENDING" && task.status !== "REJECTED") {
+    if (task.status !== "PENDING") {
       throw { status: 400, message: `当前状态（${task.status}）无法开始开发` };
     }
 
-    return prisma.task.update({
+    const updated = await prisma.task.update({
       where: { id: taskId },
       data: { status: "IN_PROGRESS" },
     });
+    await appendTaskTimeline(prisma, {
+      taskId,
+      eventType: "STATUS_CHANGED",
+      title: "开始开发",
+      operatorId: userId,
+      fromStatus: task.status,
+      toStatus: "IN_PROGRESS",
+    });
+    return updated;
   }
 
   // 填写工时（主负责人或协助人均可）
@@ -991,7 +1054,7 @@ class TaskService {
           })),
         });
       }
-      return tx.workLog.findUnique({
+      const ret = await tx.workLog.findUnique({
         where: { id: log.id },
         include: {
           user: { select: userSelect },
@@ -1001,10 +1064,59 @@ class TaskService {
           },
         },
       });
+      await appendTaskTimeline(tx, {
+        taskId,
+        eventType: "WORKLOG_ADDED",
+        title: "登记工时",
+        content: `${dto.hours}h · ${dto.content.slice(0, 80)}`,
+        operatorId: userId,
+      });
+      return ret;
     });
   }
 
-  // 提交测试验收（仅主负责人）
+  async addComment(taskId: number, userId: number, dto: CreateTaskCommentDtoType) {
+    await projectService.assertUserCanAccessTask(userId, taskId);
+    const task = await prisma.task.findUnique({ where: { id: taskId } });
+    if (!task) throw { status: 404, message: "任务不存在" };
+
+    await assertAttachmentsOwnedByUser(dto.attachmentIds, userId);
+
+    return prisma.$transaction(async (tx) => {
+      const comment = await tx.taskComment.create({
+        data: { taskId, userId, content: dto.content },
+      });
+      if (dto.attachmentIds?.length) {
+        await tx.taskCommentAttachment.createMany({
+          data: dto.attachmentIds.map((attachmentId, i) => ({
+            commentId: comment.id,
+            attachmentId,
+            sort: i,
+          })),
+        });
+      }
+      await appendTaskTimeline(tx, {
+        taskId,
+        eventType: "COMMENT_ADDED",
+        title: "发表评论",
+        content: dto.content.slice(0, 120),
+        operatorId: userId,
+      });
+      return tx.taskComment.findUnique({
+        where: { id: comment.id },
+        include: {
+          user: { select: userSelect },
+          attachments: {
+            where: { attachment: { deletedAt: null } },
+            orderBy: { sort: "asc" },
+            include: { attachment: { select: attachmentPublic } },
+          },
+        },
+      });
+    });
+  }
+
+  // 提交验收（仅主负责人；软件开发任务额外校验测试用例）
   async submitTest(taskId: number, userId: number, dto: SubmitTestDtoType) {
     await projectService.assertUserCanAccessTask(userId, taskId);
 
@@ -1017,44 +1129,58 @@ class TaskService {
     });
     if (!task) throw { status: 404, message: "任务不存在" };
 
-    if (!taskSupportsTestCases(task.workDomain)) {
-      throw {
-        status: 400,
-        message: "仅软件开发类任务支持提测与测试用例验收流程",
-      };
-    }
-
     // 严格权限校验：仅主负责人
     if (task.mainAssigneeId !== userId) {
       throw { status: 403, message: "仅主要负责人才可提交验收" };
     }
 
-    // 校验所有用例必须全部自测通过
-    const allPassed = dto.testCaseResults.every(
-      (r) => r.selfTestStatus === "PASSED"
-    );
-    if (!allPassed) {
-      throw {
-        status: 400,
-        message: "所有测试用例必须全部自测通过才能提交验收",
-      };
+    if (task.status !== "IN_PROGRESS") {
+      throw { status: 400, message: `当前状态（${task.status}）不可提交验收` };
+    }
+
+    if (taskSupportsTestCases(task.workDomain)) {
+      if (!task.testCases.length) {
+        throw { status: 400, message: "请先添加测试用例" };
+      }
+      if (dto.testCaseResults.length !== task.testCases.length) {
+        throw { status: 400, message: "请完整提交全部测试用例的自测结果" };
+      }
+      const allPassed = dto.testCaseResults.every(
+        (r) => r.selfTestStatus === "PASSED"
+      );
+      if (!allPassed) {
+        throw {
+          status: 400,
+          message: "所有测试用例必须全部自测通过才能提交验收",
+        };
+      }
     }
 
     return prisma.$transaction(async (tx) => {
-      // 更新各测试用例的自测状态
-      for (const r of dto.testCaseResults) {
-        await tx.testCase.update({
-          where: { id: r.id },
-          data: {
-            selfTestStatus: r.selfTestStatus,
-            selfTestRemark: r.selfTestRemark,
-          },
-        });
+      // 软件开发任务才更新测试用例自测状态
+      if (taskSupportsTestCases(task.workDomain)) {
+        for (const r of dto.testCaseResults) {
+          await tx.testCase.update({
+            where: { id: r.id },
+            data: {
+              selfTestStatus: r.selfTestStatus,
+              selfTestRemark: r.selfTestRemark,
+            },
+          });
+        }
       }
       // 将任务状态推进到 QA_REVIEW
       const updated = await tx.task.update({
         where: { id: taskId },
-        data: { status: "QA_REVIEW" },
+        data: { status: "QA_REVIEW", qaRejectReason: null } as any,
+      });
+      await appendTaskTimeline(tx, {
+        taskId,
+        eventType: "STATUS_CHANGED",
+        title: "提交验收",
+        operatorId: userId,
+        fromStatus: task.status,
+        toStatus: "QA_REVIEW",
       });
 
       // ===== 站内消息推送：任务提测（推给主负责人/协助人/验收人）=====
@@ -1094,7 +1220,7 @@ class TaskService {
     });
   }
 
-  // QA 验收审核
+  // QA 验收审核（软件开发任务会落测试用例结果，其他任务走简化验收）
   async qaAudit(taskId: number, userId: number, dto: QaAuditDtoType) {
     await projectService.assertUserCanAccessTask(userId, taskId);
 
@@ -1108,13 +1234,6 @@ class TaskService {
     });
     if (!task) throw { status: 404, message: "任务不存在" };
 
-    if (!taskSupportsTestCases(task.workDomain)) {
-      throw {
-        status: 400,
-        message: "仅软件开发类任务支持 QA 验收流程",
-      };
-    }
-
     // 权限校验：仅测试验收人
     if (task.testerId !== userId) {
       throw { status: 403, message: "无权限：仅测试验收人可进行 QA 审核" };
@@ -1124,25 +1243,55 @@ class TaskService {
       throw { status: 400, message: "任务当前不在验收中状态" };
     }
 
-    const hasFailure = dto.testCaseResults.some((r) => r.qaStatus === "FAILED");
+    const supportsTestCases = taskSupportsTestCases(task.workDomain);
+
+    if (supportsTestCases) {
+      if (!task.testCases.length) {
+        throw { status: 400, message: "暂无用例可验收" };
+      }
+      if (dto.testCaseResults.length !== task.testCases.length) {
+        throw { status: 400, message: "请完整提交全部测试用例的验收结果" };
+      }
+    } else if (!dto.decision) {
+      throw { status: 400, message: "请明确本次验收结果（通过或打回）" };
+    }
+
+    const hasFailure = supportsTestCases
+      ? dto.testCaseResults.some((r) => r.qaStatus === "FAILED")
+      : dto.decision === "reject";
 
     return prisma.$transaction(async (tx) => {
-      for (const r of dto.testCaseResults) {
-        await tx.testCase.update({
-          where: { id: r.id },
-          data: {
-            qaStatus: r.qaStatus,
-            qaRemark: r.qaRemark,
-            ...(r.qaStatus === "FAILED" && { bugCount: { increment: 1 } }),
-          },
-        });
+      if (supportsTestCases) {
+        for (const r of dto.testCaseResults) {
+          await tx.testCase.update({
+            where: { id: r.id },
+            data: {
+              qaStatus: r.qaStatus,
+              qaRemark: r.qaRemark,
+              ...(r.qaStatus === "FAILED" && { bugCount: { increment: 1 } }),
+            },
+          });
+        }
       }
 
       if (hasFailure) {
-        // 有用例失败 → 打回
+        const rejectReason = dto.qaRejectReason?.trim();
+        if (!rejectReason) {
+          throw { status: 400, message: "请填写打回原因" };
+        }
+        // 打回后直接回到提交验收前状态（开发中）
         const updated = await tx.task.update({
           where: { id: taskId },
-          data: { status: "REJECTED" },
+          data: { status: "IN_PROGRESS", qaRejectReason: rejectReason } as any,
+        });
+        await appendTaskTimeline(tx, {
+          taskId,
+          eventType: "QA_REJECTED",
+          title: "验收打回",
+          content: rejectReason,
+          operatorId: userId,
+          fromStatus: "QA_REVIEW",
+          toStatus: "IN_PROGRESS",
         });
 
         // ===== 站内消息推送：QA 打回（推给主负责人/协助人/验收人）=====
@@ -1182,7 +1331,20 @@ class TaskService {
         }
         const updated = await tx.task.update({
           where: { id: taskId },
-          data: { status: "COMPLETED", actualHours: dto.actualHours },
+          data: {
+            status: "COMPLETED",
+            actualHours: dto.actualHours,
+            qaRejectReason: null,
+          } as any,
+        });
+        await appendTaskTimeline(tx, {
+          taskId,
+          eventType: "QA_PASSED",
+          title: "验收通过",
+          content: `确认实际工时 ${dto.actualHours}h`,
+          operatorId: userId,
+          fromStatus: "QA_REVIEW",
+          toStatus: "COMPLETED",
         });
 
         // ===== 站内消息推送：QA 通过（推给主负责人/协助人/验收人）=====
@@ -1246,6 +1408,14 @@ class TaskService {
       where: { id: taskId },
       data: { status: "PAUSED", version: { increment: 1 } },
     });
+    await appendTaskTimeline(prisma, {
+      taskId,
+      eventType: "STATUS_CHANGED",
+      title: "暂停任务",
+      operatorId: userId,
+      fromStatus: "IN_PROGRESS",
+      toStatus: "PAUSED",
+    });
 
     // ===== 站内消息推送：暂停（推给主负责人/协助人/验收人；排除操作者）=====
     try {
@@ -1298,6 +1468,14 @@ class TaskService {
       where: { id: taskId },
       data: { status: "IN_PROGRESS", version: { increment: 1 } },
     });
+    await appendTaskTimeline(prisma, {
+      taskId,
+      eventType: "STATUS_CHANGED",
+      title: "恢复开发",
+      operatorId: userId,
+      fromStatus: "PAUSED",
+      toStatus: "IN_PROGRESS",
+    });
 
     // ===== 站内消息推送：恢复开发（推给主负责人/协助人/验收人；排除操作者）=====
     try {
@@ -1326,63 +1504,6 @@ class TaskService {
     return updated;
   }
 
-  // 重新打开任务 (REJECTED / COMPLETED -> IN_PROGRESS)
-  async reopenTask(taskId: number, userId: number) {
-    await projectService.assertUserCanAccessTask(userId, taskId);
-
-    const task = await prisma.task.findUnique({
-      where: { id: taskId },
-      include: { coAssignees: true },
-    });
-    if (!task) throw { status: 404, message: "任务不存在" };
-
-    if (task.status !== "REJECTED" && task.status !== "COMPLETED") {
-      throw {
-        status: 400,
-        message: `当前状态（${task.status}）不支持重新打开，仅支持已打回或已完成的任务`,
-      };
-    }
-
-    const updated = await prisma.$transaction(async (tx) => {
-      if (taskSupportsTestCases(task.workDomain)) {
-        await tx.testCase.updateMany({
-          where: { taskId },
-          data: { selfTestStatus: "UNTESTED", qaStatus: "UNTESTED" },
-        });
-      }
-
-      return tx.task.update({
-        where: { id: taskId },
-        data: { status: "IN_PROGRESS", version: { increment: 1 } },
-      });
-    });
-
-    // ===== 站内消息推送：重新打开（推给主负责人/协助人/验收人；排除操作者）=====
-    try {
-      const receiverIds = new Set<number>();
-      if (task.mainAssigneeId) receiverIds.add(task.mainAssigneeId);
-      if (task.testerId) receiverIds.add(task.testerId);
-      for (const ca of task.coAssignees ?? []) receiverIds.add(ca.userId);
-      receiverIds.delete(userId);
-
-      await Promise.allSettled(
-        Array.from(receiverIds).map((receiverId) =>
-          messageService.sendRealTimeMessage(
-            {
-              receiverId,
-              messageType: "TASK",
-              title: "任务已重新打开",
-              content: `任务「${task.title}」已被重新打开并进入开发状态。`,
-              extra: { biz: "task", action: "reopened", taskId, projectId: task.projectId },
-            },
-            userId,
-          ),
-        ),
-      );
-    } catch {}
-
-    return updated;
-  }
 }
 
 export const taskService = new TaskService();

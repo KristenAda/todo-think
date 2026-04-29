@@ -14,7 +14,7 @@
   }
 
   const props = withDefaults(defineProps<Props>(), {
-    size: 28
+    size: 36
   });
 
   /** 与 vite.config base 一致，避免子路径部署时 404 */

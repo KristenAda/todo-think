@@ -38,7 +38,8 @@ import { headerBarConfig } from './modules/headerBar';
 const appConfig: SystemConfig = {
   // 系统信息
   systemInfo: {
-    name: 'Todo Think' // 系统名称
+    name: 'Todo Think', // 系统名称
+    description: 'Task Delivery Workspace'
   },
   // 系统主题
   systemThemeStyles: {
@@ -104,6 +105,14 @@ const appConfig: SystemConfig = {
       iconColor: '#6B6B6B',
       textColor: '#29343D',
       img: configImages.menuStyles.light
+    },
+    {
+      theme: MenuThemeEnum.MODERN_MINIMAL,
+      background: '#f7f8fa',
+      systemNameColor: '#111827',
+      iconColor: '#6b7280',
+      textColor: '#4b5563',
+      img: configImages.menuStyles.light
     }
   ],
   // 暗黑模式菜单样式
@@ -114,6 +123,13 @@ const appConfig: SystemConfig = {
       systemNameColor: '#DDDDDD',
       iconColor: '#BABBBD',
       textColor: 'rgba(#FFFFFF, 0.7)'
+    },
+    {
+      theme: MenuThemeEnum.MODERN_MINIMAL,
+      background: '#0f1115',
+      systemNameColor: '#f3f4f6',
+      iconColor: '#9ca3af',
+      textColor: '#d1d5db'
     }
   ],
   // 系统主色

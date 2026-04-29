@@ -1,0 +1,45 @@
+@charset "UTF-8";
+
+/* HarmonyOS Sans SC split fonts */
+@import '../../fonts/HarmonyOS_Sans_SC_Regular-split/result.css';
+@import '../../fonts/HarmonyOS_Sans_SC_Medium-split/result.css';
+
+:root {
+  --app-font-family:
+    'HarmonyOS Sans SC',
+    'PingFang SC',
+    'Microsoft YaHei',
+    'Helvetica Neue',
+    Arial,
+    sans-serif;
+  --app-font-family-medium:
+    'HarmonyOS Sans SC Medium',
+    'HarmonyOS Sans SC',
+    'PingFang SC',
+    'Microsoft YaHei',
+    'Helvetica Neue',
+    Arial,
+    sans-serif;
+  --el-font-family: var(--app-font-family);
+}
+
+html,
+body,
+#app,
+button,
+input,
+select,
+textarea {
+  font-family: var(--app-font-family);
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6,
+strong,
+b {
+  font-family: var(--app-font-family-medium);
+}

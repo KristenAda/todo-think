@@ -206,6 +206,89 @@ $popup-menu-radius: 6px;
       color: var(--art-gray-600);
     }
   }
+
+  // ---------------------- Modern Minimal theme menu ----------------------
+  .menu-left-modern-minimal {
+    --mm-title-color: #111827;
+    --mm-subtitle-color: rgb(107 114 128 / 78%);
+    --mm-group-color: rgb(75 85 99 / 66%);
+    --mm-item-color: #4b5563;
+  }
+
+  .el-menu-modern-minimal {
+    padding: 12px 0 14px;
+
+    .menu-group-title {
+      margin: 15px 14px 9px;
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--mm-group-color);
+      letter-spacing: 0.09em;
+      text-transform: uppercase;
+      line-height: 1.2;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      pointer-events: none;
+      user-select: none;
+    }
+
+    > .menu-group-title:first-child {
+      margin-top: 2px;
+    }
+
+    .el-sub-menu__title,
+    .el-menu-item {
+      width: calc(100% - 24px);
+      margin: 0 12px 7px;
+      border-radius: 10px;
+      height: 40px !important;
+      line-height: 40px !important;
+      color: var(--mm-item-color) !important;
+      transition: background-color 0.2s ease;
+    }
+
+    .menu-icon {
+      margin-left: -1px;
+    }
+
+    .el-sub-menu__title:hover,
+    .el-menu-item:not(.is-active):hover {
+      background: rgb(148 163 184 / 12%) !important;
+    }
+
+    .el-menu-item.is-active {
+      color: var(--theme-color) !important;
+      background: color-mix(in srgb, var(--theme-color) 16%, transparent) !important;
+
+      .menu-icon .art-svg-icon,
+      .menu-name {
+        color: var(--theme-color) !important;
+      }
+    }
+
+    .el-sub-menu__icon-arrow {
+      color: color-mix(in srgb, var(--mm-item-color) 70%, transparent);
+    }
+  }
+
+  .menu-left-close {
+    .el-menu-modern-minimal {
+      .menu-group-title {
+        display: none;
+      }
+
+      .el-sub-menu__title,
+      .el-menu-item {
+        width: calc(100% - 12px);
+        margin: 0 6px 8px;
+      }
+
+      .menu-icon {
+        margin-left: 0;
+      }
+    }
+  }
 }
 
 @media only screen and (width <= 640px) {
@@ -228,6 +311,22 @@ $popup-menu-radius: 6px;
   @include popup-menu-base(var(--art-gray-200), var(--art-gray-900), var(--art-gray-200));
 }
 
+.menu-left-modern-minimal-popper {
+  .el-menu-item {
+    border-radius: 8px !important;
+  }
+
+  .el-menu-item:hover,
+  .el-sub-menu__title:hover {
+    background: rgb(148 163 184 / 12%) !important;
+  }
+
+  .el-menu-item.is-active {
+    color: var(--theme-color) !important;
+    background: color-mix(in srgb, var(--theme-color) 16%, transparent) !important;
+  }
+}
+
 // 暗黑模式菜单样式
 .dark {
   .el-menu--vertical,
@@ -235,7 +334,36 @@ $popup-menu-radius: 6px;
     @include popup-menu-base(var(--art-gray-200), var(--art-gray-900), #292a2e);
   }
 
+  .menu-left-modern-minimal-popper {
+    .el-menu-item:hover,
+    .el-sub-menu__title:hover {
+      background: rgb(148 163 184 / 16%) !important;
+    }
+
+    .el-menu-item.is-active {
+      background: color-mix(in srgb, var(--theme-color) 18%, #111318) !important;
+    }
+  }
+
   .layout-sidebar {
+    .menu-left-modern-minimal {
+      --mm-title-color: #f3f4f6;
+      --mm-subtitle-color: rgb(156 163 175 / 82%);
+      --mm-group-color: rgb(156 163 175 / 68%);
+      --mm-item-color: #d1d5db;
+    }
+
+    .el-menu-modern-minimal {
+      .el-sub-menu__title:hover,
+      .el-menu-item:not(.is-active):hover {
+        background: rgb(148 163 184 / 16%) !important;
+      }
+
+      .el-menu-item.is-active {
+        background: color-mix(in srgb, var(--theme-color) 18%, #111318) !important;
+      }
+    }
+
     // 图标颜色、文字颜色
     .menu-icon .art-svg-icon,
     .menu-name {

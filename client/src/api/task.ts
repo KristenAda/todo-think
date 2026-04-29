@@ -95,6 +95,13 @@ export function fetchAddWorkLog(taskId: number, data: Api.Task.CreateWorkLogPara
   });
 }
 
+export function fetchAddTaskComment(taskId: number, data: Api.Task.CreateTaskCommentParams) {
+  return request.post<Api.Task.TaskComment>({
+    url: `${BASE.task}/${taskId}/comments`,
+    data
+  });
+}
+
 export function fetchSubmitTest(taskId: number, data: Api.Task.SubmitTestParams) {
   return request.post<Api.Task.Task>({
     url: `${BASE.task}/${taskId}/submit-test`,
@@ -120,12 +127,6 @@ export function fetchPauseTask(taskId: number) {
 export function fetchResumeTask(taskId: number) {
   return request.post<Api.Task.Task>({
     url: `${BASE.task}/${taskId}/resume`
-  });
-}
-
-export function fetchReopenTask(taskId: number) {
-  return request.post<Api.Task.Task>({
-    url: `${BASE.task}/${taskId}/reopen`
   });
 }
 

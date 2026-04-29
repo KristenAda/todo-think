@@ -18,6 +18,7 @@ model Attachment {
 
   taskAttachments    TaskAttachment[]
   workLogAttachments WorkLogAttachment[]
+  taskCommentAttachments TaskCommentAttachment[]
 
   @@index([uploadedById])
   @@index([createTime])

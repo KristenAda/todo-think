@@ -8,67 +8,84 @@
   >
     <div v-if="loadingDetail" class="loading-wrap"><el-skeleton :rows="8" animated /></div>
     <div v-else-if="task" class="task-detail-body">
-      <div class="task-detail-status-row">
-        <el-tag :type="statusTagType(task.status)" size="small">{{
-          statusLabel(task.status)
-        }}</el-tag>
-      </div>
-      <el-descriptions :column="2" border size="small" class="section">
-        <el-descriptions-item label="任务领域">{{
-          workDomainLabel(task.workDomain)
-        }}</el-descriptions-item>
-        <el-descriptions-item label="事项类型">{{ typeLabel(task.type) }}</el-descriptions-item>
-        <el-descriptions-item label="所属项目">{{ task.project?.name }}</el-descriptions-item>
-        <el-descriptions-item label="预估工时">{{
-          task.estimatedHours != null ? task.estimatedHours + 'h' : '-'
-        }}</el-descriptions-item>
-        <el-descriptions-item label="实际工时">{{
-          displayActualHours != null ? displayActualHours + 'h' : '-'
-        }}</el-descriptions-item>
-        <el-descriptions-item label="测试验收人">
-          <div v-if="task.tester" class="user-inline">
-            <el-avatar :size="20" :src="task.tester.avatar ?? undefined">{{
-              initials(task.tester)
-            }}</el-avatar>
-            {{ task.tester.nickName || task.tester.userName }}
+      <div class="task-detail-layout">
+        <div class="task-detail-layout__left">
+          <div class="section section--basic task-pane task-pane--top">
+            <div class="section-title">
+              <art-svg-icon icon="mdi:information-outline" />
+              <span>任务基本信息</span>
+            </div>
+            <div class="task-basic-grid">
+          <div class="task-basic-item">
+            <span class="task-basic-item__label">任务状态</span>
+            <span class="task-basic-item__value">
+              <el-tag :type="statusTagType(task.status)" size="small">
+                {{ statusLabel(task.status) }}
+              </el-tag>
+            </span>
           </div>
-          <span v-else>-</span>
-        </el-descriptions-item>
-        <el-descriptions-item label="主要负责人" :span="1">
-          <div v-if="task.mainAssignee" class="user-inline">
-            <el-avatar :size="20" :src="task.mainAssignee.avatar ?? undefined">{{
-              initials(task.mainAssignee)
-            }}</el-avatar>
-            {{ task.mainAssignee.nickName || task.mainAssignee.userName }}
+          <div class="task-basic-item">
+            <span class="task-basic-item__label">任务领域</span>
+            <span class="task-basic-item__value">{{ workDomainLabel(task.workDomain) }}</span>
           </div>
-          <span v-else>-</span>
-        </el-descriptions-item>
-        <el-descriptions-item label="协助负责人">
-          <div class="avatar-group" v-if="task.coAssignees?.length">
-            <el-tooltip
-              v-for="ca in task.coAssignees"
-              :key="ca.id"
-              :content="ca.user.nickName || ca.user.userName"
-              placement="top"
-            >
-              <el-avatar :size="22" :src="ca.user.avatar ?? undefined" class="stacked-avatar">{{
-                initials(ca.user)
-              }}</el-avatar>
-            </el-tooltip>
+          <div class="task-basic-item">
+            <span class="task-basic-item__label">事项类型</span>
+            <span class="task-basic-item__value">{{ typeLabel(task.type) }}</span>
           </div>
-          <span v-else>-</span>
-        </el-descriptions-item>
-        <el-descriptions-item label="任务描述" :span="2">{{
-          task.description || '-'
-        }}</el-descriptions-item>
-      </el-descriptions>
+          <div class="task-basic-item">
+            <span class="task-basic-item__label">所属项目</span>
+            <span class="task-basic-item__value">{{ task.project?.name || '—' }}</span>
+          </div>
+          <div class="task-basic-item">
+            <span class="task-basic-item__label">预估工时</span>
+            <span class="task-basic-item__value">{{
+              task.estimatedHours != null ? task.estimatedHours + 'h' : '—'
+            }}</span>
+          </div>
+          <div class="task-basic-item">
+            <span class="task-basic-item__label">实际工时</span>
+            <span class="task-basic-item__value">{{
+              displayActualHours != null ? displayActualHours + 'h' : '—'
+            }}</span>
+          </div>
+            </div>
 
-      <div v-if="task.attachments?.length" class="section">
-        <div class="section-title">
-          <art-svg-icon icon="mdi:paperclip" />
-          <span>任务附件</span>
-        </div>
-        <div class="attach-row">
+            <div class="task-basic-members">
+          <div class="task-basic-members__label">负责人</div>
+          <div v-if="mergedMemberTags.length" class="task-mgr-assignees">
+            <div
+              v-for="member in mergedMemberTags"
+              :key="member.key"
+              class="task-mgr-assignee"
+              :class="member.className"
+            >
+              <el-avatar :size="22" :src="member.user.avatar ?? undefined">{{
+                initials(member.user)
+              }}</el-avatar>
+              <span class="task-mgr-assignee__name">{{ userDisplayName(member.user) }}</span>
+              <span class="task-mgr-assignee__role">{{ member.roleLabel }}</span>
+            </div>
+          </div>
+          <span v-else class="task-basic-members__empty">未分配</span>
+            </div>
+
+            <div class="task-basic-desc">
+          <div class="task-basic-desc__label">任务描述</div>
+          <div class="task-basic-desc__value">{{ displayText(task.description) }}</div>
+            </div>
+            <div v-if="task.qaRejectReason" class="task-basic-reject">
+          <div class="task-basic-reject__label">
+            <art-svg-icon icon="mdi:alert-circle-outline" />
+            最近打回原因
+          </div>
+          <div class="task-basic-reject__value">{{ task.qaRejectReason }}</div>
+            </div>
+            <div v-if="task.attachments?.length" class="section">
+              <div class="section-title">
+                <art-svg-icon icon="mdi:paperclip" />
+                <span>任务附件</span>
+              </div>
+              <div class="attach-row">
           <div
             v-for="row in task.attachments"
             :key="row.id"
@@ -108,21 +125,20 @@
               </el-button>
             </div>
           </div>
-        </div>
-      </div>
-
-      <div v-if="taskSupportsTestCases" class="section section--test-cases">
-        <div class="section-title section-title--with-meta">
-          <span class="section-title__left">
-            <art-svg-icon icon="mdi:clipboard-check-outline" />
-            <span>测试用例</span>
-          </span>
-          <span v-if="sortedTestCases.length" class="section-title__count"
-            >共 {{ sortedTestCases.length }} 条</span
-          >
-        </div>
-        <el-empty v-if="!sortedTestCases.length" description="暂无测试用例" :image-size="56" />
-        <div v-else class="test-case-list">
+              </div>
+            </div>
+            <div v-if="taskSupportsTestCases" class="section section--test-cases">
+              <div class="section-title section-title--with-meta">
+                <span class="section-title__left">
+                  <art-svg-icon icon="mdi:clipboard-check-outline" />
+                  <span>测试用例</span>
+                </span>
+                <span v-if="sortedTestCases.length" class="section-title__count"
+                  >共 {{ sortedTestCases.length }} 条</span
+                >
+              </div>
+              <el-empty v-if="!sortedTestCases.length" description="暂无测试用例" :image-size="56" />
+              <div v-else class="test-case-list">
           <div v-for="(tc, idx) in sortedTestCases" :key="tc.id" class="tc-card">
             <div class="tc-card__toolbar">
               <span class="tc-card__index">#{{ idx + 1 }}</span>
@@ -197,16 +213,18 @@
               />
             </div>
           </div>
-        </div>
-      </div>
+              </div>
+            </div>
+          </div>
 
-      <div class="section">
-        <div class="section-title">
-          <art-svg-icon icon="mdi:clock-outline" />
-          <span>工时记录</span>
-        </div>
-        <el-empty v-if="!task.workLogs?.length" description="暂无工时记录" :image-size="50" />
-        <div v-else class="worklog-list">
+          <div class="task-pane task-pane--bottom">
+            <div class="section section--worklog">
+              <div class="section-title">
+                <art-svg-icon icon="mdi:clock-outline" />
+                <span>工时记录</span>
+              </div>
+              <el-empty v-if="!task.workLogs?.length" description="暂无工时记录" :image-size="50" />
+              <div v-else class="worklog-list">
           <div v-for="log in task.workLogs" :key="log.id" class="worklog-item">
             <el-avatar :size="28" :src="log.user.avatar ?? undefined" class="log-avatar">{{
               initials(log.user)
@@ -250,6 +268,94 @@
               </div>
             </div>
           </div>
+              </div>
+            </div>
+
+            <div class="section section--comment">
+              <div class="section-title">
+                <art-svg-icon icon="mdi:comment-text-multiple-outline" />
+                <span>评论记录</span>
+              </div>
+              <div class="comment-editor">
+                <el-input
+                  v-model="commentForm.content"
+                  type="textarea"
+                  :rows="3"
+                  maxlength="2000"
+                  show-word-limit
+                  placeholder="输入评论内容（支持附件）"
+                />
+                <TaskAttachmentField ref="commentAttachRef" hint="评论可选附件，先上传后随评论提交" />
+                <div class="comment-editor__actions">
+                  <el-button type="primary" :loading="actionLoading" @click="handleAddComment">
+                    发表评论
+                  </el-button>
+                </div>
+              </div>
+
+              <el-empty
+                v-if="!task.comments?.length"
+                description="暂无评论记录"
+                :image-size="46"
+                class="comment-empty"
+              />
+              <div v-else class="comment-list">
+                <div v-for="c in task.comments" :key="c.id" class="comment-item">
+                  <el-avatar :size="30" :src="c.user.avatar ?? undefined">{{ initials(c.user) }}</el-avatar>
+                  <div class="comment-item__main">
+                    <div class="comment-item__meta">
+                      <span class="comment-item__author">{{ userDisplayName(c.user) }}</span>
+                      <span class="comment-item__time">{{ formatDate(c.createdAt) }}</span>
+                    </div>
+                    <div class="comment-item__text">{{ c.content }}</div>
+                    <div v-if="c.attachments?.length" class="comment-item__attachments">
+                      <div v-for="a in c.attachments" :key="a.id" class="comment-attach-chip">
+                        <span class="comment-attach-chip__name">{{ a.attachment.originalName }}</span>
+                        <el-button link type="primary" size="small" @click="openServerPreview(a.attachment)">
+                          预览
+                        </el-button>
+                        <el-button link type="primary" size="small" @click="downloadAtt(a.attachment)">
+                          下载
+                        </el-button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="task-detail-layout__right task-pane">
+          <div class="section section--timeline">
+            <div class="section-title">
+              <art-svg-icon icon="mdi:timeline-clock-outline" />
+              <span>任务时间线</span>
+            </div>
+            <el-empty v-if="!task.timelines?.length" description="暂无时间线记录" :image-size="54" />
+            <div v-else class="timeline-list">
+              <div
+                v-for="line in task.timelines"
+                :key="line.id"
+                class="timeline-item"
+                :class="timelineClass(line.eventType)"
+              >
+                <div class="timeline-item__dot" />
+                <div class="timeline-item__content">
+                  <div class="timeline-item__head">
+                    <span class="timeline-item__title">{{ line.title }}</span>
+                    <span class="timeline-item__time">{{ formatDate(line.createdAt) }}</span>
+                  </div>
+                  <div class="timeline-item__desc">
+                    {{ line.content || `${statusLabel(line.fromStatus || '')} → ${statusLabel(line.toStatus || '')}` }}
+                  </div>
+                  <div v-if="line.operator" class="timeline-item__operator">
+                    操作人：{{ userDisplayName(line.operator) }}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     </div>
@@ -271,9 +377,8 @@
 
         <el-button
           v-if="
-            taskSupportsTestCases &&
             isMainAssignee &&
-            ['IN_PROGRESS', 'REJECTED'].includes(task?.status ?? '')
+            ['IN_PROGRESS'].includes(task?.status ?? '')
           "
           type="warning"
           @click="handleSubmitTest"
@@ -282,8 +387,8 @@
           <art-svg-icon icon="mdi:send-check-outline" style="margin-right: 4px" /> 提交验收
         </el-button>
 
-        <template v-if="taskSupportsTestCases && isQA && task?.status === 'QA_REVIEW'">
-          <el-button type="danger" @click="handleQaAudit('reject')" :loading="actionLoading">
+        <template v-if="isQA && task?.status === 'QA_REVIEW'">
+          <el-button type="danger" @click="openQaRejectDialog" :loading="actionLoading">
             <art-svg-icon icon="mdi:close-circle-outline" style="margin-right: 4px" /> 打回修改
           </el-button>
           <el-button type="success" @click="openQaPassDialog" :loading="actionLoading">
@@ -309,19 +414,16 @@
           <art-svg-icon icon="mdi:play-circle-outline" style="margin-right: 4px" /> 恢复开发
         </el-button>
 
-        <el-button
-          v-if="['REJECTED', 'COMPLETED'].includes(task?.status ?? '')"
-          type="warning"
-          @click="handleReopen"
-          :loading="actionLoading"
-        >
-          <art-svg-icon icon="mdi:refresh-circle-outline" style="margin-right: 4px" /> 重新打开
-        </el-button>
       </div>
     </template>
   </ArtDialog>
 
-  <el-dialog v-model="workLogDialogVisible" title="登记工时" width="560px" destroy-on-close>
+  <ArtDialog
+    v-model="workLogDialogVisible"
+    title="登记工时"
+    icon="mdi:clock-plus-outline"
+    width="560px"
+  >
     <el-form ref="workLogFormRef" :model="workLogForm" :rules="workLogRules" label-width="90px">
       <el-form-item label="工时(h)" prop="hours">
         <el-input-number
@@ -351,9 +453,14 @@
       <el-button @click="workLogDialogVisible = false">取消</el-button>
       <el-button type="primary" :loading="actionLoading" @click="handleAddWorkLog">提交</el-button>
     </template>
-  </el-dialog>
+  </ArtDialog>
 
-  <el-dialog v-model="qaPassDialogVisible" title="确认实际工时" width="380px" destroy-on-close>
+  <ArtDialog
+    v-model="qaPassDialogVisible"
+    title="确认验收通过"
+    icon="mdi:check-circle-outline"
+    width="420px"
+  >
     <el-form label-width="100px">
       <el-form-item label="实际工时(h)">
         <el-input-number
@@ -371,7 +478,31 @@
         >确认通过</el-button
       >
     </template>
-  </el-dialog>
+  </ArtDialog>
+
+  <ArtDialog
+    v-model="qaRejectDialogVisible"
+    title="填写打回原因"
+    icon="mdi:close-circle-outline"
+    width="520px"
+  >
+    <el-form label-width="88px">
+      <el-form-item label="打回原因" required>
+        <el-input
+          v-model="qaRejectReason"
+          type="textarea"
+          :rows="4"
+          maxlength="500"
+          show-word-limit
+          placeholder="请填写本次打回修改原因"
+        />
+      </el-form-item>
+    </el-form>
+    <template #footer>
+      <el-button @click="qaRejectDialogVisible = false">取消</el-button>
+      <el-button type="danger" :loading="actionLoading" @click="confirmQaReject">确认打回</el-button>
+    </template>
+  </ArtDialog>
 
   <AttachmentPreviewDialog
     v-model="previewOpen"
@@ -389,11 +520,11 @@
     fetchTaskInfo,
     fetchStartWork,
     fetchAddWorkLog,
+    fetchAddTaskComment,
     fetchSubmitTest,
     fetchQaAudit,
     fetchPauseTask,
-    fetchResumeTask,
-    fetchReopenTask
+    fetchResumeTask
   } from '@/api/task';
   import { downloadAttachmentBlob } from '@/api/attachment';
   import {
@@ -423,9 +554,12 @@
   const actionLoading = ref(false);
   const workLogDialogVisible = ref(false);
   const qaPassDialogVisible = ref(false);
+  const qaRejectDialogVisible = ref(false);
+  const qaRejectReason = ref('');
   const actualHoursInput = ref<number>(1);
   const workLogFormRef = ref<FormInstance>();
   const workLogAttachRef = ref<InstanceType<typeof TaskAttachmentField> | null>(null);
+  const commentAttachRef = ref<InstanceType<typeof TaskAttachmentField> | null>(null);
 
   const previewOpen = ref(false);
   const previewDoc = ref<Api.Task.TaskAttachmentMeta | null>(null);
@@ -435,6 +569,7 @@
   const selfTestRemarkMap = reactive<Record<number, string>>({});
 
   const workLogForm = reactive({ hours: 1, content: '' });
+  const commentForm = reactive({ content: '' });
   const workLogRules: FormRules = {
     hours: [{ required: true, message: '请填写工时', trigger: 'blur' }],
     content: [{ required: true, message: '请填写工作内容', trigger: 'blur' }]
@@ -460,6 +595,42 @@
   const taskSupportsTestCases = computed(
     () => (task.value?.workDomain ?? 'GENERAL') === 'SOFTWARE_DEVELOPMENT'
   );
+  type RoleMemberTag = {
+    key: string;
+    user: Api.Task.SimpleUser;
+    roleLabel: string;
+    className: string;
+  };
+  const mergedMemberTags = computed<RoleMemberTag[]>(() => {
+    const cur = task.value;
+    if (!cur) return [];
+    const out: RoleMemberTag[] = [];
+    if (cur.mainAssignee) {
+      out.push({
+        key: `main-${cur.mainAssignee.id}`,
+        user: cur.mainAssignee,
+        roleLabel: '主要',
+        className: 'task-mgr-assignee--main'
+      });
+    }
+    for (const ca of cur.coAssignees ?? []) {
+      out.push({
+        key: `co-${ca.user.id}`,
+        user: ca.user,
+        roleLabel: '协助',
+        className: 'task-mgr-assignee--co'
+      });
+    }
+    if (cur.tester) {
+      out.push({
+        key: `qa-${cur.tester.id}`,
+        user: cur.tester,
+        roleLabel: '验收',
+        className: 'task-mgr-assignee--qa'
+      });
+    }
+    return out;
+  });
 
   const WORK_DOMAIN_LABEL: Record<Api.Task.TaskWorkDomain, string> = {
     SOFTWARE_DEVELOPMENT: '软件开发',
@@ -562,8 +733,19 @@
   function initials(u: Api.Task.SimpleUser) {
     return (u.nickName || u.userName)?.[0]?.toUpperCase() ?? '?';
   }
+  function userDisplayName(u: Api.Task.SimpleUser) {
+    return u.nickName || u.userName;
+  }
   function formatDate(d: string) {
     return d ? new Date(d).toLocaleString('zh-CN', { hour12: false }).slice(0, 16) : '';
+  }
+  function timelineClass(eventType: string) {
+    if (eventType === 'QA_PASSED') return 'timeline-item--success';
+    if (eventType === 'QA_REJECTED') return 'timeline-item--danger';
+    if (eventType === 'WORKLOG_ADDED') return 'timeline-item--primary';
+    if (eventType === 'COMMENT_ADDED') return 'timeline-item--info';
+    if (eventType === 'STATUS_CHANGED') return 'timeline-item--warning';
+    return 'timeline-item--default';
   }
 
   function formatFileSize(n: number) {
@@ -624,6 +806,32 @@
     if (v) nextTick(() => workLogAttachRef.value?.reset());
   });
 
+  async function handleAddComment() {
+    if (!commentForm.content.trim()) {
+      ElMessage.warning('请填写评论内容');
+      return;
+    }
+    actionLoading.value = true;
+    try {
+      try {
+        await commentAttachRef.value?.uploadAll();
+      } catch {
+        return;
+      }
+      const attachmentIds = commentAttachRef.value?.getAttachmentIds() ?? [];
+      await fetchAddTaskComment(props.taskId, {
+        content: commentForm.content.trim(),
+        attachmentIds: attachmentIds.length ? attachmentIds : undefined
+      });
+      ElMessage.success('评论发布成功');
+      commentForm.content = '';
+      commentAttachRef.value?.reset();
+      loadDetail();
+    } finally {
+      actionLoading.value = false;
+    }
+  }
+
   // ==================== 开始开发 ====================
   async function handleStartWork() {
     actionLoading.value = true;
@@ -670,19 +878,17 @@
 
   // ==================== 提交验收 ====================
   async function handleSubmitTest() {
-    if (!taskSupportsTestCases.value) {
-      ElMessage.warning('当前任务领域不支持测试用例与提测流程');
-      return;
-    }
-    if (!task.value?.testCases?.length) {
+    if (taskSupportsTestCases.value && !task.value?.testCases?.length) {
       ElMessage.warning('请先添加测试用例');
       return;
     }
-    const testCaseResults = task.value.testCases.map((tc) => ({
-      id: tc.id,
-      selfTestStatus: selfTestMap[tc.id] ?? 'UNTESTED',
-      selfTestRemark: selfTestRemarkMap[tc.id] ?? ''
-    }));
+    const testCaseResults = taskSupportsTestCases.value
+      ? (task.value?.testCases ?? []).map((tc) => ({
+          id: tc.id,
+          selfTestStatus: selfTestMap[tc.id] ?? 'UNTESTED',
+          selfTestRemark: selfTestRemarkMap[tc.id] ?? ''
+        }))
+      : [];
     actionLoading.value = true;
     try {
       await fetchSubmitTest(props.taskId, { testCaseResults });
@@ -698,25 +904,40 @@
 
   // ==================== QA 验收 ====================
   function openQaPassDialog() {
-    actualHoursInput.value = task.value?.estimatedHours ?? 1;
+    const sum = workLogsHoursSum.value;
+    actualHoursInput.value = sum > 0 ? Number(sum.toFixed(1)) : (task.value?.estimatedHours ?? 1);
     qaPassDialogVisible.value = true;
   }
-
-  async function handleQaAudit(action: 'pass' | 'reject') {
-    if (!taskSupportsTestCases.value) {
-      ElMessage.warning('当前任务领域不支持 QA 验收流程');
+  function openQaRejectDialog() {
+    qaRejectReason.value = '';
+    qaRejectDialogVisible.value = true;
+  }
+  async function confirmQaReject() {
+    if (!qaRejectReason.value.trim()) {
+      ElMessage.warning('请填写打回原因');
       return;
     }
-    if (!task.value?.testCases?.length) {
+    qaRejectDialogVisible.value = false;
+    await handleQaAudit('reject', qaRejectReason.value.trim());
+  }
+
+  async function handleQaAudit(action: 'pass' | 'reject', rejectReason?: string) {
+    if (taskSupportsTestCases.value && !task.value?.testCases?.length) {
       ElMessage.warning('暂无用例可验收');
       return;
     }
-    const testCaseResults = task.value.testCases.map((tc) => ({
-      id: tc.id,
-      qaStatus: action === 'reject' ? ('FAILED' as const) : ('PASSED' as const),
-      qaRemark: ''
-    }));
-    const payload: Api.Task.QaAuditParams = { testCaseResults };
+    const testCaseResults = taskSupportsTestCases.value
+      ? (task.value?.testCases ?? []).map((tc) => ({
+          id: tc.id,
+          qaStatus: action === 'reject' ? ('FAILED' as const) : ('PASSED' as const),
+          qaRemark: action === 'reject' ? rejectReason ?? '' : ''
+        }))
+      : [];
+    const payload: Api.Task.QaAuditParams = {
+      testCaseResults,
+      decision: action,
+      qaRejectReason: action === 'reject' ? rejectReason : undefined
+    };
     if (action === 'pass') {
       payload.actualHours = actualHoursInput.value;
       qaPassDialogVisible.value = false;
@@ -764,34 +985,59 @@
     }
   }
 
-  // ==================== 重新打开任务 ====================
-  async function handleReopen() {
-    actionLoading.value = true;
-    try {
-      await fetchReopenTask(props.taskId);
-      ElMessage.success('任务已重新打开并进入开发状态');
-      emit('refresh');
-      loadDetail();
-    } catch (e: any) {
-      // 失败提示由 request 统一处理，这里避免重复弹窗
-    } finally {
-      actionLoading.value = false;
-    }
-  }
 </script>
 
 <style scoped lang="scss">
   .loading-wrap {
     padding: 24px;
   }
-  .task-detail-status-row {
-    margin-bottom: 12px;
-  }
   .task-detail-body {
     padding: 0 4px 8px;
     display: flex;
     flex-direction: column;
     gap: 20px;
+    min-height: 0;
+  }
+  .task-detail-layout {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 360px;
+    gap: 14px;
+    min-height: 0;
+  }
+  .task-detail-layout__left {
+    display: grid;
+    grid-template-rows: minmax(280px, auto) minmax(0, 1fr);
+    gap: 14px;
+    min-height: 0;
+  }
+  .task-detail-layout__right {
+    min-height: 0;
+  }
+  .task-pane {
+    border: 1px solid var(--el-border-color-lighter);
+    border-radius: 14px;
+    background: var(--el-bg-color);
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.04);
+    overflow: hidden;
+  }
+  .task-pane--top,
+  .task-pane--bottom,
+  .task-detail-layout__right {
+    overflow-y: auto;
+    padding: 12px 14px;
+  }
+  .task-pane--top {
+    background: linear-gradient(
+      140deg,
+      color-mix(in srgb, var(--el-color-primary) 4%, var(--el-bg-color)) 0%,
+      var(--el-bg-color) 48%
+    );
+  }
+  .task-pane--bottom {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    background: color-mix(in srgb, var(--el-fill-color-light) 45%, var(--el-bg-color));
   }
   .section {
     .section-title {
@@ -827,21 +1073,194 @@
     }
   }
 
-  .section--test-cases {
-    margin-top: 4px;
+  .section--basic {
+    border: none;
+    border-radius: 0;
+    padding: 0;
+    background: transparent;
+    box-shadow: none;
   }
-  .user-inline {
+
+  .task-basic-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 12px 12px;
+  }
+
+  .task-basic-item {
     display: flex;
+    flex-direction: column;
+    gap: 4px;
+    min-height: 62px;
+    padding: 12px 12px;
+    border: 1px solid var(--el-border-color-extra-light);
+    border-radius: 10px;
+    background: color-mix(in srgb, var(--el-fill-color-blank) 90%, var(--el-bg-color));
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03);
+  }
+
+  .task-basic-item__label {
+    font-size: 12px;
+    color: var(--el-text-color-secondary);
+    line-height: 1.2;
+  }
+
+  .task-basic-item__value {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--el-text-color-primary);
+    line-height: 1.35;
+    word-break: break-word;
+  }
+
+  .task-basic-members {
+    margin-top: 14px;
+    padding: 12px 13px;
+    border-radius: 10px;
+    border: 1px dashed var(--el-border-color);
+    background: color-mix(in srgb, var(--el-fill-color-light) 70%, transparent);
+  }
+
+  .task-basic-members__label {
+    margin-bottom: 10px;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--el-text-color-secondary);
+    letter-spacing: 0.02em;
+  }
+
+  .task-basic-members__empty {
+    font-size: 13px;
+    color: var(--el-text-color-placeholder);
+    line-height: 1.4;
+  }
+
+  .task-basic-desc {
+    margin-top: 14px;
+    padding: 12px 13px;
+    border-radius: 10px;
+    border: 1px solid var(--el-border-color-extra-light);
+    background: var(--el-fill-color-blank);
+  }
+
+  .task-basic-desc__label {
+    margin-bottom: 8px;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--el-text-color-secondary);
+  }
+
+  .task-basic-desc__value {
+    font-size: 13px;
+    line-height: 1.7;
+    color: var(--el-text-color-primary);
+    white-space: pre-wrap;
+    word-break: break-word;
+    min-height: 24px;
+  }
+
+  .task-basic-reject {
+    margin-top: 14px;
+    padding: 12px 13px;
+    border-radius: 10px;
+    border: 1px solid var(--el-color-danger-light-7);
+    background: var(--el-color-danger-light-9);
+  }
+
+  .task-basic-reject__label {
+    display: inline-flex;
     align-items: center;
     gap: 6px;
+    margin-bottom: 8px;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--el-color-danger);
   }
-  .avatar-group {
+
+  .task-basic-reject__value {
+    font-size: 13px;
+    line-height: 1.7;
+    color: var(--el-text-color-primary);
+    white-space: pre-wrap;
+    word-break: break-word;
+  }
+
+  .task-mgr-assignees {
     display: flex;
+    flex-wrap: wrap;
+    gap: 8px 10px;
     align-items: center;
+    line-height: 1.2;
   }
-  .stacked-avatar {
-    margin-left: -6px;
-    border: 2px solid #fff;
+
+  .task-mgr-assignee {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 3px 8px 3px 3px;
+    border-radius: 999px;
+    border: 1px solid var(--el-border-color-extra-light);
+    background: var(--el-fill-color-blank);
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+  }
+
+  .task-mgr-assignee--main {
+    border-color: var(--el-color-primary-light-7);
+    background: var(--el-color-primary-light-9);
+  }
+
+  .task-mgr-assignee--co {
+    border-color: var(--el-color-success-light-7);
+    background: var(--el-color-success-light-9);
+  }
+
+  .task-mgr-assignee--qa {
+    border-color: var(--el-color-warning-light-7);
+    background: var(--el-color-warning-light-9);
+  }
+
+  .task-mgr-assignee__name {
+    max-width: 120px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--el-text-color-primary);
+    line-height: 1;
+  }
+
+  .task-mgr-assignee__role {
+    padding: 2px 6px;
+    border-radius: 999px;
+    font-size: 11px;
+    font-weight: 600;
+    line-height: 1;
+    border: 1px solid transparent;
+    background: var(--el-fill-color-light);
+    color: var(--el-text-color-secondary);
+  }
+
+  .task-mgr-assignee--main .task-mgr-assignee__role {
+    color: var(--el-color-primary);
+    border-color: var(--el-color-primary-light-5);
+    background: var(--el-color-primary-light-8);
+  }
+
+  .task-mgr-assignee--co .task-mgr-assignee__role {
+    color: var(--el-color-success);
+    border-color: var(--el-color-success-light-5);
+    background: var(--el-color-success-light-8);
+  }
+
+  .task-mgr-assignee--qa .task-mgr-assignee__role {
+    color: var(--el-color-warning-dark-2);
+    border-color: var(--el-color-warning-light-5);
+    background: var(--el-color-warning-light-8);
+  }
+
+  .section--test-cases {
+    margin-top: 4px;
   }
   .test-case-list {
     display: flex;
@@ -1177,5 +1596,204 @@
     display: flex;
     gap: 10px;
     justify-content: flex-end;
+  }
+  .section--worklog,
+  .section--comment {
+    margin: 0;
+    padding: 12px 12px 10px;
+    border: 1px solid var(--el-border-color-lighter);
+    border-radius: 12px;
+    background: var(--el-bg-color);
+    box-shadow: 0 1px 5px rgba(0, 0, 0, 0.03);
+  }
+  .section--worklog .section-title,
+  .section--comment .section-title {
+    margin-bottom: 10px;
+  }
+  .comment-editor {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    padding: 10px 12px;
+    border-radius: 10px;
+    border: 1px solid var(--el-border-color-extra-light);
+    background: var(--el-fill-color-blank);
+  }
+  .comment-editor__actions {
+    display: flex;
+    justify-content: flex-end;
+  }
+  .comment-list {
+    margin-top: 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+  .comment-item {
+    display: flex;
+    gap: 10px;
+    padding: 10px 12px;
+    border-radius: 10px;
+    border: 1px solid var(--el-border-color-extra-light);
+    background: var(--el-fill-color-blank);
+  }
+  .comment-item__main {
+    flex: 1;
+    min-width: 0;
+  }
+  .comment-item__meta {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    font-size: 12px;
+    margin-bottom: 6px;
+  }
+  .comment-item__author {
+    font-weight: 600;
+    color: var(--el-text-color-primary);
+  }
+  .comment-item__time {
+    color: var(--el-text-color-secondary);
+  }
+  .comment-item__text {
+    white-space: pre-wrap;
+    line-height: 1.65;
+    font-size: 13px;
+  }
+  .comment-item__attachments {
+    margin-top: 8px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+  .comment-attach-chip {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    padding: 6px 8px;
+    border-radius: 8px;
+    background: var(--el-fill-color-light);
+  }
+  .comment-attach-chip__name {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: 12px;
+  }
+  .timeline-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+  .timeline-item {
+    display: flex;
+    gap: 10px;
+    align-items: flex-start;
+  }
+  .timeline-item__dot {
+    margin-top: 7px;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--el-color-primary);
+    box-shadow: 0 0 0 4px var(--el-color-primary-light-8);
+    flex-shrink: 0;
+  }
+  .timeline-item__content {
+    flex: 1;
+    min-width: 0;
+    padding: 10px 12px;
+    border: 1px solid var(--el-border-color-extra-light);
+    border-radius: 10px;
+    background: var(--el-fill-color-blank);
+  }
+  .timeline-item__head {
+    display: flex;
+    justify-content: space-between;
+    gap: 8px;
+    margin-bottom: 6px;
+  }
+  .timeline-item__title {
+    font-weight: 600;
+    font-size: 13px;
+  }
+  .timeline-item__time {
+    color: var(--el-text-color-secondary);
+    font-size: 12px;
+  }
+  .timeline-item__desc {
+    font-size: 12px;
+    line-height: 1.6;
+    color: var(--el-text-color-regular);
+  }
+  .timeline-item__operator {
+    margin-top: 6px;
+    font-size: 12px;
+    color: var(--el-text-color-secondary);
+  }
+  .timeline-item--success .timeline-item__dot {
+    background: var(--el-color-success);
+    box-shadow: 0 0 0 4px var(--el-color-success-light-8);
+  }
+  .timeline-item--success .timeline-item__content {
+    border-color: var(--el-color-success-light-7);
+    background: var(--el-color-success-light-9);
+  }
+  .timeline-item--success .timeline-item__title {
+    color: var(--el-color-success-dark-2);
+  }
+  .timeline-item--danger .timeline-item__dot {
+    background: var(--el-color-danger);
+    box-shadow: 0 0 0 4px var(--el-color-danger-light-8);
+  }
+  .timeline-item--danger .timeline-item__content {
+    border-color: var(--el-color-danger-light-7);
+    background: var(--el-color-danger-light-9);
+  }
+  .timeline-item--danger .timeline-item__title {
+    color: var(--el-color-danger-dark-2);
+  }
+  .timeline-item--primary .timeline-item__dot {
+    background: var(--el-color-primary);
+    box-shadow: 0 0 0 4px var(--el-color-primary-light-8);
+  }
+  .timeline-item--primary .timeline-item__content {
+    border-color: var(--el-color-primary-light-7);
+    background: var(--el-color-primary-light-9);
+  }
+  .timeline-item--primary .timeline-item__title {
+    color: var(--el-color-primary-dark-2);
+  }
+  .timeline-item--info .timeline-item__dot {
+    background: var(--el-color-info);
+    box-shadow: 0 0 0 4px var(--el-color-info-light-8);
+  }
+  .timeline-item--info .timeline-item__content {
+    border-color: var(--el-color-info-light-7);
+    background: var(--el-color-info-light-9);
+  }
+  .timeline-item--info .timeline-item__title {
+    color: var(--el-color-info-dark-2);
+  }
+  .timeline-item--warning .timeline-item__dot {
+    background: var(--el-color-warning);
+    box-shadow: 0 0 0 4px var(--el-color-warning-light-8);
+  }
+  .timeline-item--warning .timeline-item__content {
+    border-color: var(--el-color-warning-light-7);
+    background: var(--el-color-warning-light-9);
+  }
+  .timeline-item--warning .timeline-item__title {
+    color: var(--el-color-warning-dark-2);
+  }
+  @media (max-width: 1200px) {
+    .task-detail-layout {
+      grid-template-columns: 1fr;
+    }
+    .task-detail-layout__left {
+      grid-template-rows: auto auto;
+    }
   }
 </style>

@@ -1,6 +1,19 @@
 <template>
   <template v-for="(item, index) in filteredMenuItems" :key="getUniqueKey(item, index)">
-    <ElSubMenu v-if="hasChildren(item)" :index="item.path || item.meta.title" :level="level">
+    <template v-if="isModernMinimalGroup(item)">
+      <div class="menu-group-title">
+        {{ formatMenuTitle(item.meta.title) }}
+      </div>
+      <SidebarSubmenu
+        :list="item.children"
+        :is-mobile="isMobile"
+        :level="level + 1"
+        :theme="theme"
+        @close="closeMenu"
+      />
+    </template>
+
+    <ElSubMenu v-else-if="hasChildren(item)" :index="item.path || item.meta.title" :level="level">
       <template #title>
         <div class="menu-icon flex-cc">
           <ArtSvgIcon
@@ -63,10 +76,8 @@
   import { resolveMenuIconifyIcon } from '@/utils/iconify';
   import { handleMenuJump } from '@/utils/navigation';
   import { useSettingStore } from '@/store/modules/setting';
-
-  interface MenuTheme {
-    iconColor?: string;
-  }
+  import { MenuThemeEnum } from '@/enums/appEnum';
+  import type { MenuThemeType } from '@/types/store';
 
   interface Props {
     /** 菜单标题 */
@@ -74,7 +85,7 @@
     /** 菜单列表 */
     list?: AppRouteRecord[];
     /** 主题配置 */
-    theme?: MenuTheme;
+    theme?: MenuThemeType;
     /** 是否为移动端模式 */
     isMobile?: boolean;
     /** 菜单层级 */
@@ -165,6 +176,13 @@
     // 递归检查是否有可见的子菜单
     const filteredChildren = filterRoutes(item.children);
     return filteredChildren.length > 0;
+  };
+  const isModernMinimalGroup = (item: AppRouteRecord): boolean => {
+    return (
+      props.theme?.theme === MenuThemeEnum.MODERN_MINIMAL &&
+      props.level === 0 &&
+      hasChildren(item)
+    );
   };
 
   /**

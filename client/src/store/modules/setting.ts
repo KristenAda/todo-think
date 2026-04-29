@@ -124,7 +124,8 @@ export const useSettingStore = defineStore(
     const getMenuTheme = computed((): MenuThemeType => {
       const list = AppConfig.themeList.filter((item) => item.theme === menuThemeType.value);
       if (isDark.value) {
-        return AppConfig.darkMenuStyles[0];
+        const darkList = AppConfig.darkMenuStyles.filter((item) => item.theme === menuThemeType.value);
+        return darkList[0] ?? AppConfig.darkMenuStyles[0];
       } else {
         return list[0];
       }

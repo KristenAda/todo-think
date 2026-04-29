@@ -3,13 +3,16 @@
   <div class="setting-box-wrap">
     <div
       class="setting-item"
-      v-for="item in menuThemeList"
+      v-for="(item, index) in menuThemeList"
       :key="item.theme"
       @click="switchMenuStyles(item.theme)"
     >
       <div
         class="box"
-        :class="{ 'is-active': item.theme === menuThemeType }"
+        :class="{
+          'is-active': item.theme === menuThemeType,
+          'mt-16': index >= 3
+        }"
         :style="{
           cursor: disabled ? 'no-drop' : 'pointer'
         }"

@@ -13,6 +13,7 @@ import {
   UpdateTaskDto,
   TaskPageDto,
   CreateWorkLogDto,
+  CreateTaskCommentDto,
   SubmitTestDto,
   QaAuditDto,
   PerformancePageDto,
@@ -217,6 +218,25 @@ class TaskController {
     }
   }
 
+  async addComment(ctx: Context) {
+    const taskId = Number(ctx.params.id);
+    const userId = currentUserId(ctx);
+    const parsed = CreateTaskCommentDto.safeParse(ctx.request.body);
+    if (!parsed.success) {
+      ctx.body = Result.error(parsed.error.issues[0]?.message ?? "参数错误");
+      return;
+    }
+    try {
+      ctx.body = Result.success(
+        await taskService.addComment(taskId, userId, parsed.data),
+        "评论发布成功"
+      );
+    } catch (e: any) {
+      ctx.status = e.status ?? 500;
+      ctx.body = Result.error(e.message ?? "操作失败", e.status ?? 500);
+    }
+  }
+
   async submitTest(ctx: Context) {
     const taskId = Number(ctx.params.id);
     const userId = currentUserId(ctx);
@@ -285,19 +305,6 @@ class TaskController {
     }
   }
 
-  async reopenTask(ctx: Context) {
-    const taskId = Number(ctx.params.id);
-    const userId = currentUserId(ctx);
-    try {
-      ctx.body = Result.success(
-        await taskService.reopenTask(taskId, userId),
-        "任务已重新打开并进入开发状态"
-      );
-    } catch (e: any) {
-      ctx.status = e.status ?? 500;
-      ctx.body = Result.error(e.message ?? "操作失败", e.status ?? 500);
-    }
-  }
 }
 
 export const taskController = new TaskController();

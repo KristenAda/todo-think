@@ -296,8 +296,8 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    width: 28px;
-    height: 28px;
+    width: 32px;
+    height: 32px;
     border-radius: 8px;
     background: color-mix(in srgb, var(--main-color) 12%, transparent);
     color: var(--main-color);

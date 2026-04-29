@@ -39,6 +39,10 @@ router.post(
   taskController.addWorkLog.bind(taskController)
 );
 router.post(
+  "/tasks/:id/comments",
+  taskController.addComment.bind(taskController)
+);
+router.post(
   "/tasks/:id/submit-test",
   taskController.submitTest.bind(taskController)
 );
@@ -46,7 +50,6 @@ router.post("/tasks/:id/qa-audit", taskController.qaAudit.bind(taskController));
 // 暂停 / 恢复 / 重新打开（路径须与其它 /tasks/:id/* 一致，否则前端请求 /tasks/:id/pause 无法命中）
 router.post("/tasks/:id/pause", taskController.pauseTask.bind(taskController));
 router.post("/tasks/:id/resume", taskController.resumeTask.bind(taskController));
-router.post("/tasks/:id/reopen", taskController.reopenTask.bind(taskController));
 
 // ======================== Performance Routes ========================
 router.get(

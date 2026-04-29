@@ -70,6 +70,7 @@
         <!-- Logo、系统名称 -->
         <div
           class="header"
+          :class="{ 'header-modern-minimal': isModernMinimalTheme }"
           @click="navigateToHome"
           :style="{
             background: getMenuTheme.background
@@ -79,12 +80,19 @@
 
           <div
             class="header-system-name"
-            :class="{ 'is-dual-menu-name': isDualMenu }"
+            :class="{
+              'is-dual-menu-name': isDualMenu,
+              'has-subtitle': isModernMinimalTheme
+            }"
             :style="{
               opacity: !menuOpen ? 0 : 1
             }"
           >
-            <ArtSystemName size="md" />
+            <template v-if="isModernMinimalTheme">
+              <span class="header-system-name__title">{{ systemName }}</span>
+              <span class="header-system-name__subtitle">{{ systemDescription }}</span>
+            </template>
+            <ArtSystemName v-else size="md" />
           </div>
         </div>
 
@@ -139,6 +147,8 @@
   import SidebarSubmenu from './widget/SidebarSubmenu.vue';
   import { useCommon } from '@/hooks/core/useCommon';
   import { useWindowSize, useTimeoutFn } from '@vueuse/core';
+  import { MenuThemeEnum } from '@/enums/appEnum';
+  import AppConfig from '@/config';
 
   defineOptions({ name: 'ArtSidebarMenu' });
 
@@ -218,6 +228,11 @@
       transition: 'transform 0.3s ease'
     };
   });
+  const isModernMinimalTheme = computed(() => getMenuTheme.value.theme === MenuThemeEnum.MODERN_MINIMAL);
+  const systemName = computed(() => AppConfig.systemInfo.name);
+  const systemDescription = computed(
+    () => AppConfig.systemInfo.description || 'Task Delivery Workspace'
+  );
 
   /**
    * 延迟隐藏移动端模态框（使用 VueUse 的 useTimeoutFn）

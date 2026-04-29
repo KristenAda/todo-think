@@ -100,17 +100,17 @@
   const PREVIEW_DIALOG_Z_INDEX = 50000;
 
   // 使用各包 lib/v3/*.mjs（Vue3 ESM），避免走 lib/index.js 的 UMD 经 esbuild 预构建后与 Vue 运行时搅在一起导致 isFunction 未初始化
-  const VueOfficePdf = defineAsyncComponent(() =>
-    import('@vue-office/pdf/lib/v3/vue-office-pdf.mjs')
+  const VueOfficePdf = defineAsyncComponent(
+    () => import('@vue-office/pdf/lib/v3/vue-office-pdf.mjs')
   );
-  const VueOfficeDocx = defineAsyncComponent(() =>
-    import('@vue-office/docx/lib/v3/vue-office-docx.mjs')
+  const VueOfficeDocx = defineAsyncComponent(
+    () => import('@vue-office/docx/lib/v3/vue-office-docx.mjs')
   );
-  const VueOfficeExcel = defineAsyncComponent(() =>
-    import('@vue-office/excel/lib/v3/vue-office-excel.mjs')
+  const VueOfficeExcel = defineAsyncComponent(
+    () => import('@vue-office/excel/lib/v3/vue-office-excel.mjs')
   );
-  const VueOfficePptx = defineAsyncComponent(() =>
-    import('@vue-office/pptx/lib/v3/vue-office-pptx.mjs')
+  const VueOfficePptx = defineAsyncComponent(
+    () => import('@vue-office/pptx/lib/v3/vue-office-pptx.mjs')
   );
 
   const props = defineProps<{
@@ -132,9 +132,7 @@
 
   /** 最大化/还原后递增，强制 vue-office 按新容器尺寸重新挂载 */
   const officeLayoutEpoch = ref(0);
-  const officeViewerKey = computed(
-    () => `${viewerKey.value}-layout-${officeLayoutEpoch.value}`
-  );
+  const officeViewerKey = computed(() => `${viewerKey.value}-layout-${officeLayoutEpoch.value}`);
 
   const isOfficePreview = computed(() =>
     ['pdf', 'docx', 'excel', 'pptx'].includes(previewKind.value ?? '')

@@ -34,6 +34,8 @@ model User {
   testerTasks       Task[]           @relation("TaskTester")
   coAssigneeTasks   TaskCoAssignee[] @relation("TaskCoAssignee")
   workLogs          WorkLog[]        @relation("WorkLogUser")
+  taskComments      TaskComment[]    @relation("TaskCommentUser")
+  taskTimelineOps   TaskTimeline[]   @relation("TaskTimelineOperator")
 
   attachments    Attachment[]    @relation("AttachmentUploader")
   uploadSessions UploadSession[] @relation("UploadSessionUser")
