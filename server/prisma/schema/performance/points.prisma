@@ -1,0 +1,46 @@
+model PointsAccount {
+  id        BigInt   @id @default(autoincrement())
+  ownerType String   @db.VarChar(20) // USER/TEAM/ROLE
+  ownerId   Int
+  status    String   @default("ACTIVE") @db.VarChar(20)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  entries PointsLedgerEntry[]
+
+  @@unique([ownerType, ownerId])
+  @@map("points_account")
+}
+
+model PointsLedgerEntry {
+  id              BigInt   @id @default(autoincrement())
+  accountId       BigInt
+
+  bizType         String   @db.VarChar(30) // task_settlement/adjustment/reversal/manual
+  bizId           String   @db.VarChar(64) // settlementId
+
+  projectId       Int?
+  taskId          Int?
+
+  ruleSetVersionId Int?
+  pointsType      String   @db.VarChar(40) // timeliness/quality/bonus/...
+  amount          Int // 积分分录，可正可负
+
+  occurredAt      DateTime // 业务发生时间（验收通过时间/冲正发生时间）
+  createdAt       DateTime @default(now())
+
+  idempotencyKey  String   @unique @db.VarChar(128)
+
+  explain         Json?
+
+  account         PointsAccount @relation(fields: [accountId], references: [id], onDelete: Restrict)
+  ruleSetVersion  RuleSetVersion? @relation(fields: [ruleSetVersionId], references: [id], onDelete: SetNull)
+  perfItems       PerfItem[]
+
+  @@index([bizType, bizId])
+  @@index([projectId, occurredAt])
+  @@index([taskId])
+  @@map("points_ledger_entry")
+}
+

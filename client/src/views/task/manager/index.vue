@@ -300,6 +300,13 @@
           formatter: (row) => (row.estimatedHours != null ? `${row.estimatedHours}h` : '-')
         },
         {
+          prop: 'baseScore',
+          label: '基础积分',
+          width: 95,
+          align: 'center',
+          formatter: (row) => (row.baseScore != null ? String(row.baseScore) : '-')
+        },
+        {
           prop: 'operation',
           label: '操作',
           width: 100,
@@ -535,7 +542,7 @@
       text-overflow: ellipsis;
       white-space: nowrap;
       font-size: 12px;
-      font-weight: 600;
+      font-weight: 500;
       line-height: 1;
       color: var(--el-text-color-primary);
     }

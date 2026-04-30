@@ -15,10 +15,48 @@ import {
   PerformancePageDtoType,
   ProjectTaskRuleDtoType,
 } from "./task.dto";
+import logger from "@/core/logger";
+import {
+  createFirstSettlementForAcceptedTask,
+  createReversalSettlement,
+} from "@/modules/performance/settlement.service";
 
 /** 仅软件开发类任务启用测试用例与提测/验收流程 */
 function taskSupportsTestCases(workDomain: string): boolean {
   return workDomain === "SOFTWARE_DEVELOPMENT";
+}
+
+function calcSuggestedBaseScore(input: {
+  type?: string;
+  priority?: string;
+  estimatedHours?: number | null;
+  workDomain?: string;
+}): number {
+  const typeBase: Record<string, number> = {
+    FEATURE: 12,
+    BUG: 10,
+    ENHANCEMENT: 8,
+    CHORE: 6,
+  };
+  const priorityFactor: Record<string, number> = {
+    P0: 1.6,
+    P1: 1.3,
+    P2: 1.0,
+    P3: 0.8,
+  };
+  const domainFactor: Record<string, number> = {
+    SOFTWARE_DEVELOPMENT: 1.0,
+    PRODUCT_DESIGN: 0.9,
+    OPERATIONS_SUPPORT: 0.8,
+    DATA_ANALYTICS: 0.95,
+    GENERAL: 0.85,
+  };
+  const base = typeBase[input.type ?? "FEATURE"] ?? 10;
+  const p = priorityFactor[input.priority ?? "P2"] ?? 1;
+  const d = domainFactor[input.workDomain ?? "GENERAL"] ?? 1;
+  const hourPart = Math.min(12, Math.max(0, Number(input.estimatedHours ?? 0))) * 0.8;
+  const score = (base + hourPart) * p * d;
+  return Number(score.toFixed(1));
 }
 
 // 用户基础信息 select
@@ -655,12 +693,27 @@ class TaskService {
       // Prisma MySQL 驱动不接受 undefined，必须显式控制每个字段
       const createData: any = {
         title: taskData.title,
-        status: "PENDING",
+        // 创建时若已指定主负责人，直接进入开发中，避免“已指派但仍待分配”的语义冲突
+        status: taskData.mainAssigneeId ? "IN_PROGRESS" : "PENDING",
       };
       if (taskData.projectId !== undefined) createData.projectId = taskData.projectId;
       if (taskData.mainAssigneeId !== undefined) createData.mainAssigneeId = taskData.mainAssigneeId;
       if (taskData.testerId !== undefined) createData.testerId = taskData.testerId;
       if (taskData.estimatedHours !== undefined) createData.estimatedHours = taskData.estimatedHours;
+      const suggestedBaseScore = calcSuggestedBaseScore({
+        type: taskData.type,
+        priority: taskData.priority,
+        estimatedHours: taskData.estimatedHours,
+        workDomain: taskData.workDomain,
+      });
+      createData.suggestedBaseScore = suggestedBaseScore;
+      if (taskData.baseScore !== undefined && taskData.baseScore !== null) {
+        createData.baseScore = taskData.baseScore;
+        createData.baseScoreSource = "MANUAL";
+      } else {
+        createData.baseScore = suggestedBaseScore;
+        createData.baseScoreSource = "AUTO";
+      }
       if (mergedOrgId !== undefined) createData.orgId = mergedOrgId;
       if (taskData.parentId !== undefined) createData.parentId = taskData.parentId;
       if (taskData.workDomain !== undefined) createData.workDomain = taskData.workDomain;
@@ -711,9 +764,9 @@ class TaskService {
         taskId: task.id,
         eventType: "TASK_CREATED",
         title: "创建任务",
-        content: `任务已创建${taskData.mainAssigneeId ? "并指定负责人" : ""}`,
+        content: `任务已创建${taskData.mainAssigneeId ? "并指定负责人，进入开发中" : ""}`,
         operatorId: userId,
-        toStatus: "PENDING",
+        toStatus: createData.status,
       });
 
       return tx.task.findUnique({
@@ -792,6 +845,7 @@ class TaskService {
           workDomain: true,
           dueDate: true,
           estimatedHours: true,
+          status: true,
           mainAssigneeId: true,
           testerId: true,
           coAssignees: { select: { userId: true } },
@@ -809,6 +863,11 @@ class TaskService {
         taskData.workDomain !== undefined
           ? taskData.workDomain
           : existing.workDomain;
+      const shouldAutoStartByAssign =
+        taskData.status === undefined &&
+        existing.status === "PENDING" &&
+        taskData.mainAssigneeId !== undefined &&
+        taskData.mainAssigneeId !== null;
 
       // ==================== 项目规则校验（更新时）====================
       const rules = await projectService.taskRulesInfo(existing.projectId, userId);
@@ -826,6 +885,25 @@ class TaskService {
         throw { status: 400, message: "该项目要求任务必须填写截止时间（dueDate），请补全后再更新。" };
       }
 
+      const nextType = taskData.type !== undefined ? taskData.type : (existing as any).type;
+      const nextPriority =
+        taskData.priority !== undefined ? taskData.priority : (existing as any).priority;
+      const nextSuggestedBaseScore = calcSuggestedBaseScore({
+        type: nextType,
+        priority: nextPriority,
+        estimatedHours: nextEstimatedHours,
+        workDomain: nextWorkDomain,
+      });
+
+      const nextBaseScoreSource =
+        taskData.baseScoreSource ?? (taskData.baseScore !== undefined ? "MANUAL" : "AUTO");
+      const nextBaseScore =
+        taskData.baseScore !== undefined
+          ? taskData.baseScore
+          : nextBaseScoreSource === "MANUAL"
+            ? nextSuggestedBaseScore
+            : nextSuggestedBaseScore;
+
       if (
         testCases !== undefined &&
         !taskSupportsTestCases(nextWorkDomain) &&
@@ -837,41 +915,52 @@ class TaskService {
         };
       }
 
+      const updateData: any = {
+        ...(taskData.parentId !== undefined && {
+          parentId: taskData.parentId,
+        }),
+        ...(taskData.workDomain !== undefined && {
+          workDomain: taskData.workDomain,
+        }),
+        ...(taskData.type !== undefined && { type: taskData.type }),
+        ...(taskData.priority !== undefined && {
+          priority: taskData.priority,
+        }),
+        ...(taskData.dueDate !== undefined && {
+          dueDate: taskData.dueDate ? new Date(taskData.dueDate) : null,
+        }),
+        ...(taskData.title !== undefined && { title: taskData.title }),
+        ...(taskData.description !== undefined && {
+          description: taskData.description,
+        }),
+        ...(taskData.mainAssigneeId !== undefined && {
+          mainAssigneeId: taskData.mainAssigneeId,
+        }),
+        ...(taskData.testerId !== undefined && {
+          testerId: taskData.testerId,
+        }),
+        ...(taskData.estimatedHours !== undefined && {
+          estimatedHours: taskData.estimatedHours,
+        }),
+        suggestedBaseScore: nextSuggestedBaseScore,
+        baseScore: nextBaseScore,
+        baseScoreSource:
+          taskData.baseScore !== undefined
+            ? "MANUAL"
+            : nextBaseScoreSource === "MANUAL"
+              ? "MANUAL"
+              : "AUTO",
+        ...(taskData.status !== undefined && { status: taskData.status }),
+        ...(shouldAutoStartByAssign && { status: "IN_PROGRESS" }),
+        version: { increment: 1 },
+      };
+
       const updateResult = await tx.task.updateMany({
         where: {
           id,
           version: version,
         },
-        data: {
-          ...(taskData.parentId !== undefined && {
-            parentId: taskData.parentId,
-          }),
-          ...(taskData.workDomain !== undefined && {
-            workDomain: taskData.workDomain,
-          }),
-          ...(taskData.type !== undefined && { type: taskData.type }),
-          ...(taskData.priority !== undefined && {
-            priority: taskData.priority,
-          }),
-          ...(taskData.dueDate !== undefined && {
-            dueDate: taskData.dueDate ? new Date(taskData.dueDate) : null,
-          }),
-          ...(taskData.title !== undefined && { title: taskData.title }),
-          ...(taskData.description !== undefined && {
-            description: taskData.description,
-          }),
-          ...(taskData.mainAssigneeId !== undefined && {
-            mainAssigneeId: taskData.mainAssigneeId,
-          }),
-          ...(taskData.testerId !== undefined && {
-            testerId: taskData.testerId,
-          }),
-          ...(taskData.estimatedHours !== undefined && {
-            estimatedHours: taskData.estimatedHours,
-          }),
-          ...(taskData.status !== undefined && { status: taskData.status }),
-          version: { increment: 1 },
-        },
+        data: updateData,
       });
 
       if (updateResult.count === 0) {
@@ -884,7 +973,7 @@ class TaskService {
       // ===== 计算“新执行人集合”（用于推送新增/变更，不推送被移除）=====
       const prevMainAssigneeId = existing.mainAssigneeId ?? null;
       const prevTesterId = existing.testerId ?? null;
-      const prevCoIds = new Set<number>((existing.coAssignees ?? []).map((x) => x.userId));
+      const prevCoIds = new Set<number>((existing.coAssignees ?? []).map((x: any) => x.userId));
 
       const nextMainAssigneeId =
         taskData.mainAssigneeId !== undefined ? taskData.mainAssigneeId ?? null : prevMainAssigneeId;
@@ -1517,7 +1606,7 @@ class TaskService {
       ? dto.testCaseResults.some((r) => r.qaStatus === "FAILED")
       : dto.decision === "reject";
 
-    return prisma.$transaction(async (tx) => {
+    const updated = await prisma.$transaction(async (tx) => {
       if (supportsTestCases) {
         for (const r of dto.testCaseResults) {
           await tx.testCase.update({
@@ -1605,12 +1694,14 @@ class TaskService {
         if (!dto.actualHours) {
           throw { status: 400, message: "验收通过时必须填写实际工时" };
         }
+        const acceptedAt = new Date();
         const updated = await tx.task.update({
           where: { id: taskId },
           data: {
             status: "COMPLETED",
             actualHours: dto.actualHours,
             qaRejectReason: null,
+            acceptedAt,
           } as any,
         });
         await appendTaskTimeline(tx, {
@@ -1655,6 +1746,17 @@ class TaskService {
         return updated;
       }
     });
+
+    // 验收通过才结算：异步创建结算（失败不影响验收通过主流程）
+    if (!hasFailure) {
+      try {
+        await createFirstSettlementForAcceptedTask(taskId);
+      } catch (e: any) {
+        logger.error(`[perf] create settlement failed taskId=${taskId}: ${e?.message ?? e}`);
+      }
+    }
+
+    return updated;
   }
 
   // ==================== 以下为新增的状态流转(逆向)业务 ====================
@@ -1780,6 +1882,79 @@ class TaskService {
     return updated;
   }
 
+  // 重新打开任务（COMPLETED -> IN_PROGRESS），并冲正上一笔结算
+  async reopenTask(taskId: number, userId: number) {
+    await projectService.assertUserCanAccessTask(userId, taskId);
+
+    const task = await prisma.task.findUnique({
+      where: { id: taskId },
+      include: { coAssignees: true, project: { select: { managerId: true } } },
+    });
+    if (!task) throw { status: 404, message: "任务不存在" };
+
+    const isMainAssignee = task.mainAssigneeId === userId;
+    const isCoAssignee = task.coAssignees.some((ca) => ca.userId === userId);
+    const isProjectManager = task.project?.managerId === userId;
+    if (!isMainAssignee && !isCoAssignee && !isProjectManager) {
+      throw { status: 403, message: "无权限：仅任务负责人或项目负责人可重新打开任务" };
+    }
+
+    if (task.status !== "COMPLETED") {
+      throw { status: 400, message: `当前状态（${task.status}）无法重新打开` };
+    }
+
+    const reopenedAt = new Date();
+    const updated = await prisma.task.update({
+      where: { id: taskId },
+      data: {
+        status: "IN_PROGRESS",
+        acceptedAt: null,
+        version: { increment: 1 },
+      } as any,
+    });
+    await appendTaskTimeline(prisma, {
+      taskId,
+      eventType: "STATUS_CHANGED",
+      title: "重新打开任务",
+      operatorId: userId,
+      fromStatus: "COMPLETED",
+      toStatus: "IN_PROGRESS",
+    });
+
+    // 冲正上一笔（异步；失败不阻断主流程）
+    try {
+      await createReversalSettlement(taskId, reopenedAt);
+    } catch (e: any) {
+      logger.error(`[perf] create reversal failed taskId=${taskId}: ${e?.message ?? e}`);
+    }
+
+    // ===== 站内消息推送：重新打开（推给主负责人/协助人/验收人；排除操作者）=====
+    try {
+      const receiverIds = new Set<number>();
+      if (task.mainAssigneeId) receiverIds.add(task.mainAssigneeId);
+      if (task.testerId) receiverIds.add(task.testerId);
+      for (const ca of task.coAssignees ?? []) receiverIds.add(ca.userId);
+      receiverIds.delete(userId);
+
+      await Promise.allSettled(
+        Array.from(receiverIds).map((receiverId) =>
+          messageService.sendRealTimeMessage(
+            {
+              receiverId,
+              messageType: "TASK",
+              title: "任务已重新打开",
+              content: `任务「${task.title}」已被重新打开。`,
+              extra: { biz: "task", action: "reopened", taskId, projectId: task.projectId },
+            },
+            userId,
+          ),
+        ),
+      );
+    } catch {}
+
+    return updated;
+  }
+
 }
 
 export const taskService = new TaskService();
@@ -1789,13 +1964,26 @@ export const taskService = new TaskService();
 // =====================================================================
 
 class PerformanceService {
+  async myTotalPoints(userId: number) {
+    const account = await prisma.pointsAccount.findUnique({
+      where: { ownerType_ownerId: { ownerType: "USER", ownerId: userId } },
+      select: { id: true },
+    });
+    if (!account) return { totalPoints: 0 };
+    const agg = await prisma.pointsLedgerEntry.aggregate({
+      where: { accountId: account.id },
+      _sum: { amount: true },
+    });
+    return { totalPoints: Number(agg._sum.amount ?? 0) };
+  }
+
   async stats(dto: PerformancePageDtoType, userId: number) {
     const orgIds = await projectService.getOrgIdsForUser(userId);
     if (orgIds.length === 0) {
       return { list: [], total: 0 };
     }
 
-    const { page, pageSize, projectId } = dto;
+    const { page, pageSize, projectId, startAt, endAt } = dto;
     const where: any = {
       status: "COMPLETED",
       OR: [
@@ -1814,6 +2002,31 @@ class PerformanceService {
       ],
     };
     if (projectId) where.projectId = projectId;
+    // 账期按业务发生时间：验收通过时间（acceptedAt）；若历史数据缺失则退化为 updatedAt
+    if (startAt || endAt) {
+      where.AND = where.AND ?? [];
+      where.AND.push({
+        OR: [
+          {
+            acceptedAt: {
+              ...(startAt ? { gte: new Date(startAt) } : {}),
+              ...(endAt ? { lte: new Date(endAt) } : {}),
+            },
+          },
+          {
+            AND: [
+              { acceptedAt: null },
+              {
+                updatedAt: {
+                  ...(startAt ? { gte: new Date(startAt) } : {}),
+                  ...(endAt ? { lte: new Date(endAt) } : {}),
+                },
+              },
+            ],
+          },
+        ],
+      });
+    }
 
     const completedTasks = await prisma.task.findMany({
       where,
@@ -1867,18 +2080,77 @@ class PerformanceService {
       if (bugCount === 0) stat.firstPassCount += 1;
     }
 
+    // 新增：积分统计（按 occurredAt 账期聚合）
+    const pointsWhere: any = {
+      bizType: { in: ["task_settlement", "adjustment", "reversal"] },
+      projectId: projectId ?? undefined,
+    };
+    if (startAt || endAt) {
+      pointsWhere.occurredAt = {
+        ...(startAt ? { gte: new Date(startAt) } : {}),
+        ...(endAt ? { lte: new Date(endAt) } : {}),
+      };
+    }
+
+    const ledger = await prisma.pointsLedgerEntry.findMany({
+      where: pointsWhere,
+      include: { account: true },
+    });
+
+    const pointsByUser = new Map<number, { totalPoints: number; byType: Record<string, number> }>();
+    for (const e of ledger) {
+      if (e.account?.ownerType !== "USER") continue;
+      const uid = e.account.ownerId;
+      if (!pointsByUser.has(uid)) pointsByUser.set(uid, { totalPoints: 0, byType: {} });
+      const p = pointsByUser.get(uid)!;
+      p.totalPoints += e.amount;
+      p.byType[e.pointsType] = (p.byType[e.pointsType] ?? 0) + e.amount;
+    }
+
     const allStats = Array.from(map.values()).map((s) => ({
       ...s,
       firstPassRate:
         s.totalTasks > 0
           ? Math.round((s.firstPassCount / s.totalTasks) * 100)
           : 0,
+      totalPoints: pointsByUser.get(s.user.id)?.totalPoints ?? 0,
+      pointsByType: pointsByUser.get(s.user.id)?.byType ?? {},
     }));
 
     const total = allStats.length;
     const skip = (page - 1) * pageSize;
     const list = allStats.slice(skip, skip + pageSize);
     return { list, total };
+  }
+
+  async reconcileTask(taskId: number, userId: number) {
+    await projectService.assertUserCanAccessTask(userId, taskId);
+
+    const settlements = await prisma.perfSettlement.findMany({
+      where: { taskId },
+      orderBy: [{ occurredAt: "asc" }, { createdAt: "asc" }],
+      include: {
+        items: true,
+      },
+    });
+
+    const settlementIds = settlements.map((s) => s.id.toString());
+    const ledgers = await prisma.pointsLedgerEntry.findMany({
+      where: {
+        taskId,
+        bizId: { in: settlementIds.length ? settlementIds : ["-1"] },
+      },
+      include: {
+        account: true,
+      },
+      orderBy: { createdAt: "asc" },
+    });
+
+    return {
+      taskId,
+      settlements,
+      ledgers,
+    };
   }
 }
 

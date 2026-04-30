@@ -181,7 +181,7 @@
     }>(),
     {
       disabled: false,
-      triggerText: '选择文件（可选，可多选）',
+      triggerText: '选择文件（支持多选）',
       hint: ''
     }
   );

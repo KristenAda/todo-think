@@ -83,6 +83,17 @@ export const systemRoutes: AppRouteRecord = {
       }
     },
     {
+      path: 'performance-rules',
+      name: 'PerformanceRules',
+      component: '/performance/rules/index',
+      meta: {
+        title: '规则管理',
+        icon: 'mdi:calculator-variant-outline',
+        keepAlive: true,
+        roles: ['admin', 'R_SUPER', 'R_ADMIN']
+      }
+    },
+    {
       path: 'nested',
       name: 'Nested',
       component: '',

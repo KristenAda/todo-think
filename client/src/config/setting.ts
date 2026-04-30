@@ -36,11 +36,11 @@ export const SETTING_DEFAULT_CONFIG = {
   /** 双菜单是否显示文本 */
   dualMenuShowText: false,
   /** 系统主题类型 */
-  systemThemeType: SystemThemeEnum.AUTO,
+  systemThemeType: SystemThemeEnum.LIGHT,
   /** 系统主题模式 */
-  systemThemeMode: SystemThemeEnum.AUTO,
+  systemThemeMode: SystemThemeEnum.LIGHT,
   /** 菜单风格 */
-  menuThemeType: MenuThemeEnum.DESIGN,
+  menuThemeType: MenuThemeEnum.MODERN_MINIMAL,
   /** 系统主题颜色 */
   systemThemeColor: AppConfig.systemMainColor[0],
   /** 是否显示菜单按钮 */
@@ -78,7 +78,7 @@ export const SETTING_DEFAULT_CONFIG = {
   /** 页面过渡效果 */
   pageTransition: 'slide-left',
   /** 标签页样式 */
-  tabStyle: 'tab-default',
+  tabStyle: 'tab-google',
   /** 自定义圆角 */
   customRadius: '0.75',
   /** 容器宽度 */

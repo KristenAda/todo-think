@@ -55,6 +55,7 @@
             <div class="project-card__name">{{ proj.name }}</div>
             <div class="project-card__status">
               <el-tag
+                class="project-card__status-tag"
                 :color="getStatus(proj.status).bg"
                 :style="{ color: getStatus(proj.status).color, border: 'none' }"
                 size="small"
@@ -67,32 +68,28 @@
               </el-tag>
             </div>
           </div>
-          <div class="project-card__progress-bar">
-            <div
-              class="project-card__progress-fill"
-              :style="{
-                background: getStatus(proj.status).color,
-                width: getStatus(proj.status).progress
-              }"
+          <div class="project-card__progress">
+            <el-progress
+              :percentage="getProgressPercent(proj.status)"
+              :show-text="false"
+              :stroke-width="4"
+              :color="PROJECT_PRIMARY"
             />
           </div>
           <div class="project-card__desc">{{ proj.description || '暂无描述' }}</div>
           <div class="project-card__meta">
             <div class="meta-item">
-              <art-svg-icon icon="mdi:account-tie" class="meta-item__icon" />
-              <el-avatar :size="22" :src="proj.manager.avatar ?? undefined">{{
-                (proj.manager.nickName || proj.manager.userName)?.[0]?.toUpperCase()
-              }}</el-avatar>
+              <art-svg-icon icon="mdi:account-outline" class="meta-item__icon" />
               <span>{{ proj.manager.nickName || proj.manager.userName }}</span>
             </div>
             <div class="meta-item">
-              <art-svg-icon icon="mdi:clipboard-list-outline" class="meta-item__icon" />
+              <art-svg-icon icon="mdi:format-list-bulleted-square" class="meta-item__icon" />
               <span>{{ proj._count.tasks }} 个任务</span>
             </div>
-          </div>
-          <div class="project-card__date" v-if="proj.startDate || proj.endDate">
-            <art-svg-icon icon="mdi:calendar-clock" class="meta-item__icon" />
-            <span>{{ formatDate(proj.startDate) }} ~ {{ formatDate(proj.endDate) }}</span>
+            <div class="meta-item" v-if="proj.startDate || proj.endDate">
+              <art-svg-icon icon="mdi:calendar-clock-outline" class="meta-item__icon" />
+              <span>{{ formatDate(proj.startDate) }} ~ {{ formatDate(proj.endDate) }}</span>
+            </div>
           </div>
           <div
             class="project-card__actions"
@@ -145,6 +142,7 @@
     type ProjectStatus
   } from '@/api/project';
   import ProjectFormDialog from './components/ProjectFormDialog.vue';
+  const PROJECT_PRIMARY = 'var(--theme-color)';
 
   const STATUS_OPTIONS = [
     {
@@ -159,8 +157,8 @@
       value: 'ACTIVE',
       label: '进行中',
       icon: 'mdi:play-circle-outline',
-      color: '#67c23a',
-      bg: '#f0f9eb',
+      color: 'var(--theme-color)',
+      bg: 'rgba(22, 93, 255, 0.12)',
       progress: '60%'
     },
     {
@@ -183,6 +181,10 @@
 
   function getStatus(s: string) {
     return STATUS_OPTIONS.find((o) => o.value === s) ?? STATUS_OPTIONS[0];
+  }
+  function getProgressPercent(status: string) {
+    const raw = getStatus(status).progress;
+    return Number(raw.replace('%', '')) || 0;
   }
   function formatDate(d: string | null) {
     return d ? new Date(d).toLocaleDateString('zh-CN') : '未设置';
@@ -255,7 +257,6 @@
   $card-shadow: 0 2px 12px rgba(0, 0, 0, 0.07);
   $card-shadow-hover: 0 8px 28px rgba(0, 0, 0, 0.14);
   $transition: 0.3s ease;
-
   /* 主容器：固定高度，flex列布局 */
   .project-page {
     padding: 20px;
@@ -264,7 +265,7 @@
     background: var(--art-main-bg-color);
     display: flex;
     flex-direction: column;
-    gap: 20px;
+    gap: 12px;
     overflow: hidden; /* 防止页面整体滚动 */
   }
 
@@ -279,12 +280,24 @@
     background: var(--default-box-color);
     padding: 14px 20px;
     border-radius: $card-radius;
-    box-shadow: $card-shadow;
+    box-shadow: none;
     .toolbar__filters {
       display: flex;
       gap: 10px;
       flex-wrap: wrap;
+      align-items: center;
     }
+
+    .toolbar__filters :deep(.el-input),
+    .toolbar__filters :deep(.el-select) {
+      --el-component-size: 38px;
+    }
+
+    .toolbar__filters :deep(.el-input__wrapper),
+    .toolbar__filters :deep(.el-select__wrapper) {
+      min-height: 38px;
+    }
+
     .toolbar__create-btn {
       display: flex;
       align-items: center;
@@ -325,17 +338,18 @@
   .project-grid {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
-    gap: 20px;
+    gap: 16px;
   }
 
   .project-card {
     background: var(--default-box-color);
     border-radius: $card-radius;
-    box-shadow: $card-shadow;
+    border: 1px solid var(--el-border-color-lighter);
+    box-shadow: 0 4px 14px rgba(15, 23, 42, 0.08);
     padding: 20px;
     display: flex;
     flex-direction: column;
-    gap: 12px;
+    gap: 10px;
     cursor: default;
     transition:
       transform $transition,
@@ -343,68 +357,72 @@
     position: relative;
     overflow: hidden;
     &:hover {
-      transform: translateY(-5px);
-      box-shadow: $card-shadow-hover;
+      transform: translateY(-3px);
+      box-shadow: 0 10px 22px rgba(15, 23, 42, 0.12);
     }
     &--skeleton {
       min-height: 200px;
     }
+    &__progress {
+      margin: 4px 0 10px;
+
+      :deep(.el-progress-bar__outer) {
+        border-radius: 999px;
+        background-color: rgba(15, 23, 42, 0.06);
+      }
+
+      :deep(.el-progress-bar__inner) {
+        border-radius: 999px;
+      }
+    }
+
     &__header {
       display: flex;
-      align-items: flex-start;
+      align-items: center;
       justify-content: space-between;
-      gap: 8px;
+      gap: 10px;
     }
     &__name {
       font-size: 16px;
       font-weight: 700;
       color: var(--el-text-color-primary);
       flex: 1;
+      line-height: 1.35;
       word-break: break-all;
     }
     &__status {
       flex-shrink: 0;
     }
-    &__progress-bar {
-      height: 3px;
-      background: var(--el-fill-color-light);
-      border-radius: 2px;
-      overflow: hidden;
-    }
-    &__progress-fill {
-      height: 100%;
-      border-radius: 2px;
-      transition: width 0.6s ease;
+    &__status-tag {
+      :deep(.el-tag__content) {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+      }
     }
     &__desc {
       font-size: 13px;
       color: var(--el-text-color-secondary);
-      line-height: 1.6;
+      line-height: 1.55;
       display: -webkit-box;
       -webkit-line-clamp: 2;
       -webkit-box-orient: vertical;
       overflow: hidden;
-      min-height: 42px;
+      min-height: 40px;
     }
     &__meta {
       display: flex;
-      gap: 16px;
-      flex-wrap: wrap;
-    }
-    &__date {
-      display: flex;
       align-items: center;
-      gap: 5px;
-      font-size: 12px;
-      color: var(--el-text-color-placeholder);
+      gap: 14px 18px;
+      flex-wrap: wrap;
     }
     &__actions {
       display: flex;
       gap: 4px;
       justify-content: flex-end;
-      opacity: 0;
+      opacity: 0.78;
       transition: opacity $transition;
-      padding-top: 4px;
+      padding-top: 6px;
       border-top: 1px solid var(--art-card-border);
       &--visible {
         opacity: 1;
@@ -416,14 +434,12 @@
     display: flex;
     align-items: center;
     gap: 5px;
-    font-size: 13px;
-    color: var(--el-text-color-regular);
+    font-size: 12px;
+    line-height: 1.4;
+    color: var(--el-text-color-secondary);
     &__icon {
-      color: var(--el-color-primary);
+      color: var(--el-text-color-secondary);
       font-size: 15px;
-      flex-shrink: 0;
-    }
-    &__avatar {
       flex-shrink: 0;
     }
   }
@@ -450,10 +466,10 @@
     flex-shrink: 0;
     display: flex;
     justify-content: center;
-    background: var(--default-box-color);
-    padding: 14px 20px;
-    border-radius: $card-radius;
-    box-shadow: $card-shadow;
+    background: transparent;
+    padding: 4px 0 2px;
+    border-radius: 0;
+    box-shadow: none;
 
     :deep(.el-select) {
       width: 102px !important;
@@ -462,8 +478,9 @@
     :deep(.el-pagination) {
       .btn-prev,
       .btn-next {
-        background-color: transparent;
-        border: 1px solid var(--art-gray-300);
+        color: var(--el-text-color-regular);
+        background-color: var(--default-box-color);
+        border: 1px solid var(--el-border-color);
         transition: border-color 0.15s;
 
         &:hover:not(.is-disabled) {
@@ -475,8 +492,9 @@
       li {
         box-sizing: border-box;
         font-weight: 400 !important;
-        background-color: transparent;
-        border: 1px solid var(--art-gray-300);
+        color: var(--el-text-color-regular);
+        background-color: var(--default-box-color);
+        border: 1px solid var(--el-border-color);
         transition: border-color 0.15s;
 
         &.is-active {

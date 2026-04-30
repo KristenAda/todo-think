@@ -44,7 +44,8 @@
     menuTheme: {
       design: 'MenuThemeEnum.DESIGN',
       light: 'MenuThemeEnum.LIGHT',
-      dark: 'MenuThemeEnum.DARK'
+      dark: 'MenuThemeEnum.DARK',
+      'modern-minimal': 'MenuThemeEnum.MODERN_MINIMAL'
     },
     containerWidth: {
       '100%': 'ContainerWidthEnum.FULL',

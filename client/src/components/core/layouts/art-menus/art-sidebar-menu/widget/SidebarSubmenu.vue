@@ -100,7 +100,13 @@
   const props = withDefaults(defineProps<Props>(), {
     title: '',
     list: () => [],
-    theme: () => ({}),
+    theme: () => ({
+      theme: MenuThemeEnum.LIGHT,
+      background: '',
+      systemNameColor: '',
+      textColor: '',
+      iconColor: ''
+    }),
     isMobile: false,
     level: 0
   });

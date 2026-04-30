@@ -58,11 +58,20 @@ router.post("/tasks/:id/qa-audit", taskController.qaAudit.bind(taskController));
 // 暂停 / 恢复 / 重新打开（路径须与其它 /tasks/:id/* 一致，否则前端请求 /tasks/:id/pause 无法命中）
 router.post("/tasks/:id/pause", taskController.pauseTask.bind(taskController));
 router.post("/tasks/:id/resume", taskController.resumeTask.bind(taskController));
+router.post("/tasks/:id/reopen", taskController.reopenTask.bind(taskController));
 
 // ======================== Performance Routes ========================
 router.get(
   "/performance/stats",
   performanceController.stats.bind(performanceController)
+);
+router.get(
+  "/performance/my-total-points",
+  performanceController.myTotalPoints.bind(performanceController)
+);
+router.get(
+  "/performance/reconcile/:id",
+  performanceController.reconcileTask.bind(performanceController)
 );
 
 export default router;

@@ -19,6 +19,16 @@
         >
           <el-option v-for="p in projectList" :key="p.id" :label="p.name" :value="p.id" />
         </el-select>
+        <el-date-picker
+          v-model="periodRange"
+          type="daterange"
+          value-format="YYYY-MM-DDTHH:mm:ssZ"
+          range-separator="至"
+          start-placeholder="账期开始"
+          end-placeholder="账期结束"
+          style="width: 300px"
+          @change="onPeriodChange"
+        />
         <el-button :loading="loading" @click="refreshData">刷新</el-button>
       </div>
     </div>
@@ -53,6 +63,15 @@
         </div>
       </div>
       <div class="s-card">
+        <div class="s-icon" style="background: #eef9ff">
+          <art-svg-icon icon="mdi:star-circle" style="color: #2f88ff; font-size: 26px" />
+        </div>
+        <div class="s-info">
+          <div class="s-val">{{ totalPoints }}</div>
+          <div class="s-label">总积分</div>
+        </div>
+      </div>
+      <div class="s-card">
         <div class="s-icon" style="background: #fef0f0">
           <art-svg-icon icon="mdi:bug" style="color: #f56c6c; font-size: 26px" />
         </div>
@@ -62,6 +81,18 @@
         </div>
       </div>
     </div>
+
+    <el-card shadow="never" class="points-type-card">
+      <template #header>
+        <div class="points-type-title">积分科目分布（当前筛选范围）</div>
+      </template>
+      <div class="points-type-wrap">
+        <el-tag v-for="item in pointsTypeStats" :key="item.type" size="large">
+          {{ item.type }}：{{ item.value }}
+        </el-tag>
+        <span v-if="!pointsTypeStats.length" class="points-empty">暂无积分数据</span>
+      </div>
+    </el-card>
 
     <!-- 图表区 -->
     <div class="charts-row">
@@ -115,6 +146,7 @@
   type SimpleUser = Api.Task.SimpleUser;
 
   const filterProjectId = ref<number | undefined>(undefined);
+  const periodRange = ref<[string, string] | null>(null);
   const projectList = ref<Api.Task.SimpleProject[]>([]);
   const hoursChartRef = ref<HTMLElement | null>(null);
   const bugChartRef = ref<HTMLElement | null>(null);
@@ -129,6 +161,17 @@
     allStats.value.reduce((s, r) => s + r.totalActualHours, 0).toFixed(1)
   );
   const totalBugs = computed(() => allStats.value.reduce((s, r) => s + r.totalBugCount, 0));
+  const totalPoints = computed(() => allStats.value.reduce((s, r) => s + (r.totalPoints ?? 0), 0));
+  const pointsTypeStats = computed(() => {
+    const merged: Record<string, number> = {};
+    for (const row of allStats.value) {
+      const byType = row.pointsByType ?? {};
+      for (const [k, v] of Object.entries(byType)) merged[k] = (merged[k] ?? 0) + Number(v ?? 0);
+    }
+    return Object.entries(merged)
+      .map(([type, value]) => ({ type, value }))
+      .sort((a, b) => b.value - a.value);
+  });
 
   function initials(u: SimpleUser) {
     return (u.nickName || u.userName)?.[0]?.toUpperCase() ?? '?';
@@ -256,6 +299,14 @@
             })
         },
         {
+          prop: 'totalPoints',
+          label: '总积分',
+          width: 120,
+          align: 'center',
+          sortable: true,
+          formatter: (row: PerformanceStat) => row.totalPoints ?? 0
+        },
+        {
           prop: 'grade',
           label: '综合评级',
           width: 100,
@@ -278,7 +329,9 @@
     const result = await fetchPerformanceStats({
       page: 1,
       pageSize: 1000,
-      projectId: filterProjectId.value
+      projectId: filterProjectId.value,
+      startAt: periodRange.value?.[0],
+      endAt: periodRange.value?.[1]
     });
     allStats.value = result.list;
     await nextTick();
@@ -293,6 +346,15 @@
   /** 切换项目时同步搜索参数并重新加载 */
   async function onProjectChange() {
     (searchParams as Record<string, unknown>).projectId = filterProjectId.value;
+    (searchParams as Record<string, unknown>).startAt = periodRange.value?.[0];
+    (searchParams as Record<string, unknown>).endAt = periodRange.value?.[1];
+    await Promise.all([refreshData(), loadAllStats()]);
+  }
+
+  async function onPeriodChange() {
+    (searchParams as Record<string, unknown>).projectId = filterProjectId.value;
+    (searchParams as Record<string, unknown>).startAt = periodRange.value?.[0];
+    (searchParams as Record<string, unknown>).endAt = periodRange.value?.[1];
     await Promise.all([refreshData(), loadAllStats()]);
   }
 
@@ -383,6 +445,8 @@
   onMounted(() => {
     loadProjects();
     (searchParams as Record<string, unknown>).projectId = filterProjectId.value;
+    (searchParams as Record<string, unknown>).startAt = periodRange.value?.[0];
+    (searchParams as Record<string, unknown>).endAt = periodRange.value?.[1];
     Promise.all([getData(), loadAllStats()]);
     window.addEventListener('resize', handleResize);
   });
@@ -437,8 +501,28 @@
 
   .summary-cards {
     display: grid;
-    grid-template-columns: repeat(4, 1fr);
+    grid-template-columns: repeat(5, 1fr);
     gap: 16px;
+  }
+
+  .points-type-card {
+    :deep(.el-card__body) {
+      padding-top: 12px;
+    }
+  }
+
+  .points-type-title {
+    font-weight: 600;
+  }
+
+  .points-type-wrap {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .points-empty {
+    color: var(--el-text-color-secondary);
   }
 
   .s-card {

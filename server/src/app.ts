@@ -18,6 +18,7 @@ import logger from "./core/logger";
 import prisma from "./core/prisma";
 import { bindUserSocket, unbindUserSocket } from "./core/wsHub";
 import { startOverdueReminderJob } from "./modules/task/overdueReminder.job";
+import { startPerformanceSettlementJob } from "./modules/performance/settlement.job";
 
 const app = new Koa();
 
@@ -124,3 +125,5 @@ start();
 
 // 在服务启动后初始化逾期提醒 Job（幂等由 TaskTimeline 控制）
 startOverdueReminderJob();
+// 在服务启动后初始化绩效/积分结算 Job
+startPerformanceSettlementJob();

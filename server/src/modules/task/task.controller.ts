@@ -326,6 +326,20 @@ class TaskController {
     }
   }
 
+  async reopenTask(ctx: Context) {
+    const taskId = Number(ctx.params.id);
+    const userId = currentUserId(ctx);
+    try {
+      ctx.body = Result.success(
+        await taskService.reopenTask(taskId, userId),
+        "任务已重新打开",
+      );
+    } catch (e: any) {
+      ctx.status = e.status ?? 500;
+      ctx.body = Result.error(e.message ?? "操作失败", e.status ?? 500);
+    }
+  }
+
 }
 
 export const taskController = new TaskController();
@@ -333,6 +347,11 @@ export const taskController = new TaskController();
 // ======================== Performance Controller ========================
 
 class PerformanceController {
+  async myTotalPoints(ctx: Context) {
+    const data = await performanceService.myTotalPoints(currentUserId(ctx));
+    ctx.body = Result.success(data);
+  }
+
   async stats(ctx: Context) {
     const parsed = PerformancePageDto.safeParse(ctx.query);
     if (!parsed.success) {
@@ -344,6 +363,21 @@ class PerformanceController {
       currentUserId(ctx),
     );
     ctx.body = Result.page(list, total, parsed.data.page, parsed.data.pageSize);
+  }
+
+  async reconcileTask(ctx: Context) {
+    const taskId = Number(ctx.params.id);
+    if (!taskId) {
+      ctx.body = Result.error("taskId 参数错误");
+      return;
+    }
+    try {
+      const data = await performanceService.reconcileTask(taskId, currentUserId(ctx));
+      ctx.body = Result.success(data);
+    } catch (e: any) {
+      ctx.status = e.status ?? 500;
+      ctx.body = Result.error(e.message ?? "操作失败", e.status ?? 500);
+    }
   }
 }
 

@@ -43,6 +43,12 @@
                 }}</span>
               </div>
               <div class="task-basic-item">
+                <span class="task-basic-item__label">基础积分</span>
+                <span class="task-basic-item__value">{{
+                  task.baseScore != null ? String(task.baseScore) : '—'
+                }}</span>
+              </div>
+              <div class="task-basic-item">
                 <span class="task-basic-item__label">实际工时</span>
                 <span class="task-basic-item__value">{{
                   displayActualHours != null ? displayActualHours + 'h' : '—'
@@ -63,7 +69,18 @@
                     initials(member.user)
                   }}</el-avatar>
                   <span class="task-mgr-assignee__name">{{ userDisplayName(member.user) }}</span>
-                  <span class="task-mgr-assignee__role">{{ member.roleLabel }}</span>
+                </div>
+              </div>
+              <span v-else class="task-basic-members__empty">未分配</span>
+            </div>
+            <div class="task-basic-members">
+              <div class="task-basic-members__label">验收人</div>
+              <div v-if="testerTag" class="task-mgr-assignees">
+                <div class="task-mgr-assignee task-mgr-assignee--qa">
+                  <el-avatar :size="22" :src="testerTag.user.avatar ?? undefined">{{
+                    initials(testerTag.user)
+                  }}</el-avatar>
+                  <span class="task-mgr-assignee__name">{{ userDisplayName(testerTag.user) }}</span>
                 </div>
               </div>
               <span v-else class="task-basic-members__empty">未分配</span>
@@ -80,7 +97,7 @@
               </div>
               <div class="task-basic-reject__value">{{ task.qaRejectReason }}</div>
             </div>
-            <div v-if="task.attachments?.length" class="section">
+            <div v-if="task.attachments?.length" class="section section--task-attachments">
               <div class="section-title">
                 <art-svg-icon icon="mdi:paperclip" />
                 <span>任务附件</span>
@@ -231,7 +248,7 @@
             </div>
           </div>
 
-          <div class="task-pane task-pane--bottom">
+          <div class="task-pane--bottom">
             <div class="section section--worklog">
               <div class="section-title">
                 <art-svg-icon icon="mdi:clock-outline" />
@@ -335,10 +352,25 @@
                     </div>
                     <div class="comment-item__text">{{ c.content }}</div>
                     <div v-if="c.attachments?.length" class="comment-item__attachments">
-                      <div v-for="a in c.attachments" :key="a.id" class="comment-attach-chip">
-                        <span class="comment-attach-chip__name">{{
-                          a.attachment.originalName
-                        }}</span>
+                      <div
+                        v-for="a in c.attachments"
+                        :key="a.id"
+                        class="comment-attach-chip"
+                        :class="
+                          getFileCategoryClass(a.attachment.originalName, a.attachment.mimeType)
+                        "
+                        :style="attachTintStyle(a.attachment)"
+                      >
+                        <span class="comment-attach-chip__icon" aria-hidden="true">
+                          <ArtSvgIcon
+                            :icon="getFileIcon(a.attachment.originalName, a.attachment.mimeType)"
+                          />
+                        </span>
+                        <span
+                          class="comment-attach-chip__name"
+                          :title="a.attachment.originalName"
+                          >{{ a.attachment.originalName }}</span
+                        >
                         <el-button
                           link
                           type="primary"
@@ -663,7 +695,6 @@
   type RoleMemberTag = {
     key: string;
     user: Api.Task.SimpleUser;
-    roleLabel: string;
     className: string;
   };
   const mergedMemberTags = computed<RoleMemberTag[]>(() => {
@@ -674,7 +705,6 @@
       out.push({
         key: `main-${cur.mainAssignee.id}`,
         user: cur.mainAssignee,
-        roleLabel: '主要',
         className: 'task-mgr-assignee--main'
       });
     }
@@ -682,19 +712,19 @@
       out.push({
         key: `co-${ca.user.id}`,
         user: ca.user,
-        roleLabel: '协助',
         className: 'task-mgr-assignee--co'
       });
     }
-    if (cur.tester) {
-      out.push({
-        key: `qa-${cur.tester.id}`,
-        user: cur.tester,
-        roleLabel: '验收',
-        className: 'task-mgr-assignee--qa'
-      });
-    }
     return out;
+  });
+  const testerTag = computed<RoleMemberTag | null>(() => {
+    const cur = task.value;
+    if (!cur?.tester) return null;
+    return {
+      key: `qa-${cur.tester.id}`,
+      user: cur.tester,
+      className: 'task-mgr-assignee--qa'
+    };
   });
 
   const WORK_DOMAIN_LABEL: Record<Api.Task.TaskWorkDomain, string> = {
@@ -1098,7 +1128,6 @@
     overflow: hidden;
   }
   .task-pane--top,
-  .task-pane--bottom,
   .task-detail-layout__right {
     overflow-y: auto;
     padding: 12px 14px;
@@ -1113,8 +1142,10 @@
   .task-pane--bottom {
     display: flex;
     flex-direction: column;
-    gap: 12px;
-    background: color-mix(in srgb, var(--el-fill-color-light) 45%, var(--el-bg-color));
+    gap: 14px;
+    min-height: 0;
+    overflow-y: auto;
+    padding-right: 2px;
   }
   .section {
     .section-title {
@@ -1156,6 +1187,9 @@
     padding: 0;
     background: transparent;
     box-shadow: none;
+  }
+  .section--task-attachments {
+    margin-top: 14px;
   }
 
   .task-basic-grid {
@@ -1302,38 +1336,9 @@
     text-overflow: ellipsis;
     white-space: nowrap;
     font-size: 12px;
-    font-weight: 600;
+    font-weight: 500;
     color: var(--el-text-color-primary);
     line-height: 1;
-  }
-
-  .task-mgr-assignee__role {
-    padding: 2px 6px;
-    border-radius: 999px;
-    font-size: 11px;
-    font-weight: 600;
-    line-height: 1;
-    border: 1px solid transparent;
-    background: var(--el-fill-color-light);
-    color: var(--el-text-color-secondary);
-  }
-
-  .task-mgr-assignee--main .task-mgr-assignee__role {
-    color: var(--el-color-primary);
-    border-color: var(--el-color-primary-light-5);
-    background: var(--el-color-primary-light-8);
-  }
-
-  .task-mgr-assignee--co .task-mgr-assignee__role {
-    color: var(--el-color-success);
-    border-color: var(--el-color-success-light-5);
-    background: var(--el-color-success-light-8);
-  }
-
-  .task-mgr-assignee--qa .task-mgr-assignee__role {
-    color: var(--el-color-warning-dark-2);
-    border-color: var(--el-color-warning-light-5);
-    background: var(--el-color-warning-light-8);
   }
 
   .section--test-cases {
@@ -1546,38 +1551,6 @@
 
       .log-attach-chip {
         --ft-tint: 120, 144, 156;
-        display: flex;
-        flex-wrap: wrap;
-        align-items: center;
-        gap: 6px 8px;
-        padding: 8px 10px;
-        border-radius: 10px;
-        background: rgba(var(--ft-tint), 0.06);
-        border: 1px solid rgba(var(--ft-tint), 0.16);
-
-        &__icon {
-          flex-shrink: 0;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          width: 28px;
-          height: 28px;
-          border-radius: 8px;
-          font-size: 18px;
-          color: rgb(var(--ft-tint));
-          background: rgba(var(--ft-tint), 0.12);
-        }
-
-        &__name {
-          flex: 1;
-          min-width: 0;
-          font-size: 12px;
-          font-weight: 500;
-          overflow: hidden;
-          text-overflow: ellipsis;
-          white-space: nowrap;
-          color: var(--el-text-color-regular);
-        }
       }
     }
   }
@@ -1743,14 +1716,38 @@
     flex-direction: column;
     gap: 6px;
   }
+  .log-attach-chip,
   .comment-attach-chip {
+    --ft-tint: 120, 144, 156;
     display: flex;
-    gap: 8px;
+    flex-wrap: wrap;
     align-items: center;
-    padding: 6px 8px;
-    border-radius: 8px;
-    background: var(--el-fill-color-light);
+    gap: 6px 8px;
+    padding: 6px 9px;
+    border-radius: 10px;
+    background: linear-gradient(
+      120deg,
+      rgba(var(--ft-tint), 0.08) 0%,
+      var(--el-fill-color-blank) 60%
+    );
+    border: 1px solid rgba(var(--ft-tint), 0.18);
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03);
   }
+  .log-attach-chip__icon,
+  .comment-attach-chip__icon {
+    flex-shrink: 0;
+    width: 24px;
+    height: 24px;
+    border-radius: 6px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 15px;
+    color: rgb(var(--ft-tint));
+    background: rgba(var(--ft-tint), 0.13);
+    border: 1px solid rgba(var(--ft-tint), 0.22);
+  }
+  .log-attach-chip__name,
   .comment-attach-chip__name {
     flex: 1;
     min-width: 0;
@@ -1758,6 +1755,8 @@
     text-overflow: ellipsis;
     white-space: nowrap;
     font-size: 12px;
+    font-weight: 500;
+    color: var(--el-text-color-regular);
   }
   .timeline-list {
     display: flex;

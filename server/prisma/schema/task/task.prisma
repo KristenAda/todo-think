@@ -116,10 +116,14 @@ model Task {
   // 工时
   estimatedHours Float? // 预期工时（小时）
   actualHours    Float? // 实际工时（小时）
+  suggestedBaseScore Float? // 系统建议基础积分（由任务信息估算）
+  baseScore Float? // 最终基础积分（用于结算）
+  baseScoreSource String @default("AUTO") @db.VarChar(20) // AUTO / MANUAL
   qaRejectReason String? @db.Text // 最近一次验收打回原因（任务级）
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+  acceptedAt DateTime? // 验收通过时间（业务发生时间；用于绩效账期归属）
 
   // 关联关系
   project Project @relation(fields: [projectId], references: [id])

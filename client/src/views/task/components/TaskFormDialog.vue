@@ -151,6 +151,27 @@
           </el-form-item>
         </el-col>
       </el-row>
+      <el-row :gutter="16">
+        <el-col :span="12">
+          <el-form-item label="基础积分">
+            <el-input-number
+              v-model="form.baseScore"
+              :min="0"
+              :step="0.5"
+              :precision="1"
+              style="width: 100%"
+              @change="() => (form.baseScoreSource = 'MANUAL')"
+            />
+          </el-form-item>
+        </el-col>
+      </el-row>
+      <el-alert
+        type="info"
+        :closable="false"
+        show-icon
+        style="margin: -6px 0 10px"
+        title="基础积分会根据任务信息自动给出建议并填充（不展示建议值）。规则：建议基础积分 = (类型基准 + min(预估工时,12)*0.8) × 优先级系数 × 领域系数；你可在输入框内直接调整。"
+      />
       <el-form-item label="附件">
         <TaskAttachmentField
           ref="taskAttachRef"
@@ -232,12 +253,12 @@
             :key="u.id"
             class="member-pick-card"
             :class="{ 'member-pick-card--active': assigneePickerSelectedIds.includes(u.id) }"
+            @click="onAssigneeCardClick(u.id)"
           >
             <el-checkbox
               class="member-pick-card__check"
               :model-value="assigneePickerSelectedIds.includes(u.id)"
-              @change="(v: string | number | boolean) => onAssigneeToggle(u.id, v === true)"
-              @click.stop
+              @click.stop="onAssigneeCardClick(u.id)"
             />
             <el-avatar :size="48" :src="u.avatar ?? undefined" class="member-pick-card__avatar">
               {{ initials(u) }}
@@ -296,6 +317,7 @@
           <div
             class="member-pick-card member-pick-card--tester"
             :class="{ 'member-pick-card--active': testerPickerTempId === testerNoneSentinel }"
+            @click="onTesterCardClick(testerNoneSentinel)"
           >
             <el-radio class="member-pick-card__radio" :label="testerNoneSentinel" @click.stop />
             <div class="member-pick-card__icon-slot">
@@ -316,6 +338,7 @@
             :key="u.id"
             class="member-pick-card member-pick-card--tester"
             :class="{ 'member-pick-card--active': testerPickerTempId === u.id }"
+            @click="onTesterCardClick(u.id)"
           >
             <el-radio class="member-pick-card__radio" :label="u.id" @click.stop />
             <el-avatar :size="48" :src="u.avatar ?? undefined" class="member-pick-card__avatar">
@@ -448,6 +471,9 @@
     coAssigneeIds: [] as number[],
     testerId: undefined as number | undefined,
     estimatedHours: undefined as number | undefined,
+    suggestedBaseScore: 0 as number,
+    baseScore: undefined as number | undefined,
+    baseScoreSource: 'AUTO' as 'AUTO' | 'MANUAL',
     testCases: [] as {
       id?: number;
       description: string;
@@ -463,14 +489,48 @@
     projectId: [{ required: true, message: '请选择项目', trigger: 'change' }]
   };
 
+  function calcSuggestedBaseScore() {
+    const typeBase: Record<Api.Task.TaskType, number> = {
+      FEATURE: 12,
+      BUG: 10,
+      ENHANCEMENT: 8,
+      CHORE: 6
+    };
+    const priorityFactor: Record<Api.Task.TaskPriority, number> = {
+      P0: 1.6,
+      P1: 1.3,
+      P2: 1,
+      P3: 0.8
+    };
+    const domainFactor: Record<Api.Task.TaskWorkDomain, number> = {
+      SOFTWARE_DEVELOPMENT: 1,
+      PRODUCT_DESIGN: 0.9,
+      OPERATIONS_SUPPORT: 0.8,
+      DATA_ANALYTICS: 0.95,
+      GENERAL: 0.85
+    };
+    const hourPart = Math.min(12, Math.max(0, Number(form.estimatedHours ?? 0))) * 0.8;
+    const score =
+      (typeBase[form.type] + hourPart) * priorityFactor[form.priority] * domainFactor[form.workDomain];
+    form.suggestedBaseScore = Number(score.toFixed(1));
+    if (form.baseScoreSource !== 'MANUAL' || form.baseScore == null) {
+      form.baseScore = form.suggestedBaseScore;
+      form.baseScoreSource = 'AUTO';
+    }
+  }
+
   watch(
     () => form.workDomain,
     (domain) => {
       if (domain !== 'SOFTWARE_DEVELOPMENT') {
         form.testCases = [];
       }
+      calcSuggestedBaseScore();
     }
   );
+  watch(() => form.type, calcSuggestedBaseScore);
+  watch(() => form.priority, calcSuggestedBaseScore);
+  watch(() => form.estimatedHours, calcSuggestedBaseScore);
 
   const testerNoneSentinel = -1;
 
@@ -509,6 +569,11 @@
       }
     }
     assigneePickerSelectedIds.value = [...set];
+  }
+
+  function onAssigneeCardClick(id: number) {
+    const checked = assigneePickerSelectedIds.value.includes(id);
+    onAssigneeToggle(id, !checked);
   }
 
   function openAssigneePicker() {
@@ -572,6 +637,10 @@
     testerPickerVisible.value = false;
   }
 
+  function onTesterCardClick(id: number) {
+    testerPickerTempId.value = id;
+  }
+
   function resetCreateForm() {
     editingId.value = null;
     Object.assign(form, {
@@ -586,8 +655,12 @@
       coAssigneeIds: [],
       testerId: undefined,
       estimatedHours: undefined,
+      suggestedBaseScore: 0,
+      baseScore: undefined,
+      baseScoreSource: 'AUTO',
       testCases: []
     });
+    calcSuggestedBaseScore();
   }
 
   async function hydrateFromEditRow(row: Api.Task.Task) {
@@ -614,6 +687,9 @@
       coAssigneeIds: (detail?.coAssignees ?? row.coAssignees).map((ca) => ca.userId),
       testerId: base.testerId ?? undefined,
       estimatedHours: base.estimatedHours ?? undefined,
+      suggestedBaseScore: base.suggestedBaseScore ?? 0,
+      baseScore: base.baseScore ?? base.suggestedBaseScore ?? undefined,
+      baseScoreSource: base.baseScoreSource ?? 'AUTO',
       testCases:
         wd === 'SOFTWARE_DEVELOPMENT'
           ? (detail?.testCases ?? []).map((tc) => ({
@@ -700,6 +776,8 @@
           coAssigneeIds: form.coAssigneeIds,
           testerId: form.testerId ?? null,
           estimatedHours: form.estimatedHours ?? null,
+          baseScore: form.baseScore ?? null,
+          baseScoreSource: form.baseScoreSource,
           attachmentIds,
           testCases: buildTestCasesForApi(form.testCases)
         });
@@ -724,6 +802,7 @@
           coAssigneeIds: form.coAssigneeIds,
           testerId: form.testerId ?? undefined,
           estimatedHours: form.estimatedHours ?? undefined,
+          baseScore: form.baseScore ?? undefined,
           testCases: buildTestCasesForApi(form.testCases).map((tc) => ({
             description: tc.description,
             expectedResult: tc.expectedResult

@@ -119,16 +119,6 @@
           ></div>
         </ArtIconButton>
 
-        <!-- 聊天按钮 -->
-        <ArtIconButton
-          v-if="shouldShowChat"
-          icon="ri:message-3-line"
-          class="chat-button relative"
-          @click="openChat"
-        >
-          <div class="breathing-dot absolute top-2 right-2 size-1.5 !bg-success rounded-full"></div>
-        </ArtIconButton>
-
         <!-- 设置按钮 -->
         <div v-if="shouldShowSettings">
           <ElPopover :visible="showSettingGuide" placement="bottom-start" :width="190" :offset="0">
@@ -155,8 +145,24 @@
           :icon="isDark ? 'ri:sun-fill' : 'ri:moon-line'"
         />
 
-        <!-- 用户头像、菜单 -->
-        <ArtUserMenu />
+        <!-- 头像 + 积分一体化区域 -->
+        <div class="user-points-group max-md:!hidden">
+          <!-- 积分区域 (移至左侧，符合常规信息流向) -->
+          <div class="points-chip" title="我的积分">
+            <div class="points-chip__icon-wrapper">
+              <ArtSvgIcon icon="ri:coin-fill" class="points-chip__icon" />
+            </div>
+            <span class="points-chip__value">{{ myTotalPoints }}</span>
+          </div>
+
+          <!-- 分割线 -->
+          <div class="group-divider"></div>
+
+          <!-- 头像菜单区域 (紧贴最右侧) -->
+          <div class="user-menu-wrapper">
+            <ArtUserMenu />
+          </div>
+        </div>
       </div>
     </div>
 
@@ -185,6 +191,7 @@
   import { useCommon } from '@/hooks/core/useCommon';
   import { useHeaderBar } from '@/hooks/core/useHeaderBar';
   import ArtUserMenu from './widget/ArtUserMenu.vue';
+  import { fetchMyTotalPoints } from '@/api/task';
 
   defineOptions({ name: 'ArtHeaderBar' });
 
@@ -209,7 +216,6 @@
     shouldShowGlobalSearch,
     shouldShowFullscreen,
     shouldShowNotification,
-    shouldShowChat,
     shouldShowLanguage,
     shouldShowSettings,
     shouldShowThemeToggle,
@@ -225,6 +231,7 @@
 
   const showNotice = ref(false);
   const notice = ref(null);
+  const myTotalPoints = ref<number>(0);
 
   // 菜单类型判断
   const isLeftMenu = computed(() => menuType.value === MenuTypeEnum.LEFT);
@@ -236,6 +243,7 @@
 
   onMounted(() => {
     initLanguage();
+    loadMyTotalPoints();
     document.addEventListener('click', bodyCloseNotice);
   });
 
@@ -243,16 +251,10 @@
     document.removeEventListener('click', bodyCloseNotice);
   });
 
-  /**
-   * 切换全屏状态
-   */
   const toggleFullScreen = (): void => {
     toggleFullscreen();
   };
 
-  /**
-   * 切换菜单显示/隐藏状态
-   */
   const visibleMenu = (): void => {
     settingStore.setMenuOpen(!menuOpen.value);
   };
@@ -260,34 +262,20 @@
   const { homePath } = useCommon();
   const { refresh } = useCommon();
 
-  /**
-   * 跳转到首页
-   */
   const toHome = (): void => {
     router.push(homePath.value);
   };
 
-  /**
-   * 刷新页面
-   * @param {number} time - 延迟时间，默认为0毫秒
-   */
   const reload = (time: number = 0): void => {
     setTimeout(() => {
       refresh();
     }, time);
   };
 
-  /**
-   * 初始化语言设置
-   */
   const initLanguage = (): void => {
     locale.value = language.value;
   };
 
-  /**
-   * 切换系统语言
-   * @param {LanguageEnum} lang - 目标语言类型
-   */
   const changeLanguage = (lang: LanguageEnum): void => {
     if (locale.value === lang) return;
     locale.value = lang;
@@ -295,35 +283,21 @@
     reload(50);
   };
 
-  /**
-   * 打开设置面板
-   */
   const openSetting = (): void => {
     mittBus.emit('openSetting');
-
-    // 隐藏设置引导提示
     if (showSettingGuide.value) {
       settingStore.hideSettingGuide();
     }
   };
 
-  /**
-   * 打开全局搜索对话框
-   */
   const openSearchDialog = (): void => {
     mittBus.emit('openSearchDialog');
   };
 
-  /**
-   * 点击页面其他区域关闭通知面板
-   * @param {Event} e - 点击事件对象
-   */
   const bodyCloseNotice = (e: any): void => {
     if (!showNotice.value) return;
 
     const target = e.target as HTMLElement;
-
-    // 检查是否点击了通知按钮或通知面板内部
     const isNoticeButton = target.closest('.notice-button');
     const isNoticePanel = target.closest('.art-notification-panel');
 
@@ -332,19 +306,18 @@
     }
   };
 
-  /**
-   * 切换通知面板显示状态
-   */
   const visibleNotice = (): void => {
     showNotice.value = !showNotice.value;
   };
 
-  /**
-   * 打开聊天窗口
-   */
-  const openChat = (): void => {
-    mittBus.emit('openChat');
-  };
+  async function loadMyTotalPoints() {
+    try {
+      const res = await fetchMyTotalPoints();
+      myTotalPoints.value = Number(res?.totalPoints ?? 0);
+    } catch {
+      myTotalPoints.value = 0;
+    }
+  }
 </script>
 
 <style lang="scss" scoped>
@@ -353,7 +326,6 @@
     0% {
       transform: rotate(0);
     }
-
     100% {
       transform: rotate(180deg);
     }
@@ -363,19 +335,15 @@
     0% {
       transform: rotate(0);
     }
-
     25% {
       transform: rotate(-5deg);
     }
-
     50% {
       transform: rotate(5deg);
     }
-
     75% {
       transform: rotate(-5deg);
     }
-
     100% {
       transform: rotate(0);
     }
@@ -385,11 +353,9 @@
     0% {
       transform: scale(1);
     }
-
     50% {
       transform: scale(1.1);
     }
-
     100% {
       transform: scale(1);
     }
@@ -399,11 +365,9 @@
     0% {
       transform: scale(1);
     }
-
     50% {
       transform: scale(0.9);
     }
-
     100% {
       transform: scale(1);
     }
@@ -413,11 +377,9 @@
     0% {
       transform: translateY(0);
     }
-
     50% {
       transform: translateY(-3px);
     }
-
     100% {
       transform: translateY(0);
     }
@@ -428,12 +390,10 @@
       opacity: 0.4;
       transform: scale(0.9);
     }
-
     50% {
       opacity: 1;
       transform: scale(1.1);
     }
-
     100% {
       opacity: 0.4;
       transform: scale(0.9);
@@ -444,36 +404,91 @@
   .refresh-btn:hover :deep(.art-svg-icon) {
     animation: rotate180 0.5s;
   }
-
   .language-btn:hover :deep(.art-svg-icon) {
     animation: moveUp 0.4s;
   }
-
   .setting-btn:hover :deep(.art-svg-icon) {
     animation: rotate180 0.5s;
   }
-
   .full-screen-btn:hover :deep(.art-svg-icon) {
     animation: expand 0.6s forwards;
   }
-
   .exit-full-screen-btn:hover :deep(.art-svg-icon) {
     animation: shrink 0.6s forwards;
   }
-
   .notice-button:hover :deep(.art-svg-icon) {
     animation: shake 0.5s ease-in-out;
   }
 
-  .chat-button:hover :deep(.art-svg-icon) {
-    animation: shake 0.5s ease-in-out;
+  /* ==============================================================
+     优化后：头像与积分一体化“胶囊 (Pill)”容器
+  =============================================================== */
+  .user-points-group {
+    display: inline-flex;
+    align-items: center;
+    height: 100%; /* 贴合顶栏高度 */
+    margin-left: 8px;
   }
 
-  /* Breathing animation for chat dot */
-  .breathing-dot {
-    animation: breathing 1.5s ease-in-out infinite;
+  .user-points-group:hover {
+    border-color: var(--el-border-color-light);
+    background: var(--el-bg-color);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.04);
   }
 
+  /* --- 积分内部区域 --- */
+  .points-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    height: 36px;
+    padding: 0 10px;
+    border-radius: 8px; /* 改为现代感的小圆角 */
+    cursor: pointer;
+    background-color: transparent; /* 默认完全透明 */
+    transition: background-color 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+  /* 仅在悬浮时显示极浅的底色，提供交互反馈 */
+  .points-chip:hover {
+    background-color: var(--el-fill-color-light);
+  }
+
+  .points-chip__icon-wrapper {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .points-chip__icon {
+    font-size: 18px;
+    color: #f59e0b; /* 金黄色 */
+    filter: drop-shadow(0 1px 2px rgba(245, 158, 11, 0.2));
+  }
+
+  .points-chip__value {
+    font-family: 'DIN Alternate', 'Roboto Mono', Consolas, Monaco, monospace;
+    font-weight: 700;
+    font-size: 15px;
+    color: var(--el-text-color-primary);
+    line-height: 1;
+    margin-top: 1px;
+  }
+
+  /* --- 内部分割线 --- */
+  .group-divider {
+    width: 1px;
+    height: 18px;
+    background-color: var(--el-border-color-lighter);
+    margin: 0 8px; /* 拉开一点间距，让呼吸感更好 */
+  }
+
+  /* --- 头像菜单容器 --- */
+  .user-menu-wrapper {
+    display: flex;
+    align-items: center;
+    height: 100%;
+    margin-right: 8px;
+  }
   /* iPad breakpoint adjustments */
   @media screen and (width <= 768px) {
     .logo2 {
@@ -493,25 +508,12 @@
     border-radius: 8px;
     padding: 0 12px;
     margin-left: 8px;
-
-    // &:hover {
-    //   background: linear-gradient(
-    //     135deg,
-    //     rgba(99, 102, 241, 0.08) 0%,
-    //     rgba(139, 92, 246, 0.08) 100%
-    //   );
-    //   // transform: translateY(-1px);
-    // }
   }
 
   .logo-icon {
     transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     display: flex;
     align-items: center;
-
-    // .system-info-container:hover & {
-    //   transform: scale(1.05) rotate(2deg);
-    // }
   }
 
   .system-name-wrapper {

@@ -69,6 +69,7 @@ export const CreateTaskDto = z.object({
   testerId: z.number().int().positive().optional().nullable(),
   coAssigneeIds: z.array(z.number().int().positive()).optional().default([]),
   estimatedHours: z.number().positive().optional().nullable(),
+  baseScore: z.number().nonnegative().optional().nullable(),
   testCases: z.array(TestCaseInputDto).optional().default([]),
   /** 已上传完成的附件 ID（可选，须为当前用户本人上传） */
   attachmentIds: z.array(z.number().int().positive()).max(50).optional(),
@@ -88,6 +89,8 @@ export const UpdateTaskDto = z.object({
   testerId: z.number().int().positive().optional().nullable(),
   coAssigneeIds: z.array(z.number().int().positive()).optional(),
   estimatedHours: z.number().positive().optional().nullable(),
+  baseScore: z.number().nonnegative().optional().nullable(),
+  baseScoreSource: z.enum(["AUTO", "MANUAL"]).optional(),
   // 👉 补充了 PAUSED 和 CANCELLED 状态
   status: z
     .enum([
@@ -187,6 +190,10 @@ export const PerformancePageDto = z.object({
   page: z.coerce.number().int().positive().default(1),
   pageSize: z.coerce.number().int().positive().max(1000).default(10),
   projectId: z.coerce.number().int().positive().optional(),
+  /** 账期起始（按验收/关闭业务发生时间过滤） */
+  startAt: z.string().datetime({ offset: true }).optional(),
+  /** 账期结束（按验收/关闭业务发生时间过滤） */
+  endAt: z.string().datetime({ offset: true }).optional(),
 });
 export type PerformancePageDtoType = z.infer<typeof PerformancePageDto>;
 

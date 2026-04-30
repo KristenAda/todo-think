@@ -18,7 +18,10 @@
             :class="{ 'is-selected': selectedIds.includes(user.id) }"
             @click="toggleUser(user.id)"
           >
-            <el-checkbox :model-value="selectedIds.includes(user.id)" @click.stop />
+            <el-checkbox
+              :model-value="selectedIds.includes(user.id)"
+              @click.stop="toggleUser(user.id)"
+            />
             <el-avatar :size="36" :src="user.avatar || ''" class="item-avatar" fit="cover">
               <ColorAvatar
                 :name="user.nickName || user.userName || '?'"
