@@ -282,34 +282,54 @@ async function ensureGlobalDefaultRuleSetVersion(ruleSetId: number) {
 }
 
 async function getEffectiveRuleSetVersionId(projectId: number, occurredAt: Date) {
-  // 1) 项目级规则（若未来实现）——暂留接口位
-  const projectRuleSet = await prisma.ruleSet.findFirst({
-    where: { scope: "PROJECT", projectId, status: "ACTIVE" },
-    orderBy: { updatedAt: "desc" },
-  });
-  if (projectRuleSet) {
-    const v = await prisma.ruleSetVersion.findFirst({
-      where: {
-        ruleSetId: projectRuleSet.id,
-        OR: [
-          { effectiveFrom: null, effectiveTo: null },
-          {
-            AND: [
-              { OR: [{ effectiveFrom: null }, { effectiveFrom: { lte: occurredAt } }] },
-              { OR: [{ effectiveTo: null }, { effectiveTo: { gte: occurredAt } }] },
-            ],
-          },
+  const effectiveWindow: any = {
+    OR: [
+      { effectiveFrom: null, effectiveTo: null },
+      {
+        AND: [
+          { OR: [{ effectiveFrom: null }, { effectiveFrom: { lte: occurredAt } }] },
+          { OR: [{ effectiveTo: null }, { effectiveTo: { gte: occurredAt } }] },
         ],
       },
-      orderBy: { version: "desc" },
+    ],
+  };
+
+  // 1) 先取项目规则（同项目下如有多个规则集，取最新版本）
+  const projectRuleSets = await prisma.ruleSet.findMany({
+    where: { scope: "PROJECT", projectId, status: "ACTIVE" },
+    select: { id: true },
+  });
+  if (projectRuleSets.length) {
+    const projectVersion = await prisma.ruleSetVersion.findFirst({
+      where: {
+        ruleSetId: { in: projectRuleSets.map((x) => x.id) },
+        ...effectiveWindow,
+      },
+      orderBy: [{ publishedAt: "desc" }, { version: "desc" }],
     });
-    if (v) return v.id;
+    if (projectVersion) return projectVersion.id;
   }
 
-  // 2) 全局默认
-  const global = await ensureGlobalDefaultRuleSet();
-  const globalV = await ensureGlobalDefaultRuleSetVersion(global.id);
-  return globalV.id;
+  // 2) 再取用户配置的全局规则（而不是直接回退内置10分规则）
+  const globalRuleSets = await prisma.ruleSet.findMany({
+    where: { scope: "GLOBAL", status: "ACTIVE" },
+    select: { id: true },
+  });
+  if (globalRuleSets.length) {
+    const globalVersion = await prisma.ruleSetVersion.findFirst({
+      where: {
+        ruleSetId: { in: globalRuleSets.map((x) => x.id) },
+        ...effectiveWindow,
+      },
+      orderBy: [{ publishedAt: "desc" }, { version: "desc" }],
+    });
+    if (globalVersion) return globalVersion.id;
+  }
+
+  // 3) 最后兜底内置全局默认规则
+  const builtinGlobal = await ensureGlobalDefaultRuleSet();
+  const builtinGlobalVersion = await ensureGlobalDefaultRuleSetVersion(builtinGlobal.id);
+  return builtinGlobalVersion.id;
 }
 
 function buildTaskFact(task: any): TaskFact {
