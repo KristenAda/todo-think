@@ -2,6 +2,14 @@ import request from '@/utils/http';
 
 export type ProjectStatus = 'PLANNING' | 'ACTIVE' | 'COMPLETED' | 'SUSPENDED';
 
+export interface ProjectTaskRules {
+  requireEstimateHours: boolean;
+  requireDueDate: boolean;
+  requireTestEvidenceForDev: boolean;
+  allowCoAssigneeSubmitQa: boolean;
+  allowQaRejectWithoutHours: boolean;
+}
+
 export interface ProjectItem {
   id: number;
   name: string;
@@ -48,7 +56,7 @@ export function fetchProjectOrgMembers() {
 export function fetchProjectPage(params: ProjectPageParams) {
   return request.get<{ list: ProjectItem[]; total: number; page: number; pageSize: number }>({
     url: '/projects',
-    params,
+    params
   });
 }
 
@@ -62,4 +70,19 @@ export function fetchProjectUpdate(id: number, data: Partial<CreateProjectParams
 
 export function fetchProjectDelete(id: number) {
   return request.del({ url: `/projects/${id}` });
+}
+
+// ==================== 项目任务规则（流程治理主线B） ====================
+
+export function fetchProjectTaskRules(id: number) {
+  return request.get<ProjectTaskRules>({
+    url: `/projects/${id}/task-rules`
+  });
+}
+
+export function updateProjectTaskRules(id: number, data: Partial<ProjectTaskRules>) {
+  return request.put<void>({
+    url: `/projects/${id}/task-rules`,
+    data
+  });
 }

@@ -6,7 +6,8 @@ import Koa from "koa";
 import bodyParser from "@koa/bodyparser";
 import cors from "@koa/cors";
 import jwt from "koa-jwt";
-import { WebSocketServer } from "ws";
+import type { IncomingMessage } from "http";
+import { WebSocketServer, WebSocket } from "ws";
 import jsonwebtoken from "jsonwebtoken";
 import { loadRoutes } from "./routers";
 import { AuthUtil } from "./core/auth.util";
@@ -16,6 +17,7 @@ import { requestLogger } from "./middlewares/logger";
 import logger from "./core/logger";
 import prisma from "./core/prisma";
 import { bindUserSocket, unbindUserSocket } from "./core/wsHub";
+import { startOverdueReminderJob } from "./modules/task/overdueReminder.job";
 
 const app = new Koa();
 
@@ -54,7 +56,7 @@ const start = async () => {
    */
   const wss = new WebSocketServer({ server, path: "/ws" });
 
-  wss.on("connection", (ws, req) => {
+  wss.on("connection", (ws: WebSocket, req: IncomingMessage) => {
     let userId: number | null = null;
 
     try {
@@ -119,3 +121,6 @@ const start = async () => {
 };
 
 start();
+
+// 在服务启动后初始化逾期提醒 Job（幂等由 TaskTimeline 控制）
+startOverdueReminderJob();

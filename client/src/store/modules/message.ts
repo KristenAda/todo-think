@@ -47,7 +47,8 @@ export const useMessageStore = defineStore('messageStore', () => {
       time: formatTimeText(m?.createTime),
       messageType: m?.messageType,
       isRead: Boolean(m?.isRead),
-      sender: m?.sender ?? null
+      sender: m?.sender ?? null,
+      extra: m?.extra ?? undefined
     }));
   }
 
@@ -78,7 +79,8 @@ export const useMessageStore = defineStore('messageStore', () => {
       time: formatTimeText(message?.createTime),
       messageType: message?.messageType,
       isRead: Boolean(message?.isRead),
-      sender: message?.sender ?? null
+      sender: message?.sender ?? null,
+      extra: message?.extra ?? undefined
     };
 
     latestMessages.value.unshift(normalized);
@@ -112,8 +114,10 @@ export const useMessageStore = defineStore('messageStore', () => {
     const msg = latestMessages.value.find((m) => m.id === id);
     if (msg && !msg.isRead) {
       msg.isRead = true;
-      unreadCount.value = Math.max(0, unreadCount.value - 1);
     }
+
+    // 后端 ok=true 表示该消息从未读 -> 已读（即命中更新了 isRead=false 的记录）
+    unreadCount.value = Math.max(0, unreadCount.value - 1);
     return true;
   }
 
@@ -134,4 +138,3 @@ export const useMessageStore = defineStore('messageStore', () => {
     markAllRead
   };
 });
-

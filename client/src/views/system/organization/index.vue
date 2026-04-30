@@ -222,175 +222,25 @@
       </div>
     </div>
 
-    <ArtDialog v-model="addManagerVisible" title="添加部门管理者" icon="mdi:crown" width="560px">
-      <div class="dialog-search">
-        <el-input
-          v-model="userSearchText"
-          placeholder="搜索用户名或昵称..."
-          prefix-icon="Search"
-          clearable
-        />
-      </div>
-      <div class="user-select-container">
-        <el-scrollbar height="340px">
-          <div class="user-list">
-            <div
-              v-for="user in filteredNonManagers"
-              :key="user.id"
-              class="user-item"
-              :class="{ 'is-selected': selectedUserIds.includes(user.id) }"
-              @click="toggleUser(user.id)"
-            >
-              <el-checkbox :model-value="selectedUserIds.includes(user.id)" @click.stop />
-              <el-avatar :size="36" :src="user.avatar || ''" class="item-avatar" fit="cover">
-                <ColorAvatar
-                  :name="user.nickName || user.userName || '?'"
-                  :gender="user.userGender || ''"
-                  :size="36"
-                />
-              </el-avatar>
-              <div class="item-info">
-                <div class="item-name">{{ user.nickName || user.userName }}</div>
-                <div class="item-sub">账号: {{ user.userName }}</div>
-              </div>
-              <el-tag size="small" :type="user.status === '1' ? 'success' : 'info'" effect="plain">
-                {{ user.status === '1' ? '正常' : '停用' }}
-              </el-tag>
-            </div>
-            <el-empty
-              v-if="filteredNonManagers.length === 0"
-              description="暂无可选用户"
-              :image-size="60"
-            />
-          </div>
-        </el-scrollbar>
-      </div>
-      <template #footer>
-        <div class="dialog-footer">
-          <span class="selected-text"
-            >已选择 <strong>{{ selectedUserIds.length }}</strong> 人</span
-          >
-          <div>
-            <el-button @click="addManagerVisible = false">取消</el-button>
-            <el-button type="primary" :loading="submitLoading" @click="submitAddManagers"
-              >确认添加</el-button
-            >
-          </div>
-        </div>
-      </template>
-    </ArtDialog>
+    <OrgUserMultiPickDialog
+      v-model="addManagerVisible"
+      title="添加部门管理者"
+      icon="mdi:crown"
+      :candidates="nonManagerCandidates"
+      :loading="submitLoading"
+      @confirm="submitAddManagers"
+    />
 
-    <ArtDialog
+    <OrgUserMultiPickDialog
       v-model="addMemberVisible"
       title="添加部门成员"
       icon="mdi:account-plus"
-      width="560px"
-    >
-      <div class="dialog-search">
-        <el-input
-          v-model="userSearchText"
-          placeholder="搜索用户名或昵称..."
-          prefix-icon="Search"
-          clearable
-        />
-      </div>
-      <div class="user-select-container">
-        <el-scrollbar height="340px">
-          <div class="user-list">
-            <div
-              v-for="user in filteredNonMembers"
-              :key="user.id"
-              class="user-item"
-              :class="{ 'is-selected': selectedUserIds.includes(user.id) }"
-              @click="toggleUser(user.id)"
-            >
-              <el-checkbox :model-value="selectedUserIds.includes(user.id)" @click.stop />
-              <el-avatar :size="36" :src="user.avatar || ''" class="item-avatar" fit="cover">
-                <ColorAvatar
-                  :name="user.nickName || user.userName || '?'"
-                  :gender="user.userGender || ''"
-                  :size="36"
-                />
-              </el-avatar>
-              <div class="item-info">
-                <div class="item-name">{{ user.nickName || user.userName }}</div>
-                <div class="item-sub">账号: {{ user.userName }}</div>
-              </div>
-              <el-tag size="small" :type="user.status === '1' ? 'success' : 'info'" effect="plain">
-                {{ user.status === '1' ? '正常' : '停用' }}
-              </el-tag>
-            </div>
-            <el-empty
-              v-if="filteredNonMembers.length === 0"
-              description="暂无可选用户"
-              :image-size="60"
-            />
-          </div>
-        </el-scrollbar>
-      </div>
-      <template #footer>
-        <div class="dialog-footer">
-          <span class="selected-text"
-            >已选择 <strong>{{ selectedUserIds.length }}</strong> 人</span
-          >
-          <div>
-            <el-button @click="addMemberVisible = false">取消</el-button>
-            <el-button type="primary" :loading="submitLoading" @click="submitAddMembers"
-              >确认添加</el-button
-            >
-          </div>
-        </div>
-      </template>
-    </ArtDialog>
+      :candidates="nonMemberCandidates"
+      :loading="submitLoading"
+      @confirm="submitAddMembers"
+    />
 
-    <ArtDialog
-      v-model="profileVisible"
-      title="人员详情"
-      icon="mdi:account-details"
-      width="400px"
-      :show-minimize="false"
-      :show-maximize="false"
-    >
-      <div v-if="profileUser" class="profile-card">
-        <div class="profile-header">
-          <el-avatar :size="72" :src="profileUser.avatar || ''" class="profile-avatar" fit="cover">
-            <ColorAvatar
-              :name="profileUser.nickName || profileUser.userName || '?'"
-              :gender="profileUser.userGender || ''"
-              :size="72"
-            />
-          </el-avatar>
-          <div class="profile-name">{{ profileUser.nickName || profileUser.userName }}</div>
-          <div class="profile-role">@{{ profileUser.userName }}</div>
-        </div>
-        <div class="profile-details">
-          <div class="detail-item">
-            <span class="label"><art-svg-icon icon="mdi:gender-male-female" /> 性别</span>
-            <span class="value">{{ profileUser.userGender || '未知' }}</span>
-          </div>
-          <div class="detail-item">
-            <span class="label"><art-svg-icon icon="mdi:cellphone" /> 手机号</span>
-            <span class="value">{{ profileUser.userPhone || '未填写' }}</span>
-          </div>
-          <div class="detail-item">
-            <span class="label"><art-svg-icon icon="mdi:email" /> 邮箱</span>
-            <span class="value">{{ profileUser.userEmail || '未填写' }}</span>
-          </div>
-          <div class="detail-item">
-            <span class="label"><art-svg-icon icon="mdi:shield-check" /> 状态</span>
-            <span class="value">
-              <el-tag
-                :type="profileUser.status === '1' ? 'success' : 'danger'"
-                size="small"
-                effect="dark"
-              >
-                {{ profileUser.status === '1' ? '正常' : '异常' }}
-              </el-tag>
-            </span>
-          </div>
-        </div>
-      </div>
-    </ArtDialog>
+    <OrgMemberProfileDialog v-model="profileVisible" :user="profileUser" />
   </div>
 </template>
 
@@ -408,17 +258,15 @@
     fetchRemoveMember
   } from '@/api/organization';
   import { useUserStore } from '@/store/modules/user';
+  import OrgUserMultiPickDialog from './components/OrgUserMultiPickDialog.vue';
+  import OrgMemberProfileDialog from './components/OrgMemberProfileDialog.vue';
 
   const userStore = useUserStore();
   const currentUserId = computed(() => userStore.info?.userId ?? 0);
   /** 与登录接口 roles（Role.roleCode，如 admin）及模板标识 R_SUPER 对齐 */
   const isSuperAdmin = computed(() => {
     const roles = userStore.info?.roles ?? [];
-    return (
-      roles.includes('admin') ||
-      roles.includes('R_SUPER') ||
-      roles.includes('R_ADMIN')
-    );
+    return roles.includes('admin') || roles.includes('R_SUPER') || roles.includes('R_ADMIN');
   });
 
   // --- 左侧树逻辑 ---
@@ -484,60 +332,36 @@
   // --- 弹窗共用逻辑 ---
   const allUsers = ref<any[]>([]);
   const submitLoading = ref(false);
-  const userSearchText = ref('');
-  const selectedUserIds = ref<number[]>([]);
 
   const loadAllUsers = async () => {
     const res = await fetchAllUsers();
     allUsers.value = res ?? [];
   };
 
-  const toggleUser = (id: number) => {
-    const index = selectedUserIds.value.indexOf(id);
-    if (index === -1) selectedUserIds.value.push(id);
-    else selectedUserIds.value.splice(index, 1);
-  };
-
-  const filteredNonManagers = computed(() => {
+  const nonManagerCandidates = computed(() => {
     const existing = new Set(managers.value.map((m) => m.id));
-    const kw = userSearchText.value.toLowerCase();
-    return allUsers.value.filter(
-      (u) =>
-        !existing.has(u.id) &&
-        (!kw ||
-          u.userName.toLowerCase().includes(kw) ||
-          (u.nickName || '').toLowerCase().includes(kw))
-    );
+    return allUsers.value.filter((u) => !existing.has(u.id));
   });
 
-  const filteredNonMembers = computed(() => {
+  const nonMemberCandidates = computed(() => {
     const existing = new Set(members.value.map((m) => m.id));
-    const kw = userSearchText.value.toLowerCase();
-    return allUsers.value.filter(
-      (u) =>
-        !existing.has(u.id) &&
-        (!kw ||
-          u.userName.toLowerCase().includes(kw) ||
-          (u.nickName || '').toLowerCase().includes(kw))
-    );
+    return allUsers.value.filter((u) => !existing.has(u.id));
   });
 
   // --- 管理者操作 ---
   const addManagerVisible = ref(false);
   const openAddManagerDialog = async () => {
-    userSearchText.value = '';
-    selectedUserIds.value = [];
     await loadAllUsers();
     addManagerVisible.value = false;
     nextTick(() => {
       addManagerVisible.value = true;
     });
   };
-  const submitAddManagers = async () => {
-    if (!selectedUserIds.value.length) return ElMessage.warning('请至少选择一个用户');
+  const submitAddManagers = async (ids: number[]) => {
+    if (!ids.length) return ElMessage.warning('请至少选择一个用户');
     submitLoading.value = true;
     try {
-      await fetchAddManagers(selectedDeptId.value!, selectedUserIds.value);
+      await fetchAddManagers(selectedDeptId.value!, ids);
       ElMessage.success('添加管理者成功');
       addManagerVisible.value = false;
       await loadManagers();
@@ -559,19 +383,17 @@
   // --- 成员操作 ---
   const addMemberVisible = ref(false);
   const openAddMemberDialog = async () => {
-    userSearchText.value = '';
-    selectedUserIds.value = [];
     await loadAllUsers();
     addMemberVisible.value = false;
     nextTick(() => {
       addMemberVisible.value = true;
     });
   };
-  const submitAddMembers = async () => {
-    if (!selectedUserIds.value.length) return ElMessage.warning('请至少选择一个用户');
+  const submitAddMembers = async (ids: number[]) => {
+    if (!ids.length) return ElMessage.warning('请至少选择一个用户');
     submitLoading.value = true;
     try {
-      await fetchAddMembers(selectedDeptId.value!, selectedUserIds.value);
+      await fetchAddMembers(selectedDeptId.value!, ids);
       ElMessage.success('添加成员成功');
       addMemberVisible.value = false;
       await loadMembers();
@@ -595,10 +417,7 @@
   const profileUser = ref<any>(null);
   const openProfileDialog = (row: any) => {
     profileUser.value = row;
-    profileVisible.value = false;
-    nextTick(() => {
-      profileVisible.value = true;
-    });
+    profileVisible.value = true;
   };
 
   onMounted(async () => {
@@ -875,212 +694,5 @@
   }
   .text-muted {
     color: var(--el-text-color-secondary);
-  }
-
-  /* ================= 弹窗样式美化 ================= */
-  .custom-dialog {
-    :deep(.el-dialog__body) {
-      padding: 10px 20px 0;
-    }
-
-    .dialog-search {
-      margin-bottom: 16px;
-    }
-
-    .user-select-container {
-      border: 1px solid var(--el-border);
-      border-radius: 6px;
-      padding: 8px;
-      background: var(--el-fill-color-blank);
-
-      .user-list {
-        display: flex;
-        flex-direction: column;
-        gap: 6px;
-
-        .user-item {
-          display: flex;
-          align-items: center;
-          gap: 12px;
-          padding: 10px 14px;
-          background: var(--default-box-color);
-          border: 1px solid transparent;
-          border-radius: 6px;
-          cursor: pointer;
-          transition: all 0.2s;
-
-          &:hover {
-            background: var(--el-color-primary-light-9);
-          }
-
-          &.is-selected {
-            border-color: var(--el-color-primary-light-5);
-            background: var(--el-color-primary-light-9);
-          }
-
-          .item-info {
-            flex: 1;
-            .item-name {
-              font-size: 14px;
-              font-weight: 500;
-              color: var(--el-text-color-primary);
-            }
-            .item-sub {
-              font-size: 12px;
-              color: var(--el-text-color-secondary);
-              margin-top: 2px;
-            }
-          }
-        }
-      }
-    }
-
-    .dialog-footer {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      width: 100%;
-
-      .selected-text {
-        font-size: 13px;
-        color: var(--el-text-color-regular);
-        strong {
-          color: $primary-color;
-          font-size: 16px;
-        }
-      }
-    }
-  }
-
-  /* 个人资料卡片 */
-  .profile-card {
-    text-align: center;
-    padding: 10px;
-
-    .profile-header {
-      margin-bottom: 24px;
-      .profile-avatar {
-        border: 2px solid var(--art-card-border);
-        margin-bottom: 12px;
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        background: var(--el-fill-color-light);
-      }
-      .profile-name {
-        font-size: 18px;
-        font-weight: 600;
-        color: var(--el-text-color-primary);
-      }
-      .profile-role {
-        font-size: 13px;
-        color: var(--el-text-color-secondary);
-        margin-top: 4px;
-      }
-    }
-
-    .profile-details {
-      background: var(--art-main-bg-color);
-      border-radius: 8px;
-      padding: 16px;
-      display: flex;
-      flex-direction: column;
-      gap: 16px;
-
-      .detail-item {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        font-size: 14px;
-
-        .label {
-          color: var(--el-text-color-secondary);
-          display: flex;
-          align-items: center;
-          gap: 6px;
-
-          .art-svg-icon {
-            font-size: 16px;
-          }
-        }
-        .value {
-          color: var(--el-text-color-primary);
-          font-weight: 500;
-        }
-      }
-    }
-  }
-
-  /* ================= 弹窗内容样式 ================= */
-  .dialog-search {
-    margin-bottom: 16px;
-  }
-
-  .user-select-container {
-    border: 1px solid var(--art-card-border);
-    border-radius: 8px;
-    padding: 8px;
-    background: var(--el-fill-color-blank);
-
-    .user-list {
-      display: flex;
-      flex-direction: column;
-      gap: 6px;
-
-      .user-item {
-        display: flex;
-        align-items: center;
-        gap: 12px;
-        padding: 10px 14px;
-        background: var(--default-box-color);
-        border: 1px solid transparent;
-        border-radius: 8px;
-        cursor: pointer;
-        transition: all 0.2s;
-
-        &:hover {
-          background: var(--el-color-primary-light-9);
-        }
-
-        &.is-selected {
-          border-color: var(--el-color-primary-light-5);
-          background: var(--el-color-primary-light-9);
-        }
-
-        .item-info {
-          flex: 1;
-
-          .item-name {
-            font-size: 14px;
-            font-weight: 500;
-            color: var(--el-text-color-primary);
-          }
-
-          .item-sub {
-            font-size: 12px;
-            color: var(--el-text-color-secondary);
-            margin-top: 2px;
-          }
-        }
-      }
-    }
-  }
-
-  .dialog-footer {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    width: 100%;
-    padding-top: 4px;
-
-    .selected-text {
-      font-size: 13px;
-      color: var(--el-text-color-regular);
-
-      strong {
-        color: $primary-color;
-        font-size: 16px;
-      }
-    }
   }
 </style>

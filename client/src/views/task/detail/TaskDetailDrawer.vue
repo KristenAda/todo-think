@@ -16,69 +16,69 @@
               <span>任务基本信息</span>
             </div>
             <div class="task-basic-grid">
-          <div class="task-basic-item">
-            <span class="task-basic-item__label">任务状态</span>
-            <span class="task-basic-item__value">
-              <el-tag :type="statusTagType(task.status)" size="small">
-                {{ statusLabel(task.status) }}
-              </el-tag>
-            </span>
-          </div>
-          <div class="task-basic-item">
-            <span class="task-basic-item__label">任务领域</span>
-            <span class="task-basic-item__value">{{ workDomainLabel(task.workDomain) }}</span>
-          </div>
-          <div class="task-basic-item">
-            <span class="task-basic-item__label">事项类型</span>
-            <span class="task-basic-item__value">{{ typeLabel(task.type) }}</span>
-          </div>
-          <div class="task-basic-item">
-            <span class="task-basic-item__label">所属项目</span>
-            <span class="task-basic-item__value">{{ task.project?.name || '—' }}</span>
-          </div>
-          <div class="task-basic-item">
-            <span class="task-basic-item__label">预估工时</span>
-            <span class="task-basic-item__value">{{
-              task.estimatedHours != null ? task.estimatedHours + 'h' : '—'
-            }}</span>
-          </div>
-          <div class="task-basic-item">
-            <span class="task-basic-item__label">实际工时</span>
-            <span class="task-basic-item__value">{{
-              displayActualHours != null ? displayActualHours + 'h' : '—'
-            }}</span>
-          </div>
+              <div class="task-basic-item">
+                <span class="task-basic-item__label">任务状态</span>
+                <span class="task-basic-item__value">
+                  <el-tag :type="statusTagType(task.status)" size="small">
+                    {{ statusLabel(task.status) }}
+                  </el-tag>
+                </span>
+              </div>
+              <div class="task-basic-item">
+                <span class="task-basic-item__label">任务领域</span>
+                <span class="task-basic-item__value">{{ workDomainLabel(task.workDomain) }}</span>
+              </div>
+              <div class="task-basic-item">
+                <span class="task-basic-item__label">事项类型</span>
+                <span class="task-basic-item__value">{{ typeLabel(task.type) }}</span>
+              </div>
+              <div class="task-basic-item">
+                <span class="task-basic-item__label">所属项目</span>
+                <span class="task-basic-item__value">{{ task.project?.name || '—' }}</span>
+              </div>
+              <div class="task-basic-item">
+                <span class="task-basic-item__label">预估工时</span>
+                <span class="task-basic-item__value">{{
+                  task.estimatedHours != null ? task.estimatedHours + 'h' : '—'
+                }}</span>
+              </div>
+              <div class="task-basic-item">
+                <span class="task-basic-item__label">实际工时</span>
+                <span class="task-basic-item__value">{{
+                  displayActualHours != null ? displayActualHours + 'h' : '—'
+                }}</span>
+              </div>
             </div>
 
             <div class="task-basic-members">
-          <div class="task-basic-members__label">负责人</div>
-          <div v-if="mergedMemberTags.length" class="task-mgr-assignees">
-            <div
-              v-for="member in mergedMemberTags"
-              :key="member.key"
-              class="task-mgr-assignee"
-              :class="member.className"
-            >
-              <el-avatar :size="22" :src="member.user.avatar ?? undefined">{{
-                initials(member.user)
-              }}</el-avatar>
-              <span class="task-mgr-assignee__name">{{ userDisplayName(member.user) }}</span>
-              <span class="task-mgr-assignee__role">{{ member.roleLabel }}</span>
-            </div>
-          </div>
-          <span v-else class="task-basic-members__empty">未分配</span>
+              <div class="task-basic-members__label">负责人</div>
+              <div v-if="mergedMemberTags.length" class="task-mgr-assignees">
+                <div
+                  v-for="member in mergedMemberTags"
+                  :key="member.key"
+                  class="task-mgr-assignee"
+                  :class="member.className"
+                >
+                  <el-avatar :size="22" :src="member.user.avatar ?? undefined">{{
+                    initials(member.user)
+                  }}</el-avatar>
+                  <span class="task-mgr-assignee__name">{{ userDisplayName(member.user) }}</span>
+                  <span class="task-mgr-assignee__role">{{ member.roleLabel }}</span>
+                </div>
+              </div>
+              <span v-else class="task-basic-members__empty">未分配</span>
             </div>
 
             <div class="task-basic-desc">
-          <div class="task-basic-desc__label">任务描述</div>
-          <div class="task-basic-desc__value">{{ displayText(task.description) }}</div>
+              <div class="task-basic-desc__label">任务描述</div>
+              <div class="task-basic-desc__value">{{ displayText(task.description) }}</div>
             </div>
             <div v-if="task.qaRejectReason" class="task-basic-reject">
-          <div class="task-basic-reject__label">
-            <art-svg-icon icon="mdi:alert-circle-outline" />
-            最近打回原因
-          </div>
-          <div class="task-basic-reject__value">{{ task.qaRejectReason }}</div>
+              <div class="task-basic-reject__label">
+                <art-svg-icon icon="mdi:alert-circle-outline" />
+                最近打回原因
+              </div>
+              <div class="task-basic-reject__value">{{ task.qaRejectReason }}</div>
             </div>
             <div v-if="task.attachments?.length" class="section">
               <div class="section-title">
@@ -86,45 +86,52 @@
                 <span>任务附件</span>
               </div>
               <div class="attach-row">
-          <div
-            v-for="row in task.attachments"
-            :key="row.id"
-            class="attach-line"
-            :class="getFileCategoryClass(row.attachment.originalName, row.attachment.mimeType)"
-            :style="attachTintStyle(row.attachment)"
-          >
-            <div class="attach-line__icon" aria-hidden="true">
-              <ArtSvgIcon
-                :icon="getFileIcon(row.attachment.originalName, row.attachment.mimeType)"
-              />
-            </div>
-            <div class="attach-line__main">
-              <span class="fname" :title="row.attachment.originalName">{{
-                row.attachment.originalName
-              }}</span>
-              <div class="attach-line__meta">
-                <span
-                  v-if="getFileExtLabel(row.attachment.originalName)"
-                  class="attach-line__ext"
-                  >{{ getFileExtLabel(row.attachment.originalName) }}</span
+                <div
+                  v-for="row in task.attachments"
+                  :key="row.id"
+                  class="attach-line"
+                  :class="
+                    getFileCategoryClass(row.attachment.originalName, row.attachment.mimeType)
+                  "
+                  :style="attachTintStyle(row.attachment)"
                 >
-                <span class="fsize">{{ formatFileSize(row.attachment.size) }}</span>
-              </div>
-            </div>
-            <div class="attach-line__actions">
-              <el-button
-                link
-                type="primary"
-                size="small"
-                @click="openServerPreview(row.attachment)"
-              >
-                预览
-              </el-button>
-              <el-button link type="primary" size="small" @click="downloadAtt(row.attachment)">
-                下载
-              </el-button>
-            </div>
-          </div>
+                  <div class="attach-line__icon" aria-hidden="true">
+                    <ArtSvgIcon
+                      :icon="getFileIcon(row.attachment.originalName, row.attachment.mimeType)"
+                    />
+                  </div>
+                  <div class="attach-line__main">
+                    <span class="fname" :title="row.attachment.originalName">{{
+                      row.attachment.originalName
+                    }}</span>
+                    <div class="attach-line__meta">
+                      <span
+                        v-if="getFileExtLabel(row.attachment.originalName)"
+                        class="attach-line__ext"
+                        >{{ getFileExtLabel(row.attachment.originalName) }}</span
+                      >
+                      <span class="fsize">{{ formatFileSize(row.attachment.size) }}</span>
+                    </div>
+                  </div>
+                  <div class="attach-line__actions">
+                    <el-button
+                      link
+                      type="primary"
+                      size="small"
+                      @click="openServerPreview(row.attachment)"
+                    >
+                      预览
+                    </el-button>
+                    <el-button
+                      link
+                      type="primary"
+                      size="small"
+                      @click="downloadAtt(row.attachment)"
+                    >
+                      下载
+                    </el-button>
+                  </div>
+                </div>
               </div>
             </div>
             <div v-if="taskSupportsTestCases" class="section section--test-cases">
@@ -137,82 +144,89 @@
                   >共 {{ sortedTestCases.length }} 条</span
                 >
               </div>
-              <el-empty v-if="!sortedTestCases.length" description="暂无测试用例" :image-size="56" />
-              <div v-else class="test-case-list">
-          <div v-for="(tc, idx) in sortedTestCases" :key="tc.id" class="tc-card">
-            <div class="tc-card__toolbar">
-              <span class="tc-card__index">#{{ idx + 1 }}</span>
-              <div class="tc-card__status-chips">
-                <div class="tc-chip">
-                  <span class="tc-chip__label">自测</span>
-                  <el-tag :type="testTagType(tc.selfTestStatus)" size="small" effect="light">{{
-                    testLabel(tc.selfTestStatus)
-                  }}</el-tag>
-                </div>
-                <div class="tc-chip">
-                  <span class="tc-chip__label">QA</span>
-                  <el-tag :type="testTagType(tc.qaStatus)" size="small" effect="light">{{
-                    testLabel(tc.qaStatus)
-                  }}</el-tag>
-                </div>
-                <el-tag
-                  v-if="Number(tc.bugCount) > 0"
-                  type="danger"
-                  size="small"
-                  effect="plain"
-                  class="tc-bug-tag"
-                >
-                  Bug ×{{ tc.bugCount }}
-                </el-tag>
-              </div>
-            </div>
-
-            <div class="tc-card__body">
-              <div class="tc-field">
-                <div class="tc-field__label">
-                  <art-svg-icon icon="mdi:text-box-outline" class="tc-field__icon" />
-                  描述 / 操作步骤
-                </div>
-                <div class="tc-field__value">{{ displayText(tc.description) }}</div>
-              </div>
-              <div class="tc-field tc-field--expected">
-                <div class="tc-field__label">
-                  <art-svg-icon icon="mdi:check-circle-outline" class="tc-field__icon" />
-                  预期结果
-                </div>
-                <div class="tc-field__value">{{ displayText(tc.expectedResult) }}</div>
-              </div>
-              <div v-if="trimText(tc.selfTestRemark)" class="tc-remark tc-remark--self">
-                <span class="tc-remark__label">自测备注</span>
-                <span class="tc-remark__text">{{ tc.selfTestRemark }}</span>
-              </div>
-              <div v-if="trimText(tc.qaRemark)" class="tc-remark tc-remark--qa">
-                <span class="tc-remark__label">QA 备注</span>
-                <span class="tc-remark__text">{{ tc.qaRemark }}</span>
-              </div>
-            </div>
-
-            <div
-              v-if="(isMainAssignee || isCoAssignee) && task?.status !== 'COMPLETED'"
-              class="tc-card__actions"
-            >
-              <el-select
-                v-model="selfTestMap[tc.id]"
-                size="small"
-                class="tc-card__select"
-                placeholder="自测结果"
-              >
-                <el-option label="通过" value="PASSED" />
-                <el-option label="失败" value="FAILED" />
-              </el-select>
-              <el-input
-                v-model="selfTestRemarkMap[tc.id]"
-                size="small"
-                placeholder="自测备注（可选）"
-                class="tc-card__remark-input"
+              <el-empty
+                v-if="!sortedTestCases.length"
+                description="暂无测试用例"
+                :image-size="56"
               />
-            </div>
-          </div>
+              <div v-else class="test-case-list">
+                <div v-for="(tc, idx) in sortedTestCases" :key="tc.id" class="tc-card">
+                  <div class="tc-card__toolbar">
+                    <span class="tc-card__index">#{{ idx + 1 }}</span>
+                    <div class="tc-card__status-chips">
+                      <div class="tc-chip">
+                        <span class="tc-chip__label">自测</span>
+                        <el-tag
+                          :type="testTagType(tc.selfTestStatus)"
+                          size="small"
+                          effect="light"
+                          >{{ testLabel(tc.selfTestStatus) }}</el-tag
+                        >
+                      </div>
+                      <div class="tc-chip">
+                        <span class="tc-chip__label">QA</span>
+                        <el-tag :type="testTagType(tc.qaStatus)" size="small" effect="light">{{
+                          testLabel(tc.qaStatus)
+                        }}</el-tag>
+                      </div>
+                      <el-tag
+                        v-if="Number(tc.bugCount) > 0"
+                        type="danger"
+                        size="small"
+                        effect="plain"
+                        class="tc-bug-tag"
+                      >
+                        Bug ×{{ tc.bugCount }}
+                      </el-tag>
+                    </div>
+                  </div>
+
+                  <div class="tc-card__body">
+                    <div class="tc-field">
+                      <div class="tc-field__label">
+                        <art-svg-icon icon="mdi:text-box-outline" class="tc-field__icon" />
+                        描述 / 操作步骤
+                      </div>
+                      <div class="tc-field__value">{{ displayText(tc.description) }}</div>
+                    </div>
+                    <div class="tc-field tc-field--expected">
+                      <div class="tc-field__label">
+                        <art-svg-icon icon="mdi:check-circle-outline" class="tc-field__icon" />
+                        预期结果
+                      </div>
+                      <div class="tc-field__value">{{ displayText(tc.expectedResult) }}</div>
+                    </div>
+                    <div v-if="trimText(tc.selfTestRemark)" class="tc-remark tc-remark--self">
+                      <span class="tc-remark__label">自测备注</span>
+                      <span class="tc-remark__text">{{ tc.selfTestRemark }}</span>
+                    </div>
+                    <div v-if="trimText(tc.qaRemark)" class="tc-remark tc-remark--qa">
+                      <span class="tc-remark__label">QA 备注</span>
+                      <span class="tc-remark__text">{{ tc.qaRemark }}</span>
+                    </div>
+                  </div>
+
+                  <div
+                    v-if="(isMainAssignee || isCoAssignee) && task?.status !== 'COMPLETED'"
+                    class="tc-card__actions"
+                  >
+                    <el-select
+                      v-model="selfTestMap[tc.id]"
+                      size="small"
+                      class="tc-card__select"
+                      placeholder="自测结果"
+                    >
+                      <el-option label="通过" value="PASSED" />
+                      <el-option label="失败" value="FAILED" />
+                    </el-select>
+                    <el-input
+                      v-model="selfTestRemarkMap[tc.id]"
+                      size="small"
+                      placeholder="自测备注（可选）"
+                      class="tc-card__remark-input"
+                    />
+                  </div>
+                </div>
               </div>
             </div>
           </div>
@@ -225,49 +239,56 @@
               </div>
               <el-empty v-if="!task.workLogs?.length" description="暂无工时记录" :image-size="50" />
               <div v-else class="worklog-list">
-          <div v-for="log in task.workLogs" :key="log.id" class="worklog-item">
-            <el-avatar :size="28" :src="log.user.avatar ?? undefined" class="log-avatar">{{
-              initials(log.user)
-            }}</el-avatar>
-            <div class="log-content">
-              <div class="log-meta">
-                <span class="log-user">{{ log.user.nickName || log.user.userName }}</span>
-                <el-tag size="small" type="success">{{ log.hours }}h</el-tag>
-                <span class="log-time">{{ formatDate(log.createdAt) }}</span>
-              </div>
-              <div class="log-text">{{ log.content }}</div>
-              <div v-if="log.attachments?.length" class="log-attach">
-                <span class="log-attach-label">附件</span>
-                <div
-                  v-for="ar in log.attachments"
-                  :key="ar.id"
-                  class="log-attach-chip"
-                  :class="getFileCategoryClass(ar.attachment.originalName, ar.attachment.mimeType)"
-                  :style="attachTintStyle(ar.attachment)"
-                >
-                  <span class="log-attach-chip__icon" aria-hidden="true">
-                    <ArtSvgIcon
-                      :icon="getFileIcon(ar.attachment.originalName, ar.attachment.mimeType)"
-                    />
-                  </span>
-                  <span class="log-attach-chip__name" :title="ar.attachment.originalName">{{
-                    ar.attachment.originalName
-                  }}</span>
-                  <el-button
-                    link
-                    type="primary"
-                    size="small"
-                    @click="openServerPreview(ar.attachment)"
-                  >
-                    预览
-                  </el-button>
-                  <el-button link type="primary" size="small" @click="downloadAtt(ar.attachment)">
-                    下载
-                  </el-button>
+                <div v-for="log in task.workLogs" :key="log.id" class="worklog-item">
+                  <el-avatar :size="28" :src="log.user.avatar ?? undefined" class="log-avatar">{{
+                    initials(log.user)
+                  }}</el-avatar>
+                  <div class="log-content">
+                    <div class="log-meta">
+                      <span class="log-user">{{ log.user.nickName || log.user.userName }}</span>
+                      <el-tag size="small" type="success">{{ log.hours }}h</el-tag>
+                      <span class="log-time">{{ formatDate(log.createdAt) }}</span>
+                    </div>
+                    <div class="log-text">{{ log.content }}</div>
+                    <div v-if="log.attachments?.length" class="log-attach">
+                      <span class="log-attach-label">附件</span>
+                      <div
+                        v-for="ar in log.attachments"
+                        :key="ar.id"
+                        class="log-attach-chip"
+                        :class="
+                          getFileCategoryClass(ar.attachment.originalName, ar.attachment.mimeType)
+                        "
+                        :style="attachTintStyle(ar.attachment)"
+                      >
+                        <span class="log-attach-chip__icon" aria-hidden="true">
+                          <ArtSvgIcon
+                            :icon="getFileIcon(ar.attachment.originalName, ar.attachment.mimeType)"
+                          />
+                        </span>
+                        <span class="log-attach-chip__name" :title="ar.attachment.originalName">{{
+                          ar.attachment.originalName
+                        }}</span>
+                        <el-button
+                          link
+                          type="primary"
+                          size="small"
+                          @click="openServerPreview(ar.attachment)"
+                        >
+                          预览
+                        </el-button>
+                        <el-button
+                          link
+                          type="primary"
+                          size="small"
+                          @click="downloadAtt(ar.attachment)"
+                        >
+                          下载
+                        </el-button>
+                      </div>
+                    </div>
+                  </div>
                 </div>
-              </div>
-            </div>
-          </div>
               </div>
             </div>
 
@@ -285,7 +306,10 @@
                   show-word-limit
                   placeholder="输入评论内容（支持附件）"
                 />
-                <TaskAttachmentField ref="commentAttachRef" hint="评论可选附件，先上传后随评论提交" />
+                <TaskAttachmentField
+                  ref="commentAttachRef"
+                  hint="评论可选附件，先上传后随评论提交"
+                />
                 <div class="comment-editor__actions">
                   <el-button type="primary" :loading="actionLoading" @click="handleAddComment">
                     发表评论
@@ -301,7 +325,9 @@
               />
               <div v-else class="comment-list">
                 <div v-for="c in task.comments" :key="c.id" class="comment-item">
-                  <el-avatar :size="30" :src="c.user.avatar ?? undefined">{{ initials(c.user) }}</el-avatar>
+                  <el-avatar :size="30" :src="c.user.avatar ?? undefined">{{
+                    initials(c.user)
+                  }}</el-avatar>
                   <div class="comment-item__main">
                     <div class="comment-item__meta">
                       <span class="comment-item__author">{{ userDisplayName(c.user) }}</span>
@@ -310,11 +336,23 @@
                     <div class="comment-item__text">{{ c.content }}</div>
                     <div v-if="c.attachments?.length" class="comment-item__attachments">
                       <div v-for="a in c.attachments" :key="a.id" class="comment-attach-chip">
-                        <span class="comment-attach-chip__name">{{ a.attachment.originalName }}</span>
-                        <el-button link type="primary" size="small" @click="openServerPreview(a.attachment)">
+                        <span class="comment-attach-chip__name">{{
+                          a.attachment.originalName
+                        }}</span>
+                        <el-button
+                          link
+                          type="primary"
+                          size="small"
+                          @click="openServerPreview(a.attachment)"
+                        >
                           预览
                         </el-button>
-                        <el-button link type="primary" size="small" @click="downloadAtt(a.attachment)">
+                        <el-button
+                          link
+                          type="primary"
+                          size="small"
+                          @click="downloadAtt(a.attachment)"
+                        >
                           下载
                         </el-button>
                       </div>
@@ -332,7 +370,11 @@
               <art-svg-icon icon="mdi:timeline-clock-outline" />
               <span>任务时间线</span>
             </div>
-            <el-empty v-if="!task.timelines?.length" description="暂无时间线记录" :image-size="54" />
+            <el-empty
+              v-if="!task.timelines?.length"
+              description="暂无时间线记录"
+              :image-size="54"
+            />
             <div v-else class="timeline-list">
               <div
                 v-for="line in task.timelines"
@@ -347,7 +389,10 @@
                     <span class="timeline-item__time">{{ formatDate(line.createdAt) }}</span>
                   </div>
                   <div class="timeline-item__desc">
-                    {{ line.content || `${statusLabel(line.fromStatus || '')} → ${statusLabel(line.toStatus || '')}` }}
+                    {{
+                      line.content ||
+                      `${statusLabel(line.fromStatus || '')} → ${statusLabel(line.toStatus || '')}`
+                    }}
                   </div>
                   <div v-if="line.operator" class="timeline-item__operator">
                     操作人：{{ userDisplayName(line.operator) }}
@@ -376,10 +421,7 @@
         </el-button>
 
         <el-button
-          v-if="
-            isMainAssignee &&
-            ['IN_PROGRESS'].includes(task?.status ?? '')
-          "
+          v-if="isMainAssignee && ['IN_PROGRESS'].includes(task?.status ?? '')"
           type="warning"
           @click="handleSubmitTest"
           :loading="actionLoading"
@@ -413,7 +455,6 @@
         >
           <art-svg-icon icon="mdi:play-circle-outline" style="margin-right: 4px" /> 恢复开发
         </el-button>
-
       </div>
     </template>
   </ArtDialog>
@@ -497,10 +538,22 @@
           placeholder="请填写本次打回修改原因"
         />
       </el-form-item>
+
+      <el-form-item v-if="!allowQaRejectWithoutHours" label="实际工时(h)" required>
+        <el-input-number
+          v-model="actualHoursInput"
+          :min="0.5"
+          :step="0.5"
+          :precision="1"
+          style="width: 100%"
+        />
+      </el-form-item>
     </el-form>
     <template #footer>
       <el-button @click="qaRejectDialogVisible = false">取消</el-button>
-      <el-button type="danger" :loading="actionLoading" @click="confirmQaReject">确认打回</el-button>
+      <el-button type="danger" :loading="actionLoading" @click="confirmQaReject"
+        >确认打回</el-button
+      >
     </template>
   </ArtDialog>
 
@@ -584,8 +637,20 @@
       !!currentUserId.value &&
       (task.value?.coAssignees ?? []).some((ca) => ca.userId === currentUserId.value)
   );
+
+  // 项目规则（主线B）：决定 QA 是否允许协助人发起、打回是否需要工时
+  const allowCoAssigneeSubmitQa = computed(
+    () => task.value?.project?.taskRule?.allowCoAssigneeSubmitQa ?? false
+  );
+  const allowQaRejectWithoutHours = computed(
+    () => task.value?.project?.taskRule?.allowQaRejectWithoutHours ?? true
+  );
+
   const isQA = computed(
-    () => !!currentUserId.value && task.value?.testerId === currentUserId.value
+    () =>
+      !!currentUserId.value &&
+      (task.value?.testerId === currentUserId.value ||
+        (allowCoAssigneeSubmitQa.value && isCoAssignee.value))
   );
   /** 任务“管理者”上升到项目层面：项目负责人可管理项目下任务 */
   const isTaskManager = computed(
@@ -802,6 +867,14 @@
     { immediate: true }
   );
 
+  // 当任务抽屉已打开但 taskId 发生变化时，确保重新拉取详情
+  watch(
+    () => props.taskId,
+    () => {
+      if (visible.value) loadDetail();
+    }
+  );
+
   watch(workLogDialogVisible, (v) => {
     if (v) nextTick(() => workLogAttachRef.value?.reset());
   });
@@ -840,7 +913,7 @@
       ElMessage.success('已开始开发');
       emit('refresh');
       loadDetail();
-    } catch (e: any) {
+    } catch {
       // 失败提示由 request 统一处理，这里避免重复弹窗
     } finally {
       actionLoading.value = false;
@@ -869,7 +942,7 @@
       workLogForm.content = '';
       workLogAttachRef.value?.reset();
       loadDetail();
-    } catch (e: any) {
+    } catch {
       // 失败提示由 request 统一处理，这里避免重复弹窗
     } finally {
       actionLoading.value = false;
@@ -895,7 +968,7 @@
       ElMessage.success('已提交验收');
       emit('refresh');
       loadDetail();
-    } catch (e: any) {
+    } catch {
       // 失败提示由 request 统一处理，这里避免重复弹窗
     } finally {
       actionLoading.value = false;
@@ -910,6 +983,8 @@
   }
   function openQaRejectDialog() {
     qaRejectReason.value = '';
+    const sum = workLogsHoursSum.value;
+    actualHoursInput.value = sum > 0 ? Number(sum.toFixed(1)) : (task.value?.estimatedHours ?? 1);
     qaRejectDialogVisible.value = true;
   }
   async function confirmQaReject() {
@@ -930,7 +1005,7 @@
       ? (task.value?.testCases ?? []).map((tc) => ({
           id: tc.id,
           qaStatus: action === 'reject' ? ('FAILED' as const) : ('PASSED' as const),
-          qaRemark: action === 'reject' ? rejectReason ?? '' : ''
+          qaRemark: action === 'reject' ? (rejectReason ?? '') : ''
         }))
       : [];
     const payload: Api.Task.QaAuditParams = {
@@ -942,13 +1017,16 @@
       payload.actualHours = actualHoursInput.value;
       qaPassDialogVisible.value = false;
     }
+    if (action === 'reject' && !allowQaRejectWithoutHours.value) {
+      payload.actualHours = actualHoursInput.value;
+    }
     actionLoading.value = true;
     try {
       await fetchQaAudit(props.taskId, payload);
       ElMessage.success(action === 'pass' ? '验收通过' : '已打回');
       emit('refresh');
       loadDetail();
-    } catch (e: any) {
+    } catch {
       // 失败提示由 request 统一处理，这里避免重复弹窗
     } finally {
       actionLoading.value = false;
@@ -963,7 +1041,7 @@
       ElMessage.success('任务已暂停');
       emit('refresh');
       loadDetail();
-    } catch (e: any) {
+    } catch {
       // 失败提示由 request 统一处理，这里避免重复弹窗
     } finally {
       actionLoading.value = false;
@@ -978,13 +1056,12 @@
       ElMessage.success('任务已恢复开发');
       emit('refresh');
       loadDetail();
-    } catch (e: any) {
+    } catch {
       // 失败提示由 request 统一处理，这里避免重复弹窗
     } finally {
       actionLoading.value = false;
     }
   }
-
 </script>
 
 <style scoped lang="scss">

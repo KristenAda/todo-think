@@ -65,9 +65,29 @@ model Project {
   deletedAt  DateTime? // 软删除
 
   manager User   @relation("ProjectManager", fields: [managerId], references: [id])
+  taskRule ProjectTaskRule?
   tasks   Task[]
 
   @@map("project")
+}
+
+/// 项目级任务流转规则（配置化：用于流程治理主线B）
+model ProjectTaskRule {
+  id        Int     @id @default(autoincrement())
+  projectId Int    @unique
+
+  // 规则开关（默认值保持“当前系统行为不变”）
+  requireEstimateHours Boolean @default(false)
+  requireDueDate Boolean @default(false)
+  requireTestEvidenceForDev Boolean @default(true)
+  allowCoAssigneeSubmitQa Boolean @default(false)
+  allowQaRejectWithoutHours Boolean @default(true)
+
+  updatedAt DateTime @updatedAt
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@map("project_task_rule")
 }
 
 /// 任务表

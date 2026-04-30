@@ -30,54 +30,21 @@
       </template>
     </ElCalendar>
 
-    <!-- 事件编辑弹窗 -->
-    <ElDialog v-model="dialogVisible" :title="dialogTitle" width="600px" @closed="resetForm">
-      <ElForm :model="eventForm" label-width="80px">
-        <ElFormItem label="活动标题" required>
-          <ElInput v-model="eventForm.content" placeholder="请输入活动标题" />
-        </ElFormItem>
-        <ElFormItem label="事件颜色">
-          <ElRadioGroup v-model="eventForm.type">
-            <ElRadio v-for="type in eventTypes" :key="type.value" :value="type.value">
-              {{ type.label }}
-            </ElRadio>
-          </ElRadioGroup>
-        </ElFormItem>
-        <ElFormItem label="开始日期" required>
-          <ElDatePicker
-            style="width: 100%"
-            v-model="eventForm.date"
-            type="date"
-            placeholder="选择日期"
-            format="YYYY-MM-DD"
-            value-format="YYYY-MM-DD"
-          />
-        </ElFormItem>
-        <ElFormItem label="结束日期">
-          <ElDatePicker
-            style="width: 100%"
-            v-model="eventForm.endDate"
-            type="date"
-            placeholder="选择结束日期"
-            format="YYYY-MM-DD"
-            value-format="YYYY-MM-DD"
-            :min-date="eventForm.date"
-          />
-        </ElFormItem>
-      </ElForm>
-      <template #footer>
-        <span class="dialog-footer">
-          <ElButton v-if="isEditing" type="danger" @click="handleDeleteEvent"> 删除 </ElButton>
-          <ElButton type="primary" @click="handleSaveEvent">
-            {{ isEditing ? '更新' : '添加' }}
-          </ElButton>
-        </span>
-      </template>
-    </ElDialog>
+    <CalendarEventDialog
+      v-model="dialogVisible"
+      v-model:event-form="eventForm"
+      :title="dialogTitle"
+      :is-editing="isEditing"
+      @closed="resetForm"
+      @save="handleSaveEvent"
+      @delete="handleDeleteEvent"
+    />
   </div>
 </template>
 
 <script setup lang="ts">
+  import CalendarEventDialog from './components/CalendarEventDialog.vue';
+
   defineOptions({ name: 'TemplateCalendar' });
 
   /**
@@ -91,16 +58,6 @@
     bgClass?: string;
     textClass?: string;
   }
-
-  /**
-   * 事件类型选项
-   */
-  const eventTypes = [
-    { label: '基本', value: 'primary' },
-    { label: '成功', value: 'success' },
-    { label: '警告', value: 'warning' },
-    { label: '危险', value: 'danger' }
-  ] as const;
 
   const currentDate = ref(new Date('2025-02-07'));
   const dialogVisible = ref(false);
@@ -212,7 +169,9 @@
     };
     editingEventIndex.value = -1;
     dialogVisible.value = false;
-    nextTick(() => { dialogVisible.value = true; });
+    nextTick(() => {
+      dialogVisible.value = true;
+    });
   };
 
   /**
@@ -227,7 +186,9 @@
       (e) => e.date === event.date && e.content === event.content
     );
     dialogVisible.value = false;
-    nextTick(() => { dialogVisible.value = true; });
+    nextTick(() => {
+      dialogVisible.value = true;
+    });
   };
 
   /**
@@ -282,9 +243,5 @@
 
   :deep(.el-calendar-day:hover) {
     background-color: transparent !important;
-  }
-
-  :deep(.el-dialog__body) {
-    padding-top: 20px;
   }
 </style>

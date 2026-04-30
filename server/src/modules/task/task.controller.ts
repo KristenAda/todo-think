@@ -12,6 +12,7 @@ import {
   CreateTaskDto,
   UpdateTaskDto,
   TaskPageDto,
+  ProjectTaskRuleDto,
   CreateWorkLogDto,
   CreateTaskCommentDto,
   SubmitTestDto,
@@ -96,6 +97,26 @@ class ProjectController {
       ctx.status = e.status ?? 500;
       ctx.body = Result.error(e.message ?? "更新失败", e.status ?? 500);
     }
+  }
+
+  // ======================== Project Task Rules ========================
+  async taskRulesInfo(ctx: Context) {
+    const id = Number(ctx.params.id);
+    const userId = currentUserId(ctx);
+    const data = await projectService.taskRulesInfo(id, userId);
+    ctx.body = Result.success(data);
+  }
+
+  async taskRulesUpdate(ctx: Context) {
+    const id = Number(ctx.params.id);
+    const parsed = ProjectTaskRuleDto.safeParse(ctx.request.body);
+    if (!parsed.success) {
+      ctx.body = Result.error(parsed.error.issues?.[0]?.message ?? "参数错误");
+      return;
+    }
+    const userId = currentUserId(ctx);
+    await projectService.taskRulesUpdate(id, userId, parsed.data);
+    ctx.body = Result.success(null, "规则更新成功");
   }
 
   async delete(ctx: Context) {

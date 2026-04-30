@@ -134,6 +134,43 @@
       <div class="board-col">
         <div class="board-col__header">
           <div class="board-col__title">
+            <span class="board-col__dot board-col__dot--overdue" />
+            <art-svg-icon icon="mdi:clock-alert-outline" class="board-col__hicon" />
+            <span>逾期任务</span>
+          </div>
+          <el-badge :value="overdueTasks.length" :max="99" type="danger" />
+        </div>
+        <div class="board-col__list" v-loading="loading">
+          <div v-if="!loading && overdueTasks.length === 0" class="board-col__empty">
+            <art-svg-icon icon="mdi:timer-off-outline" class="empty-icon" />
+            <span>暂无逾期任务</span>
+          </div>
+          <div
+            v-for="task in overdueTasks"
+            :key="task.id"
+            class="task-card task-card--clickable task-card--overdue"
+            @click="openDrawer(task.id)"
+          >
+            <div class="task-card__project">
+              <art-svg-icon icon="mdi:folder-outline" class="task-card__proj-icon" />
+              {{ task.project?.name }}
+            </div>
+            <div class="task-card__title">{{ task.title }}</div>
+            <div class="task-card__footer">
+              <el-tag :type="statusTag(task.status)" size="small" round>逾期</el-tag>
+              <span class="task-card__time">{{ fromNow(task.updatedAt) }}</span>
+              <span class="task-card__action">
+                去处理
+                <art-svg-icon icon="ri:arrow-right-line" class="action-icon" />
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="board-col">
+        <div class="board-col__header">
+          <div class="board-col__title">
             <span class="board-col__dot board-col__dot--done" />
             <art-svg-icon icon="mdi:check-circle-outline" class="board-col__hicon" />
             <span>最近完成</span>
@@ -179,11 +216,12 @@
 </template>
 
 <script setup lang="ts">
-  import { ref, computed, onMounted } from 'vue';
+  import { ref, computed, onMounted, onBeforeUnmount } from 'vue';
   import { fetchWorkbench, type WorkbenchStats, type WorkbenchTask } from '@/api/dashboard';
   import { useUserStore } from '@/store/modules/user';
   // 根据你的实际路径引入任务详情组件
   import TaskDetailDrawer from '@/views/task/detail/TaskDetailDrawer.vue';
+  import mittBus from '@/utils/sys/mittBus';
 
   defineOptions({ name: 'Console' });
 
@@ -229,6 +267,7 @@
   });
   const pendingTasks = ref<WorkbenchTask[]>([]);
   const qaTasks = ref<WorkbenchTask[]>([]);
+  const overdueTasks = ref<WorkbenchTask[]>([]);
   const processedTasks = ref<WorkbenchTask[]>([]);
 
   const statCards = [
@@ -272,6 +311,7 @@
         stats.value = data.stats;
         pendingTasks.value = data.pendingTasks;
         qaTasks.value = data.qaTasks;
+        overdueTasks.value = data.overdueTasks;
         processedTasks.value = data.processedTasks;
       }
     } catch {
@@ -283,6 +323,19 @@
 
   onMounted(() => loadWorkbench());
 
+  // ===== 通知点击：打开任务详情抽屉 =====
+  const handleOpenTaskDetail = (taskId: number) => {
+    openDrawer(taskId);
+  };
+
+  onMounted(() => {
+    mittBus.on('openTaskDetail', handleOpenTaskDetail);
+  });
+
+  onBeforeUnmount(() => {
+    mittBus.off('openTaskDetail', handleOpenTaskDetail);
+  });
+
   // ===== 抽屉控制 =====
   const drawerVisible = ref(false);
   const drawerTaskId = ref<number | null>(null);
@@ -293,9 +346,10 @@
   }
 
   // ===== 工具函数 =====
-  const STATUS_MAP: Record<string, { label: string; tag: string }> = {
+  type TagType = 'primary' | 'success' | 'warning' | 'info' | 'danger';
+  const STATUS_MAP: Record<string, { label: string; tag: TagType }> = {
     PENDING: { label: '待分配', tag: 'info' },
-    IN_PROGRESS: { label: '开发中', tag: '' },
+    IN_PROGRESS: { label: '开发中', tag: 'primary' },
     SELF_TESTING: { label: '待提测', tag: 'warning' },
     QA_REVIEW: { label: '验收中', tag: 'warning' },
     REJECTED: { label: '打回修改', tag: 'danger' },
@@ -306,7 +360,7 @@
     return STATUS_MAP[s]?.label ?? s;
   }
 
-  function statusTag(s: string) {
+  function statusTag(s: string): TagType {
     return STATUS_MAP[s]?.tag ?? 'info';
   }
 
@@ -332,6 +386,7 @@
   $color-pending: #f59e0b;
   $color-qa: #ef4444;
   $color-completed: #10b981;
+  $color-overdue: #f97316;
   $color-bug: #8b5cf6;
 
   /* ★ 占满高度、阻止外层滚动 */
@@ -606,7 +661,7 @@
   // ===== 三列看板 =====
   .workbench__board {
     display: grid;
-    grid-template-columns: repeat(3, 1fr);
+    grid-template-columns: repeat(4, 1fr);
     gap: 20px;
     align-items: start;
     flex: 1;
@@ -654,6 +709,9 @@
       }
       &--done {
         background: $color-completed;
+      }
+      &--overdue {
+        background: $color-overdue;
       }
     }
     &__hicon {

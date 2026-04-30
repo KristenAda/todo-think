@@ -7,6 +7,8 @@ class DashboardService {
   async workbench(userId: number) {
     // 本月起始时间
     const now = new Date();
+    // 逾期判断基准
+    const overdueNow = new Date(now.getTime());
     const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
     const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
 
@@ -25,6 +27,7 @@ class DashboardService {
       bugCount,
       pendingTasks,
       qaTasks,
+      overdueTasks,
       processedTasks,
     ] = await Promise.all([
       // 1. 待处理任务数（主责或协助，状态 PENDING/IN_PROGRESS/REJECTED）
@@ -106,6 +109,25 @@ class DashboardService {
         },
       }),
 
+      // 7. 逾期任务列表（前 10 条）
+      prisma.task.findMany({
+        where: {
+          dueDate: { lt: overdueNow },
+          status: { in: ['PENDING', 'IN_PROGRESS', 'SELF_TESTING', 'QA_REVIEW', 'REJECTED', 'PAUSED'] },
+          OR: [
+            { mainAssigneeId: userId },
+            { managerId: userId },
+            { id: { in: coAssigneeTaskIds } },
+          ],
+        },
+        orderBy: [{ dueDate: 'asc' }, { updatedAt: 'desc' }],
+        take: 10,
+        include: {
+          project: { select: { id: true, name: true } },
+          mainAssignee: { select: { id: true, userName: true, nickName: true, avatar: true } },
+        },
+      }),
+
       // 7. 已处理/最近完成任务列表（前 10 条）
       prisma.task.findMany({
         where: {
@@ -134,6 +156,7 @@ class DashboardService {
       },
       pendingTasks,
       qaTasks,
+      overdueTasks,
       processedTasks,
     };
   }

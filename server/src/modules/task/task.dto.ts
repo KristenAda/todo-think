@@ -189,3 +189,14 @@ export const PerformancePageDto = z.object({
   projectId: z.coerce.number().int().positive().optional(),
 });
 export type PerformancePageDtoType = z.infer<typeof PerformancePageDto>;
+
+// ==================== ProjectTaskRule ====================
+
+export const ProjectTaskRuleDto = z.object({
+  requireEstimateHours: z.boolean().optional().default(false),
+  requireDueDate: z.boolean().optional().default(false),
+  requireTestEvidenceForDev: z.boolean().optional().default(true),
+  allowCoAssigneeSubmitQa: z.boolean().optional().default(false),
+  allowQaRejectWithoutHours: z.boolean().optional().default(true),
+});
+export type ProjectTaskRuleDtoType = z.infer<typeof ProjectTaskRuleDto>;

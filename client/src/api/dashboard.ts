@@ -24,6 +24,7 @@ export interface WorkbenchData {
   stats: WorkbenchStats;
   pendingTasks: WorkbenchTask[];
   qaTasks: WorkbenchTask[];
+  overdueTasks: WorkbenchTask[];
   processedTasks: WorkbenchTask[];
 }
 

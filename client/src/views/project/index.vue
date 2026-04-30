@@ -113,153 +113,38 @@
       </transition-group>
     </div>
 
-    <div class="project-page__pagination" v-if="total > 0">
+    <div class="project-page__pagination custom-pagination center" v-if="total > 0">
       <el-pagination
         v-model:current-page="query.page"
         v-model:page-size="query.pageSize"
         :total="total"
         :page-sizes="[12, 24, 48]"
-        layout="total,sizes,prev,pager,next"
+        layout="total, prev, pager, next, sizes, jumper"
         background
         @size-change="loadProjects"
         @current-change="loadProjects"
       />
     </div>
 
-    <ArtDialog
+    <ProjectFormDialog
       v-model="dialogVisible"
-      :title="editingId ? '编辑项目' : '新建项目'"
-      icon="solar:folder-bold-duotone"
-      width="560px"
-      destroy-on-close
-    >
-      <el-form ref="formRef" :model="form" :rules="rules" label-width="90px">
-        <el-form-item label="项目名称" prop="name">
-          <el-input
-            v-model="form.name"
-            placeholder="请输入项目名称"
-            maxlength="100"
-            show-word-limit
-          />
-        </el-form-item>
-        <el-form-item label="项目描述">
-          <el-input
-            v-model="form.description"
-            type="textarea"
-            :rows="3"
-            placeholder="请输入项目描述"
-          />
-        </el-form-item>
-        <el-form-item label="负责人" prop="managerId">
-          <div class="proj-member-field proj-member-field--block">
-            <div class="proj-member-tags">
-              <el-tag v-if="projectManagerUser" type="primary" class="proj-user-tag">
-                <span class="proj-user-tag__inner">
-                  <el-avatar :size="20" :src="projectManagerUser.avatar ?? undefined">{{
-                    initials(projectManagerUser)
-                  }}</el-avatar>
-                  <span>{{ userDisplayName(projectManagerUser) }}</span>
-                </span>
-              </el-tag>
-              <span v-else class="proj-member-placeholder">未选择（必选）</span>
-            </div>
-            <el-button @click="openProjectManagerPicker">选择人员</el-button>
-          </div>
-        </el-form-item>
-        <el-form-item label="项目状态" prop="status">
-          <el-select v-model="form.status" style="width: 100%">
-            <el-option
-              v-for="s in STATUS_OPTIONS"
-              :key="s.value"
-              :label="s.label"
-              :value="s.value"
-            />
-          </el-select>
-        </el-form-item>
-        <el-form-item label="项目周期">
-          <el-date-picker
-            v-model="form.dateRange"
-            type="daterange"
-            range-separator="~"
-            start-placeholder="开始日期"
-            end-placeholder="结束日期"
-            style="width: 100%"
-            value-format="YYYY-MM-DDTHH:mm:ss.000Z"
-          />
-        </el-form-item>
-      </el-form>
-      <template #footer>
-        <el-button @click="dialogVisible = false">取消</el-button>
-        <el-button type="primary" :loading="submitting" @click="handleSubmit">确定</el-button>
-      </template>
-    </ArtDialog>
-
-    <!-- 项目负责人：公共 ArtDialog + 卡片单选（必选） -->
-    <ArtDialog
-      v-model="managerPickerVisible"
-      title="选择项目负责人"
-      subtitle="单选，必选"
-      icon="mdi:account-tie-outline"
-      width="600px"
-      :z-index="9100"
-      :show-minimize="false"
-      :show-maximize="false"
-    >
-      <div class="proj-member-picker">
-        <div class="proj-member-picker__scroll">
-          <el-radio-group v-model="managerPickerTempId" class="proj-member-picker__radio-group">
-            <div
-              v-for="u in userList"
-              :key="u.id"
-              class="member-pick-card member-pick-card--tester"
-              :class="{ 'member-pick-card--active': managerPickerTempId === u.id }"
-            >
-              <el-radio class="member-pick-card__radio" :label="u.id" @click.stop />
-              <el-avatar :size="48" :src="u.avatar ?? undefined" class="member-pick-card__avatar">
-                {{ initials(u) }}
-              </el-avatar>
-              <div class="member-pick-card__body">
-                <div class="member-pick-card__name">{{ userDisplayName(u) }}</div>
-                <div class="member-pick-card__email">{{ displayEmail(u.userEmail) }}</div>
-                <div class="member-pick-card__meta">
-                  <span class="member-pick-card__meta-item">
-                    <art-svg-icon
-                      icon="mdi:gender-male-female"
-                      class="member-pick-card__meta-icon"
-                    />
-                    {{ displayGender(u.userGender) }}
-                  </span>
-                  <span class="member-pick-card__meta-item">
-                    <art-svg-icon icon="mdi:phone-outline" class="member-pick-card__meta-icon" />
-                    {{ displayPhone(u.userPhone) }}
-                  </span>
-                </div>
-              </div>
-            </div>
-          </el-radio-group>
-        </div>
-      </div>
-      <template #footer>
-        <el-button @click="managerPickerVisible = false">取消</el-button>
-        <el-button type="primary" @click="confirmProjectManagerPicker">确定</el-button>
-      </template>
-    </ArtDialog>
+      :mode="projectDialogMode"
+      :initial-project="projectDialogSource"
+      @success="loadProjects"
+    />
   </div>
 </template>
 
 <script setup lang="ts">
-  import { ref, reactive, onMounted, computed, nextTick } from 'vue';
+  import { ref, reactive, onMounted, nextTick } from 'vue';
   import { ElMessage } from 'element-plus';
-  import type { FormInstance, FormRules } from 'element-plus';
   import {
     fetchProjectPage,
-    fetchProjectCreate,
-    fetchProjectUpdate,
     fetchProjectDelete,
-    fetchProjectOrgMembers,
     type ProjectItem,
     type ProjectStatus
   } from '@/api/project';
+  import ProjectFormDialog from './components/ProjectFormDialog.vue';
 
   const STATUS_OPTIONS = [
     {
@@ -304,24 +189,12 @@
   }
 
   const loading = ref(false);
-  const submitting = ref(false);
   const dialogVisible = ref(false);
-  const editingId = ref<number | null>(null);
+  const projectDialogMode = ref<'create' | 'edit'>('create');
+  const projectDialogSource = ref<ProjectItem | null>(null);
   const hoveredId = ref<number | null>(null);
   const projectList = ref<ProjectItem[]>([]);
-  const userList = ref<
-    {
-      id: number;
-      userName: string;
-      nickName: string | null;
-      avatar: string | null;
-      userEmail?: string | null;
-      userGender?: string | null;
-      userPhone?: string | null;
-    }[]
-  >([]);
   const total = ref(0);
-  const formRef = ref<FormInstance>();
 
   const query = reactive({
     page: 1,
@@ -329,59 +202,6 @@
     name: '',
     status: undefined as ProjectStatus | undefined
   });
-  const form = reactive({
-    name: '',
-    description: '',
-    managerId: undefined as number | undefined,
-    status: 'ACTIVE' as ProjectStatus,
-    dateRange: null as [string, string] | null
-  });
-  const rules: FormRules = {
-    name: [{ required: true, message: '请输入项目名称', trigger: 'blur' }],
-    managerId: [{ required: true, message: '请选择负责人', trigger: 'change' }],
-    status: [{ required: true, message: '请选择项目状态', trigger: 'change' }]
-  };
-
-  const managerPickerVisible = ref(false);
-  const managerPickerTempId = ref<number | undefined>(undefined);
-
-  function userDisplayName(u: { userName: string; nickName: string | null }) {
-    return u.nickName || u.userName;
-  }
-  function initials(u: { userName: string; nickName: string | null }) {
-    return (u.nickName || u.userName)?.[0]?.toUpperCase() ?? '?';
-  }
-  function displayEmail(v: string | null | undefined) {
-    if (v == null || String(v).trim() === '') return '未填写邮箱';
-    return v;
-  }
-  function displayPhone(v: string | null | undefined) {
-    if (v == null || String(v).trim() === '') return '未填写手机';
-    return v;
-  }
-  function displayGender(v: string | null | undefined) {
-    if (v == null || String(v).trim() === '') return '未填写';
-    return v;
-  }
-
-  const projectManagerUser = computed(() => {
-    if (!form.managerId) return null;
-    return userList.value.find((u) => u.id === form.managerId) ?? null;
-  });
-
-  function openProjectManagerPicker() {
-    managerPickerTempId.value = form.managerId;
-    managerPickerVisible.value = true;
-  }
-
-  function confirmProjectManagerPicker() {
-    if (!managerPickerTempId.value) {
-      ElMessage.warning('请选择项目负责人');
-      return;
-    }
-    form.managerId = managerPickerTempId.value;
-    managerPickerVisible.value = false;
-  }
 
   async function loadProjects() {
     loading.value = true;
@@ -396,25 +216,14 @@
     }
   }
 
-  async function loadUsers() {
-    const res = await fetchProjectOrgMembers();
-    if (Array.isArray(res)) userList.value = res;
-  }
-
   function handleSearch() {
     query.page = 1;
     loadProjects();
   }
 
   function openCreateDialog() {
-    editingId.value = null;
-    Object.assign(form, {
-      name: '',
-      description: '',
-      managerId: undefined,
-      status: 'ACTIVE',
-      dateRange: null
-    });
+    projectDialogMode.value = 'create';
+    projectDialogSource.value = null;
     dialogVisible.value = false;
     nextTick(() => {
       dialogVisible.value = true;
@@ -422,46 +231,12 @@
   }
 
   function openEditDialog(proj: ProjectItem) {
-    editingId.value = proj.id;
-    Object.assign(form, {
-      name: proj.name,
-      description: proj.description ?? '',
-      managerId: proj.managerId,
-      status: proj.status,
-      dateRange: proj.startDate && proj.endDate ? [proj.startDate, proj.endDate] : null
-    });
+    projectDialogMode.value = 'edit';
+    projectDialogSource.value = proj;
     dialogVisible.value = false;
     nextTick(() => {
       dialogVisible.value = true;
     });
-  }
-
-  async function handleSubmit() {
-    await formRef.value?.validate();
-    submitting.value = true;
-    try {
-      const payload = {
-        name: form.name,
-        description: form.description || undefined,
-        managerId: form.managerId!,
-        status: form.status,
-        startDate: form.dateRange?.[0] ?? null,
-        endDate: form.dateRange?.[1] ?? null
-      };
-      if (editingId.value) {
-        await fetchProjectUpdate(editingId.value, payload);
-        ElMessage.success('更新成功');
-      } else {
-        await fetchProjectCreate(payload);
-        ElMessage.success('创建成功');
-      }
-      dialogVisible.value = false;
-      loadProjects();
-    } catch {
-      /* 拦截器处理 */
-    } finally {
-      submitting.value = false;
-    }
   }
 
   async function handleDelete(id: number) {
@@ -472,7 +247,6 @@
 
   onMounted(() => {
     loadProjects();
-    loadUsers();
   });
 </script>
 
@@ -675,11 +449,48 @@
   .project-page__pagination {
     flex-shrink: 0;
     display: flex;
-    justify-content: flex-end;
+    justify-content: center;
     background: var(--default-box-color);
     padding: 14px 20px;
     border-radius: $card-radius;
     box-shadow: $card-shadow;
+
+    :deep(.el-select) {
+      width: 102px !important;
+    }
+
+    :deep(.el-pagination) {
+      .btn-prev,
+      .btn-next {
+        background-color: transparent;
+        border: 1px solid var(--art-gray-300);
+        transition: border-color 0.15s;
+
+        &:hover:not(.is-disabled) {
+          color: var(--theme-color);
+          border-color: var(--theme-color);
+        }
+      }
+
+      li {
+        box-sizing: border-box;
+        font-weight: 400 !important;
+        background-color: transparent;
+        border: 1px solid var(--art-gray-300);
+        transition: border-color 0.15s;
+
+        &.is-active {
+          font-weight: 400;
+          color: #fff;
+          background-color: var(--theme-color);
+          border: 1px solid var(--theme-color);
+        }
+
+        &:hover:not(.is-disabled) {
+          border-color: var(--theme-color);
+        }
+      }
+    }
   }
 
   /* Vue 动画组 */
@@ -700,149 +511,5 @@
   }
   .card-list-move {
     transition: transform 0.4s ease;
-  }
-</style>
-
-<style scoped lang="scss">
-  .proj-member-field {
-    display: flex;
-    align-items: flex-start;
-    gap: 12px;
-    flex-wrap: wrap;
-    width: 100%;
-  }
-
-  .proj-member-field--block {
-    flex-direction: column;
-    align-items: stretch;
-  }
-
-  .proj-member-tags {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 8px;
-    align-items: center;
-    flex: 1;
-    min-width: 0;
-    min-height: 32px;
-  }
-
-  .proj-member-placeholder {
-    font-size: 13px;
-    color: var(--el-text-color-placeholder);
-    line-height: 32px;
-  }
-
-  .proj-user-tag :deep(.el-tag__content) {
-    display: inline-flex;
-    align-items: center;
-  }
-
-  .proj-user-tag__inner {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-  }
-
-  .proj-member-picker__scroll {
-    max-height: min(56vh, 480px);
-    overflow-y: auto;
-    padding: 2px 6px 8px 2px;
-    margin-right: -4px;
-  }
-
-  .proj-member-picker__radio-group {
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
-    width: 100%;
-    align-items: stretch;
-  }
-
-  /* 复用 task 页的卡片样式命名，避免再造一套 */
-  .member-pick-card {
-    display: grid;
-    grid-template-columns: auto 48px minmax(0, 1fr);
-    align-items: center;
-    gap: 12px 14px;
-    padding: 14px 16px;
-    border-radius: 14px;
-    border: 1px solid var(--el-border-color-lighter);
-    background: var(--art-main-bg-color, var(--el-bg-color));
-    box-shadow:
-      0 1px 2px rgba(0, 0, 0, 0.04),
-      0 0 0 1px rgba(255, 255, 255, 0.06) inset;
-    transition:
-      border-color 0.2s ease,
-      box-shadow 0.2s ease;
-
-    &:hover {
-      border-color: var(--el-color-primary-light-5);
-      box-shadow: 0 6px 20px rgba(0, 0, 0, 0.06);
-    }
-
-    &--active {
-      border-color: var(--el-color-primary-light-3);
-      box-shadow:
-        0 4px 18px rgba(0, 0, 0, 0.07),
-        0 0 0 1px var(--el-color-primary-light-7) inset;
-    }
-  }
-
-  .member-pick-card__radio {
-    margin: 0 !important;
-    height: auto !important;
-    align-self: center;
-
-    :deep(.el-radio__label) {
-      display: none;
-    }
-  }
-
-  .member-pick-card__avatar {
-    flex-shrink: 0;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
-    border: 2px solid var(--el-border-color-extra-light);
-  }
-
-  .member-pick-card__body {
-    min-width: 0;
-  }
-
-  .member-pick-card__name {
-    font-size: 15px;
-    font-weight: 600;
-    color: var(--el-text-color-primary);
-    letter-spacing: 0.01em;
-    line-height: 1.35;
-  }
-
-  .member-pick-card__email {
-    margin-top: 4px;
-    font-size: 12px;
-    color: var(--el-text-color-secondary);
-    line-height: 1.4;
-    word-break: break-all;
-  }
-
-  .member-pick-card__meta {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 10px 18px;
-    margin-top: 8px;
-  }
-
-  .member-pick-card__meta-item {
-    display: inline-flex;
-    align-items: center;
-    gap: 5px;
-    font-size: 12px;
-    color: var(--el-text-color-secondary);
-  }
-
-  .member-pick-card__meta-icon {
-    font-size: 15px;
-    opacity: 0.88;
-    color: var(--el-color-primary);
   }
 </style>

@@ -85,6 +85,7 @@
   import { useMessageStore } from '@/store/modules/message';
   import { useRouter } from 'vue-router';
   import { ElTag } from 'element-plus';
+  import mittBus from '@/utils/sys/mittBus';
 
   defineOptions({ name: 'ArtNotification' });
 
@@ -96,6 +97,7 @@
     content?: string;
     messageType?: string;
     sender?: any;
+    extra?: any;
   }
   type MergedKind = 'message';
 
@@ -111,6 +113,8 @@
     tagType: 'info' | 'success' | 'warning' | 'danger';
     iconType: 'task' | 'system' | 'direct';
     avatar?: string;
+    messageType: 'TASK' | 'SYSTEM' | 'DIRECT' | string;
+    extra?: any;
   }
 
   interface NoticeStyle {
@@ -209,7 +213,9 @@
         tagText,
         tagType,
         iconType,
-        avatar: m?.sender?.avatar
+        avatar: m?.sender?.avatar,
+        messageType: mt,
+        extra: m?.extra ?? undefined
       };
     });
   });
@@ -220,12 +226,24 @@
 
   const handleItemClick = async (item: MergedItem) => {
     if (!item.id) return;
-    if (item.isRead) return;
-    try {
-      await messageStore.markRead(item.id);
-    } catch {
-      // 标记已读失败时不阻断交互
+    // 先标记已读（不阻断跳转/打开）
+    if (!item.isRead) {
+      try {
+        await messageStore.markRead(item.id);
+      } catch {
+        // 标记已读失败时不阻断交互
+      }
     }
+
+    // TASK 类型消息：尝试根据 extra.taskId 定位任务抽屉
+    const taskId = Number(item?.extra?.taskId);
+    if (item.messageType === 'TASK' && taskId) {
+      await router.push({ name: 'Console' });
+      // 再延后一个 tick，避免目标页面 onMounted 订阅尚未就绪
+      setTimeout(() => mittBus.emit('openTaskDetail', taskId), 0);
+    }
+
+    emit('update:value', false);
   };
 
   // 监听属性变化

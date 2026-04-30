@@ -13,6 +13,7 @@ import {
   SubmitTestDtoType,
   QaAuditDtoType,
   PerformancePageDtoType,
+  ProjectTaskRuleDtoType,
 } from "./task.dto";
 
 /** 仅软件开发类任务启用测试用例与提测/验收流程 */
@@ -252,6 +253,54 @@ class ProjectService {
         manager: { select: userSelect },
         _count: { select: { tasks: true } },
       },
+    });
+  }
+
+  // ==================== ProjectTaskRule ====================
+  private defaultTaskRules() {
+    return {
+      requireEstimateHours: false,
+      requireDueDate: false,
+      requireTestEvidenceForDev: true,
+      allowCoAssigneeSubmitQa: false,
+      allowQaRejectWithoutHours: true,
+    };
+  }
+
+  async taskRulesInfo(projectId: number, userId: number) {
+    await this.assertUserCanAccessProject(userId, projectId);
+
+    const record = await prisma.projectTaskRule.findUnique({
+      where: { projectId },
+    });
+
+    if (!record) return this.defaultTaskRules();
+
+    return {
+      requireEstimateHours: record.requireEstimateHours,
+      requireDueDate: record.requireDueDate,
+      requireTestEvidenceForDev: record.requireTestEvidenceForDev,
+      allowCoAssigneeSubmitQa: record.allowCoAssigneeSubmitQa,
+      allowQaRejectWithoutHours: record.allowQaRejectWithoutHours,
+    };
+  }
+
+  async taskRulesUpdate(projectId: number, userId: number, dto: ProjectTaskRuleDtoType) {
+    await this.assertUserCanAccessProject(userId, projectId);
+
+    const data = {
+      requireEstimateHours: dto.requireEstimateHours ?? false,
+      requireDueDate: dto.requireDueDate ?? false,
+      requireTestEvidenceForDev: dto.requireTestEvidenceForDev ?? true,
+      allowCoAssigneeSubmitQa: dto.allowCoAssigneeSubmitQa ?? false,
+      allowQaRejectWithoutHours: dto.allowQaRejectWithoutHours ?? true,
+    };
+
+    // 使用 upsert，确保“首次配置”可自动创建默认记录
+    await prisma.projectTaskRule.upsert({
+      where: { projectId },
+      update: data,
+      create: { projectId, ...data },
     });
   }
 
@@ -506,7 +555,22 @@ class TaskService {
     return prisma.task.findUnique({
       where: { id },
       include: {
-        project: { select: { id: true, name: true, managerId: true } },
+        project: {
+          select: {
+            id: true,
+            name: true,
+            managerId: true,
+            taskRule: {
+              select: {
+                requireEstimateHours: true,
+                requireDueDate: true,
+                requireTestEvidenceForDev: true,
+                allowCoAssigneeSubmitQa: true,
+                allowQaRejectWithoutHours: true,
+              },
+            },
+          },
+        },
         manager: { select: userSelect },
         mainAssignee: { select: userSelect },
         tester: { select: userSelect },
@@ -571,6 +635,21 @@ class TaskService {
       throw { status: 400, message: "任务组织必须与所属项目一致" };
     }
     const mergedOrgId = proj.orgId;
+
+    // ==================== 项目规则校验（创建时）====================
+    const rules = await projectService.taskRulesInfo(dto.projectId, userId);
+    if (
+      rules.requireEstimateHours &&
+      (taskData.estimatedHours == null || taskData.estimatedHours <= 0)
+    ) {
+      throw {
+        status: 400,
+        message: "该项目要求创建任务时填写预估工时（estimatedHours），当前为空或非正数。",
+      };
+    }
+    if (rules.requireDueDate && taskData.dueDate == null) {
+      throw { status: 400, message: "该项目要求创建任务时填写截止时间（dueDate），当前为空。" };
+    }
 
     const createdTask = await prisma.$transaction(async (tx) => {
       // Prisma MySQL 驱动不接受 undefined，必须显式控制每个字段
@@ -711,6 +790,8 @@ class TaskService {
           title: true,
           projectId: true,
           workDomain: true,
+          dueDate: true,
+          estimatedHours: true,
           mainAssigneeId: true,
           testerId: true,
           coAssignees: { select: { userId: true } },
@@ -728,6 +809,22 @@ class TaskService {
         taskData.workDomain !== undefined
           ? taskData.workDomain
           : existing.workDomain;
+
+      // ==================== 项目规则校验（更新时）====================
+      const rules = await projectService.taskRulesInfo(existing.projectId, userId);
+      const nextEstimatedHours =
+        taskData.estimatedHours !== undefined ? taskData.estimatedHours : existing.estimatedHours;
+      if (rules.requireEstimateHours && (nextEstimatedHours == null || nextEstimatedHours <= 0)) {
+        throw {
+          status: 400,
+          message: "该项目要求任务必须填写预估工时（estimatedHours），请补全后再更新。",
+        };
+      }
+
+      const nextDueDate = taskData.dueDate !== undefined ? taskData.dueDate : existing.dueDate;
+      if (rules.requireDueDate && nextDueDate == null) {
+        throw { status: 400, message: "该项目要求任务必须填写截止时间（dueDate），请补全后再更新。" };
+      }
 
       if (
         testCases !== undefined &&
@@ -995,7 +1092,10 @@ class TaskService {
 
     const task = await prisma.task.findUnique({
       where: { id: taskId },
-      include: { coAssignees: true },
+      include: {
+        coAssignees: true,
+        project: { select: { name: true } },
+      },
     });
     if (!task) throw { status: 404, message: "任务不存在" };
 
@@ -1006,6 +1106,18 @@ class TaskService {
     }
     if (task.status !== "PENDING") {
       throw { status: 400, message: `当前状态（${task.status}）无法开始开发` };
+    }
+
+    // ==================== 项目规则校验（开始开发时）====================
+    const rules = await projectService.taskRulesInfo(task.projectId, userId);
+    if (rules.requireEstimateHours && (task.estimatedHours == null || task.estimatedHours <= 0)) {
+      throw {
+        status: 400,
+        message: "该项目要求开发前填写预估工时（estimatedHours）。请先补全后再开始开发。",
+      };
+    }
+    if (rules.requireDueDate && task.dueDate == null) {
+      throw { status: 400, message: "该项目要求开发前填写截止时间（dueDate）。请先补全后再开始开发。" };
     }
 
     const updated = await prisma.task.update({
@@ -1020,6 +1132,39 @@ class TaskService {
       fromStatus: task.status,
       toStatus: "IN_PROGRESS",
     });
+
+    // ===== 站内消息推送：开始开发（推给主负责人/协助人/验收人；排除操作者）=====
+    try {
+      const receiverIds = new Set<number>();
+      if (task.mainAssigneeId) receiverIds.add(task.mainAssigneeId);
+      if (task.testerId) receiverIds.add(task.testerId);
+      for (const ca of task.coAssignees ?? []) receiverIds.add(ca.userId);
+      receiverIds.delete(userId);
+
+      const projectName = task.project?.name ?? "";
+      const taskTitle = task.title ?? "";
+
+      await Promise.allSettled(
+        Array.from(receiverIds).map((receiverId) =>
+          messageService.sendRealTimeMessage(
+            {
+              receiverId,
+              messageType: "TASK",
+              title: "任务已开始开发",
+              content: `任务「${taskTitle}」进入开发中（项目：${projectName}）。`,
+              extra: {
+                biz: "task",
+                action: "started",
+                taskId,
+                projectId: task.projectId,
+              },
+            },
+            userId
+          )
+        )
+      );
+    } catch {}
+
     return updated;
   }
 
@@ -1029,7 +1174,10 @@ class TaskService {
 
     const task = await prisma.task.findUnique({
       where: { id: taskId },
-      include: { coAssignees: true },
+      include: {
+        coAssignees: true,
+        project: { select: { name: true } },
+      },
     });
     if (!task) throw { status: 404, message: "任务不存在" };
 
@@ -1041,7 +1189,7 @@ class TaskService {
 
     await assertAttachmentsOwnedByUser(dto.attachmentIds, userId);
 
-    return prisma.$transaction(async (tx) => {
+    const ret = await prisma.$transaction(async (tx) => {
       const log = await tx.workLog.create({
         data: { taskId, userId, hours: dto.hours, content: dto.content },
       });
@@ -1073,16 +1221,53 @@ class TaskService {
       });
       return ret;
     });
+
+    // ===== 站内消息推送：工时登记（推给主负责人/协助人/验收人；排除操作者）=====
+    try {
+      const receiverIds = new Set<number>();
+      if (task.mainAssigneeId) receiverIds.add(task.mainAssigneeId);
+      if (task.testerId) receiverIds.add(task.testerId);
+      for (const ca of task.coAssignees ?? []) receiverIds.add(ca.userId);
+      receiverIds.delete(userId);
+
+      const projectName = task.project?.name ?? "";
+      const taskTitle = task.title ?? "";
+
+      await Promise.allSettled(
+        Array.from(receiverIds).map((receiverId) =>
+          messageService.sendRealTimeMessage(
+            {
+              receiverId,
+              messageType: "TASK",
+              title: "工时已登记",
+              content: `任务「${taskTitle}」新增工时：${dto.hours}h（项目：${projectName}）。`,
+              extra: {
+                biz: "task",
+                action: "worklogAdded",
+                taskId,
+                projectId: task.projectId,
+              },
+            },
+            userId
+          )
+        )
+      );
+    } catch {}
+
+    return ret;
   }
 
   async addComment(taskId: number, userId: number, dto: CreateTaskCommentDtoType) {
     await projectService.assertUserCanAccessTask(userId, taskId);
-    const task = await prisma.task.findUnique({ where: { id: taskId } });
+    const task = await prisma.task.findUnique({
+      where: { id: taskId },
+      include: { coAssignees: true, project: { select: { name: true } } },
+    });
     if (!task) throw { status: 404, message: "任务不存在" };
 
     await assertAttachmentsOwnedByUser(dto.attachmentIds, userId);
 
-    return prisma.$transaction(async (tx) => {
+    const ret = await prisma.$transaction(async (tx) => {
       const comment = await tx.taskComment.create({
         data: { taskId, userId, content: dto.content },
       });
@@ -1114,6 +1299,61 @@ class TaskService {
         },
       });
     });
+
+    // ===== 站内消息推送：评论新增（推给主负责人/协助人/验收人；排除操作者）=====
+    try {
+      const receiverIds = new Set<number>();
+      if (task.mainAssigneeId) receiverIds.add(task.mainAssigneeId);
+      if (task.testerId) receiverIds.add(task.testerId);
+      for (const ca of task.coAssignees ?? []) receiverIds.add(ca.userId);
+      receiverIds.delete(userId);
+
+      // 如果评论内容包含 @用户，则额外通知被提及用户（按 userName / nickName 精确匹配）
+      // 规则：@xxx，xxx 直到遇到空白或标点分隔（不支持复杂富文本结构）
+      const mentionTokens = Array.from(
+        (dto.content ?? '').matchAll(/@([^\s@，。,.!?;:：]{1,30})/g)
+      )
+        .map((m) => m[1])
+        .filter(Boolean);
+
+      if (mentionTokens.length) {
+        const uniqTokens = Array.from(new Set(mentionTokens));
+        const mentionedUsers = await prisma.user.findMany({
+          where: {
+            OR: [{ userName: { in: uniqTokens } }, { nickName: { in: uniqTokens } }]
+          },
+          select: { id: true }
+        });
+
+        for (const u of mentionedUsers) receiverIds.add(u.id);
+      }
+
+      const projectName = task.project?.name ?? "";
+      const taskTitle = task.title ?? "";
+      const snippet = dto.content?.slice(0, 80) ?? "";
+
+      await Promise.allSettled(
+        Array.from(receiverIds).map((receiverId) =>
+          messageService.sendRealTimeMessage(
+            {
+              receiverId,
+              messageType: "TASK",
+              title: "任务收到新评论",
+              content: `任务「${taskTitle}」新增评论：${snippet}（项目：${projectName}）。`,
+              extra: {
+                biz: "task",
+                action: "commentAdded",
+                taskId,
+                projectId: task.projectId,
+              },
+            },
+            userId
+          )
+        )
+      );
+    } catch {}
+
+    return ret;
   }
 
   // 提交验收（仅主负责人；软件开发任务额外校验测试用例）
@@ -1138,21 +1378,33 @@ class TaskService {
       throw { status: 400, message: `当前状态（${task.status}）不可提交验收` };
     }
 
+    const rules = await projectService.taskRulesInfo(task.projectId, userId);
+
     if (taskSupportsTestCases(task.workDomain)) {
       if (!task.testCases.length) {
         throw { status: 400, message: "请先添加测试用例" };
       }
-      if (dto.testCaseResults.length !== task.testCases.length) {
-        throw { status: 400, message: "请完整提交全部测试用例的自测结果" };
-      }
-      const allPassed = dto.testCaseResults.every(
-        (r) => r.selfTestStatus === "PASSED"
-      );
-      if (!allPassed) {
-        throw {
-          status: 400,
-          message: "所有测试用例必须全部自测通过才能提交验收",
-        };
+
+      if (rules.requireTestEvidenceForDev) {
+        if (dto.testCaseResults.length !== task.testCases.length) {
+          throw { status: 400, message: "请完整提交全部测试用例的自测结果" };
+        }
+        const allPassed = dto.testCaseResults.every(
+          (r) => r.selfTestStatus === "PASSED"
+        );
+        if (!allPassed) {
+          throw {
+            status: 400,
+            message: "所有测试用例必须全部自测通过才能提交验收（已启用项目规则：requireTestEvidenceForDev）",
+          };
+        }
+      } else {
+        // 放宽：允许不完整/不强制全部通过；但需要确保提交的用例 id 属于本任务
+        const taskCaseIds = new Set(task.testCases.map((tc) => tc.id));
+        const invalid = dto.testCaseResults.some((r) => !taskCaseIds.has(r.id));
+        if (invalid) {
+          throw { status: 400, message: "自测结果包含无效测试用例，请重新选择" };
+        }
       }
     }
 
@@ -1234,9 +1486,14 @@ class TaskService {
     });
     if (!task) throw { status: 404, message: "任务不存在" };
 
-    // 权限校验：仅测试验收人
+    const rules = await projectService.taskRulesInfo(task.projectId, userId);
+
+    // 权限校验：仅测试验收人；可由规则放宽到协助人
+    const isCoAssignee = (task.coAssignees ?? []).some((ca) => ca.userId === userId);
     if (task.testerId !== userId) {
-      throw { status: 403, message: "无权限：仅测试验收人可进行 QA 审核" };
+      if (!(rules.allowCoAssigneeSubmitQa && isCoAssignee)) {
+        throw { status: 403, message: "无权限：仅测试验收人可进行 QA 审核（协助人权限未启用）" };
+      }
     }
 
     if (task.status !== "QA_REVIEW") {
@@ -1279,10 +1536,29 @@ class TaskService {
         if (!rejectReason) {
           throw { status: 400, message: "请填写打回原因" };
         }
+
+        // 若规则要求：打回必须填写实际工时
+        const needHours = !rules.allowQaRejectWithoutHours;
+        if (needHours) {
+          const actualHours = dto.actualHours;
+          if (!actualHours || actualHours <= 0) {
+            throw {
+              status: 400,
+              message: "打回修改需要填写实际工时（规则：allowQaRejectWithoutHours=false）",
+            };
+          }
+        }
+
         // 打回后直接回到提交验收前状态（开发中）
         const updated = await tx.task.update({
           where: { id: taskId },
-          data: { status: "IN_PROGRESS", qaRejectReason: rejectReason } as any,
+          data: {
+            status: "IN_PROGRESS",
+            qaRejectReason: rejectReason,
+            ...(dto.actualHours && !rules.allowQaRejectWithoutHours
+              ? { actualHours: dto.actualHours }
+              : {}),
+          } as any,
         });
         await appendTaskTimeline(tx, {
           taskId,

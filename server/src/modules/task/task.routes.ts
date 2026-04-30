@@ -15,6 +15,14 @@ router.get(
   projectController.orgMembers.bind(projectController)
 );
 router.get("/projects/:id", projectController.info.bind(projectController));
+router.get(
+  "/projects/:id/task-rules",
+  projectController.taskRulesInfo.bind(projectController)
+);
+router.put(
+  "/projects/:id/task-rules",
+  projectController.taskRulesUpdate.bind(projectController)
+);
 router.post("/projects", projectController.create.bind(projectController));
 router.put("/projects/:id", projectController.update.bind(projectController));
 router.delete(
