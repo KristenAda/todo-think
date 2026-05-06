@@ -22,7 +22,10 @@ export async function requestLogger(ctx: Context, next: Next) {
   const { method, url, ip } = ctx;
   const body = (ctx.request as { body?: unknown }).body;
 
-  logger.info(`→ ${method} ${url} ip=${ip} body=${safeJson(body)}`);
+  // GET/HEAD 无业务 body，跳过 JSON.stringify，减轻高 QPS 下日志开销
+  const bodyPart =
+    method === "GET" || method === "HEAD" ? "" : ` body=${safeJson(body)}`;
+  logger.info(`→ ${method} ${url} ip=${ip}${bodyPart}`);
 
   await next();
 

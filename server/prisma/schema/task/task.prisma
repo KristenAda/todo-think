@@ -68,6 +68,7 @@ model Project {
   taskRule ProjectTaskRule?
   tasks   Task[]
 
+  @@index([orgId, id])
   @@map("project")
 }
 
@@ -143,6 +144,9 @@ model Task {
   timelines   TaskTimeline[]
   attachments TaskAttachment[]
 
+  @@index([orgId, id])
+  @@index([projectId, status, id])
+  @@index([mainAssigneeId, id])
   @@map("task")
 }
 

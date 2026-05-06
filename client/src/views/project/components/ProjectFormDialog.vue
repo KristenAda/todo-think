@@ -52,7 +52,6 @@
           start-placeholder="开始日期"
           end-placeholder="结束日期"
           style="width: 100%"
-          value-format="YYYY-MM-DDTHH:mm:ss.000Z"
         />
       </el-form-item>
 
@@ -195,7 +194,8 @@
     description: '',
     managerId: undefined as number | undefined,
     status: 'ACTIVE' as ProjectStatus,
-    dateRange: null as [string, string] | null
+    /** 使用 Date 绑定，避免 value-format 与后端带毫秒的 ISO 字符串不一致导致无法回显 */
+    dateRange: null as [Date, Date] | null
   });
 
   const taskRulesForm = reactive<ProjectTaskRules>({
@@ -258,6 +258,28 @@
     if (Array.isArray(res)) userList.value = res;
   }
 
+  function parseProjectDate(d: string | null | undefined): Date | null {
+    if (d == null || String(d).trim() === '') return null;
+    const t = new Date(d);
+    return Number.isNaN(t.getTime()) ? null : t;
+  }
+
+  /** 与列表卡片一致：有起止则区间；仅一端有值时仍尽量回显到日期选择器 */
+  function projectDatesToRange(proj: ProjectItem): [Date, Date] | null {
+    const start = parseProjectDate(proj.startDate);
+    const end = parseProjectDate(proj.endDate);
+    if (start && end) return [start, end];
+    if (start) return [start, start];
+    if (end) return [end, end];
+    return null;
+  }
+
+  function toApiIsoDate(v: Date | null | undefined): string | null {
+    if (!v) return null;
+    if (Number.isNaN(v.getTime())) return null;
+    return v.toISOString();
+  }
+
   function resetDefaults() {
     Object.assign(form, {
       name: '',
@@ -287,7 +309,7 @@
       description: proj.description ?? '',
       managerId: proj.managerId,
       status: proj.status,
-      dateRange: proj.startDate && proj.endDate ? [proj.startDate, proj.endDate] : null
+      dateRange: projectDatesToRange(proj)
     });
     try {
       const rule = await fetchProjectTaskRules(proj.id);
@@ -313,8 +335,8 @@
         description: form.description || undefined,
         managerId: form.managerId!,
         status: form.status,
-        startDate: form.dateRange?.[0] ?? null,
-        endDate: form.dateRange?.[1] ?? null
+        startDate: toApiIsoDate(form.dateRange?.[0]),
+        endDate: toApiIsoDate(form.dateRange?.[1])
       };
       if (props.mode === 'edit' && props.initialProject) {
         await fetchProjectUpdate(props.initialProject.id, payload);

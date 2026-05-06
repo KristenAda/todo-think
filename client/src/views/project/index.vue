@@ -142,7 +142,7 @@
     type ProjectStatus
   } from '@/api/project';
   import ProjectFormDialog from './components/ProjectFormDialog.vue';
-  import { formatDateTime } from '@/utils/date';
+  import { formatDate } from '@/utils/date';
   const PROJECT_PRIMARY = 'var(--theme-color)';
 
   const STATUS_OPTIONS = [
@@ -189,7 +189,7 @@
   }
   function formatProjectDate(d: string | null) {
     if (!d) return '未设置';
-    return formatDateTime(d) || '未设置';
+    return formatDate(d) || '未设置';
   }
 
   const loading = ref(false);
