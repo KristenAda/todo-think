@@ -62,6 +62,7 @@
   import { ElMessage, ElMessageBox } from 'element-plus';
   import type { UploadRequestOptions } from 'element-plus';
   import { h } from 'vue';
+  import { formatDateTime } from '@/utils/date';
 
   defineOptions({ name: 'SystemAttachment' });
 
@@ -117,8 +118,10 @@
         {
           prop: 'createTime',
           label: '上传时间',
-          width: 180,
-          sortable: true
+          width: 185,
+          sortable: true,
+          formatter: (row: AttachmentItem) =>
+            row.createTime ? formatDateTime(row.createTime) : ''
         },
         {
           prop: 'operation',

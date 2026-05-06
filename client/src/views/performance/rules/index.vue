@@ -22,7 +22,6 @@
         <el-button type="primary" plain @click="openCreateRuleSet">新建规则集</el-button>
         <el-button @click="openEditRuleSet">编辑规则集</el-button>
         <el-button type="danger" plain @click="deleteCurrentRuleSet">删除规则集</el-button>
-        <el-button @click="openVariableConfig">变量配置</el-button>
         <el-button @click="openVersions">查看历史版本</el-button>
         <el-button type="primary" @click="saveAsNewVersion">保存为新版本</el-button>
       </div>
@@ -90,19 +89,17 @@
       :loading="versionsLoading"
       :columns="versionColumns"
     />
-    <RuleVariableConfigDialog
-      v-model:visible="variableConfigVisible"
-      :variable-drafts="variableDrafts"
-      :columns="variableColumns"
-      @add-variable-draft="addVariableDraft"
-      @save-variable-config="saveVariableConfig"
-    />
     <RuleSetFormDialog
       v-model:visible="ruleSetDialogVisible"
       :mode="ruleSetDialogMode"
       :form="ruleSetForm"
       :project-options="projectOptions"
+      :variable-drafts="variableDrafts"
+      :columns="variableColumns"
+      :saving="ruleSetDialogSaving"
       @save="saveRuleSet"
+      @add-variable-draft="addVariableDraft"
+      @reload-variable-drafts="loadVariableDraftsForDialog"
     />
     <RuleVersionPreviewDialog
       v-model:visible="versionPreviewVisible"
@@ -124,7 +121,6 @@
     ElSelect
   } from 'element-plus';
   import RuleSetFormDialog from './components/RuleSetFormDialog.vue';
-  import RuleVariableConfigDialog from './components/RuleVariableConfigDialog.vue';
   import RuleVersionPreviewDialog from './components/RuleVersionPreviewDialog.vue';
   import RuleVersionsDialog from './components/RuleVersionsDialog.vue';
   import {
@@ -144,6 +140,7 @@
     fetchUpsertRuleVariables,
     fetchUpdateRuleSet
   } from '@/api/task';
+  import { formatDateTime } from '@/utils/date';
 
   defineOptions({ name: 'PerformanceRules' });
 
@@ -159,9 +156,9 @@
   const versions = ref<Api.Task.RuleSetVersion[]>([]);
 
   const systemVars = ref<Api.Task.RuleVariable[]>([]);
-  const variableConfigVisible = ref(false);
   const variableDrafts = ref<Api.Task.RuleVariable[]>([]);
   const ruleSetDialogVisible = ref(false);
+  const ruleSetDialogSaving = ref(false);
   const ruleSetDialogMode = ref<'create' | 'edit'>('create');
   const projectOptions = ref<Api.Task.SimpleProject[]>([]);
   const ruleSetForm = reactive<Api.Task.CreateRuleSetParams>({
@@ -191,7 +188,13 @@
   const versionColumns = computed(() => [
     { type: 'index', label: '序号', width: 70 },
     { prop: 'version', label: '版本号', width: 100 },
-    { prop: 'publishedAt', label: '发布时间', minWidth: 200 },
+    {
+      prop: 'publishedAt',
+      label: '发布时间',
+      minWidth: 185,
+      formatter: (row: Api.Task.RuleSetVersion) =>
+        row.publishedAt ? formatDateTime(row.publishedAt) : ''
+    },
     {
       prop: 'operation',
       label: '操作',
@@ -213,7 +216,7 @@
   ]);
 
   const variableColumns = computed(() => [
-    { type: 'index', label: '序号', width: 70 },
+    { type: 'globalIndex', width: 60, label: '序号' },
     {
       prop: 'code',
       label: '编码',
@@ -316,6 +319,37 @@
     return null;
   }
 
+  function normalizeFetchedVariables(vars: Api.Task.RuleVariable[]): Api.Task.RuleVariable[] {
+    return vars.map((v) => ({
+      ...v,
+      defaultValue: parseDefaultValue(v.defaultValue),
+      sort: Number(v.sort ?? 0)
+    }));
+  }
+
+  /** 按当前表单作用域/项目拉取变量草稿（新建前或弹窗内切换项目/作用域时） */
+  async function loadVariableDraftsForDialog() {
+    const projectId =
+      ruleSetForm.scope === RuleScopeEnum.PROJECT ? ruleSetForm.projectId ?? undefined : undefined;
+    const vars = await fetchRuleVariables({ projectId });
+    variableDrafts.value = normalizeFetchedVariables(vars).map((v) => ({ ...v }));
+  }
+
+  function buildCleanedVariables(): Api.Task.RuleVariable[] | null {
+    const cleaned = variableDrafts.value
+      .filter((v) => v.code && v.label && v.sourcePath)
+      .map((v, idx) => ({
+        ...v,
+        defaultValue: v.defaultValue == null ? null : Number(v.defaultValue),
+        sort: idx + 1
+      }));
+    if (!cleaned.length) {
+      ElMessage.warning('至少保留一个有效变量');
+      return null;
+    }
+    return cleaned;
+  }
+
   function buildFormulaDefinition(expression: string) {
     return {
       params: {},
@@ -374,12 +408,13 @@
     projectOptions.value = await fetchProjectList();
   }
 
-  function openCreateRuleSet() {
+  async function openCreateRuleSet() {
     ruleSetDialogMode.value = 'create';
     ruleSetForm.code = '';
     ruleSetForm.name = '';
     ruleSetForm.scope = RuleScopeEnum.PROJECT;
     ruleSetForm.projectId = currentRuleSet.value?.projectId ?? undefined;
+    await loadVariableDraftsForDialog();
     ruleSetDialogVisible.value = true;
   }
 
@@ -393,6 +428,7 @@
     ruleSetForm.name = currentRuleSet.value.name;
     ruleSetForm.scope = (currentRuleSet.value.scope as RuleScopeEnum) ?? RuleScopeEnum.PROJECT;
     ruleSetForm.projectId = currentRuleSet.value.projectId ?? undefined;
+    variableDrafts.value = systemVars.value.map((v) => ({ ...v }));
     ruleSetDialogVisible.value = true;
   }
 
@@ -405,17 +441,27 @@
       ElMessage.warning('项目作用域必须选择关联项目');
       return;
     }
-    if (ruleSetDialogMode.value === 'create') {
-      const created = await fetchCreateRuleSet(ruleSetForm);
-      selectedRuleSetId.value = created.id;
-      ElMessage.success('规则集创建成功');
-    } else if (currentRuleSet.value) {
-      await fetchUpdateRuleSet(currentRuleSet.value.id, ruleSetForm);
-      ElMessage.success('规则集修改成功');
+    const cleaned = buildCleanedVariables();
+    if (!cleaned) return;
+
+    ruleSetDialogSaving.value = true;
+    try {
+      if (ruleSetDialogMode.value === 'create') {
+        const created = await fetchCreateRuleSet(ruleSetForm);
+        selectedRuleSetId.value = created.id;
+      } else if (currentRuleSet.value) {
+        await fetchUpdateRuleSet(currentRuleSet.value.id, ruleSetForm);
+      }
+      await fetchUpsertRuleVariables({ variables: cleaned });
+      ElMessage.success('规则集与变量已保存');
+      ruleSetDialogVisible.value = false;
+      await loadRuleSets();
+      await loadRuleVariables();
+      if (selectedRuleSetId.value) await onRuleSetChange();
+      runTest();
+    } finally {
+      ruleSetDialogSaving.value = false;
     }
-    ruleSetDialogVisible.value = false;
-    await loadRuleSets();
-    await onRuleSetChange();
   }
 
   async function deleteCurrentRuleSet() {
@@ -436,21 +482,12 @@
   async function loadRuleVariables() {
     const projectId = currentRuleSet.value?.projectId ?? undefined;
     const vars = await fetchRuleVariables({ projectId: projectId ?? undefined });
-    const normalized = vars.map((v) => ({
-      ...v,
-      defaultValue: parseDefaultValue(v.defaultValue),
-      sort: Number(v.sort ?? 0)
-    }));
+    const normalized = normalizeFetchedVariables(vars);
     systemVars.value = normalized;
     variableDrafts.value = normalized.map((v) => ({ ...v }));
     for (const v of normalized) {
       sandbox[v.code] = Number(v.defaultValue ?? 0);
     }
-  }
-
-  function openVariableConfig() {
-    variableDrafts.value = systemVars.value.map((v) => ({ ...v }));
-    variableConfigVisible.value = true;
   }
 
   function addVariableDraft() {
@@ -464,25 +501,6 @@
       enabled: true,
       sort: variableDrafts.value.length + 1
     });
-  }
-
-  async function saveVariableConfig() {
-    const cleaned = variableDrafts.value
-      .filter((v) => v.code && v.label && v.sourcePath)
-      .map((v, idx) => ({
-        ...v,
-        defaultValue: v.defaultValue == null ? null : Number(v.defaultValue),
-        sort: idx + 1
-      }));
-    if (!cleaned.length) {
-      ElMessage.warning('至少保留一个有效变量');
-      return;
-    }
-    await fetchUpsertRuleVariables({ variables: cleaned });
-    ElMessage.success('变量配置已保存');
-    variableConfigVisible.value = false;
-    await loadRuleVariables();
-    runTest();
   }
 
   async function onRuleSetChange() {

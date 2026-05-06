@@ -50,7 +50,7 @@
           </div>
           <div class="meta-row" v-if="profile.createTime">
             <art-svg-icon icon="mdi:calendar-account" class="meta-icon" /><span
-              >加入于 {{ formatDate(profile.createTime) }}</span
+              >加入于 {{ formatDateTime(profile.createTime) }}</span
             >
           </div>
         </div>
@@ -233,6 +233,7 @@
   import type { FormInstance, FormRules, UploadRawFile } from 'element-plus';
   import { fetchGetProfile, fetchUpdateProfile, fetchChangePassword } from '@/api/system-manage';
   import { useUserStore } from '@/store/modules/user';
+  import { formatDateTime } from '@/utils/date';
 
   defineOptions({ name: 'UserCenter' });
 
@@ -264,10 +265,6 @@
       infoForm.userEmail = data.userEmail || '';
       infoForm.tags = Array.isArray(data.tags) ? [...data.tags] : [];
     }
-  }
-
-  function formatDate(d: string) {
-    return d ? new Date(d).toLocaleDateString('zh-CN') : '-';
   }
 
   function handleAvatarUpload(file: UploadRawFile) {

@@ -7,9 +7,8 @@
  * - 自动给最新 migration 的 `migration.sql` 的表/字段补上 COMMENT
  *
  * 使用方式（推荐）：
- * 1) prisma migrate dev --create-only
- * 2) node scripts/prismaMysqlComments.js
- * 3) prisma migrate dev
+ *   npm run comments:migrate
+ *   或等价：npx prisma migrate dev --create-only → 本脚本 → npx prisma migrate dev
  */
 const fs = require('fs');
 const path = require('path');

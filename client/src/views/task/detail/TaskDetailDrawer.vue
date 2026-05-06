@@ -263,8 +263,8 @@
                   <div class="log-content">
                     <div class="log-meta">
                       <span class="log-user">{{ log.user.nickName || log.user.userName }}</span>
-                      <el-tag size="small" type="success">{{ log.hours }}h</el-tag>
-                      <span class="log-time">{{ formatDate(log.createdAt) }}</span>
+                      <span class="worklog-hours" title="本次登记工时">{{ log.hours }}h</span>
+                      <span class="log-time">{{ formatDateTime(log.createdAt) }}</span>
                     </div>
                     <div class="log-text">{{ log.content }}</div>
                     <div v-if="log.attachments?.length" class="log-attach">
@@ -348,7 +348,7 @@
                   <div class="comment-item__main">
                     <div class="comment-item__meta">
                       <span class="comment-item__author">{{ userDisplayName(c.user) }}</span>
-                      <span class="comment-item__time">{{ formatDate(c.createdAt) }}</span>
+                      <span class="comment-item__time">{{ formatDateTime(c.createdAt) }}</span>
                     </div>
                     <div class="comment-item__text">{{ c.content }}</div>
                     <div v-if="c.attachments?.length" class="comment-item__attachments">
@@ -418,7 +418,7 @@
                 <div class="timeline-item__content">
                   <div class="timeline-item__head">
                     <span class="timeline-item__title">{{ line.title }}</span>
-                    <span class="timeline-item__time">{{ formatDate(line.createdAt) }}</span>
+                    <span class="timeline-item__time">{{ formatDateTime(line.createdAt) }}</span>
                   </div>
                   <div class="timeline-item__desc">
                     {{
@@ -618,6 +618,7 @@
     getFileTintRgb,
     getFileExtLabel
   } from '@/utils/fileTypeIcon';
+  import { formatDateTime } from '@/utils/date';
   import { useUserStore } from '@/store/modules/user';
   import TaskAttachmentField from '../components/TaskAttachmentField.vue';
   import AttachmentPreviewDialog from '../components/AttachmentPreviewDialog.vue';
@@ -830,9 +831,6 @@
   }
   function userDisplayName(u: Api.Task.SimpleUser) {
     return u.nickName || u.userName;
-  }
-  function formatDate(d: string) {
-    return d ? new Date(d).toLocaleString('zh-CN', { hour12: false }).slice(0, 16) : '';
   }
   function timelineClass(eventType: string) {
     if (eventType === 'QA_PASSED') return 'timeline-item--success';
@@ -1518,15 +1516,34 @@
       .log-meta {
         display: flex;
         align-items: center;
+        flex-wrap: wrap;
         gap: 8px;
         margin-bottom: 4px;
         .log-user {
           font-weight: 500;
           font-size: 13px;
         }
+        .worklog-hours {
+          display: inline-flex;
+          align-items: center;
+          padding: 1px 8px;
+          border-radius: 6px;
+          font-size: 13px;
+          font-weight: 600;
+          line-height: 1.35;
+          color: var(--el-color-primary);
+          background: linear-gradient(
+            125deg,
+            var(--el-color-primary-light-9) 0%,
+            var(--el-fill-color-blank) 72%
+          );
+          border: 1px solid var(--el-color-primary-light-5);
+          box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+        }
         .log-time {
           font-size: 12px;
           color: #999;
+          margin-left: auto;
         }
       }
       .log-text {

@@ -14,6 +14,7 @@ import {
   fetchMessagePage,
   fetchUnreadMessageCount
 } from '@/api/message';
+import { formatDateTime } from '@/utils/date';
 
 export interface RealtimeMessagePayload {
   event: string;
@@ -53,9 +54,8 @@ export const useMessageStore = defineStore('messageStore', () => {
   }
 
   function formatTimeText(time: string | Date | undefined) {
-    const d = time ? new Date(time) : new Date();
-    if (Number.isNaN(d.getTime())) return '';
-    return d.toLocaleString();
+    if (!time) return '';
+    return formatDateTime(time);
   }
 
   function showRealtimeNotification(message: any) {

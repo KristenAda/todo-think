@@ -1,5 +1,7 @@
 -- ============================================================
--- 数字绩效 / 积分 / 动态规则引擎 核心菜单 SQL
+-- 【历史补丁】数字绩效 / 积分 / 规则引擎菜单
+-- 新环境请优先使用 prisma/seed.sql（已合并 id 40/140/141 及 _MenuToRole）。
+-- 本文件仍可用于老库「仅补菜单」：重复执行 id 40/140/141 为 ON DUPLICATE 更新。
 -- 目标：将核心功能菜单授权给 userId = 1
 --
 -- 说明：
@@ -12,6 +14,31 @@
 -- 一、菜单（核心功能）
 -- 约定 ID 段：140~149（避免与现有种子数据冲突）
 -- ------------------------------------------------------------
+
+-- 0) 积分记录（前端路由 /system/points-ledger；与规则管理同级，便于联查）
+INSERT INTO `Menu` (
+  `id`, `parentId`, `name`, `title`, `path`, `component`, `icon`,
+  `type`, `sort`, `isEnable`, `keepAlive`, `isIframe`, `isHide`, `authList`,
+  `createTime`, `updateTime`
+) VALUES (
+  141, 1, 'PointsLedgerLog', '积分记录', 'points-ledger', '/system/points-ledger/index', 'mdi:history',
+  2, 21, 1, 1, 0, 0, '[{"title":"查看积分流水","authMark":"points-ledger:view"}]',
+  NOW(), NOW()
+)
+ON DUPLICATE KEY UPDATE
+  `parentId` = VALUES(`parentId`),
+  `title` = VALUES(`title`),
+  `path` = VALUES(`path`),
+  `component` = VALUES(`component`),
+  `icon` = VALUES(`icon`),
+  `type` = VALUES(`type`),
+  `sort` = VALUES(`sort`),
+  `isEnable` = VALUES(`isEnable`),
+  `keepAlive` = VALUES(`keepAlive`),
+  `isIframe` = VALUES(`isIframe`),
+  `isHide` = VALUES(`isHide`),
+  `authList` = VALUES(`authList`),
+  `updateTime` = NOW();
 
 -- 1) 系统管理下：规则管理（前端路由 /system/performance-rules）
 INSERT INTO `Menu` (
@@ -66,6 +93,7 @@ ON DUPLICATE KEY UPDATE
 -- ------------------------------------------------------------
 INSERT IGNORE INTO `_MenuToRole` (`A`, `B`) VALUES
   (140, 1),
+  (141, 1),
   (40, 1);
 
 -- ------------------------------------------------------------
@@ -79,9 +107,9 @@ INSERT IGNORE INTO `_RoleToUser` (`A`, `B`) VALUES
 -- ------------------------------------------------------------
 -- SELECT id, parentId, name, title, path, component
 -- FROM `Menu`
--- WHERE id IN (40, 140)
+-- WHERE id IN (40, 140, 141)
 -- ORDER BY id;
 --
--- SELECT * FROM `_MenuToRole` WHERE (`A` IN (40, 140) AND `B`=1);
+-- SELECT * FROM `_MenuToRole` WHERE (`A` IN (40, 140, 141) AND `B`=1);
 -- SELECT * FROM `_RoleToUser` WHERE `A`=1 AND `B`=1;
 

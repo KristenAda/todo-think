@@ -5,6 +5,8 @@
  * - 仅补充/修改 Prisma schema 的 `///` 文档注释，但没有任何 model/字段结构变化
  * - 希望把注释真正写入 MySQL 的 TABLE/COLUMN COMMENT
  *
+ * 快捷调用：npm run comments:apply（或 npm run db -- comments-apply）
+ *
  * 原理：
  * - 解析 `prisma/schema/<modules>/*.prisma`（跳过 migrations）中的 model/字段 `///` 注释（示例：prisma/schema/system/message.prisma）
  * - 读取 information_schema 获取当前列定义（column_type、null/default/extra）

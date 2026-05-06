@@ -35,6 +35,7 @@
   import { storeToRefs } from 'pinia';
   import { useRouter } from 'vue-router';
   import mittBus from '@/utils/sys/mittBus';
+  import { formatDateTime } from '@/utils/date';
 
   defineOptions({ name: 'MessageCenter' });
 
@@ -105,8 +106,7 @@
             prop: 'createTime',
             label: '时间',
             minWidth: 180,
-            formatter: (row: any) =>
-              row?.createTime ? new Date(row.createTime).toLocaleString() : ''
+            formatter: (row: any) => (row?.createTime ? formatDateTime(row.createTime) : '')
           },
           {
             prop: 'isRead',

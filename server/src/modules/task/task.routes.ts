@@ -73,5 +73,13 @@ router.get(
   "/performance/reconcile/:id",
   performanceController.reconcileTask.bind(performanceController)
 );
+router.get(
+  "/performance/points-ledger",
+  performanceController.pointsLedgerPage.bind(performanceController),
+);
+router.get(
+  "/performance/points-ledger/:entryId",
+  performanceController.pointsLedgerDetail.bind(performanceController),
+);
 
 export default router;

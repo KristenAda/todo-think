@@ -88,7 +88,7 @@
             </div>
             <div class="meta-item" v-if="proj.startDate || proj.endDate">
               <art-svg-icon icon="mdi:calendar-clock-outline" class="meta-item__icon" />
-              <span>{{ formatDate(proj.startDate) }} ~ {{ formatDate(proj.endDate) }}</span>
+              <span>{{ formatProjectDate(proj.startDate) }} ~ {{ formatProjectDate(proj.endDate) }}</span>
             </div>
           </div>
           <div
@@ -142,6 +142,7 @@
     type ProjectStatus
   } from '@/api/project';
   import ProjectFormDialog from './components/ProjectFormDialog.vue';
+  import { formatDateTime } from '@/utils/date';
   const PROJECT_PRIMARY = 'var(--theme-color)';
 
   const STATUS_OPTIONS = [
@@ -186,8 +187,9 @@
     const raw = getStatus(status).progress;
     return Number(raw.replace('%', '')) || 0;
   }
-  function formatDate(d: string | null) {
-    return d ? new Date(d).toLocaleDateString('zh-CN') : '未设置';
+  function formatProjectDate(d: string | null) {
+    if (!d) return '未设置';
+    return formatDateTime(d) || '未设置';
   }
 
   const loading = ref(false);

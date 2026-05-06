@@ -13,12 +13,14 @@ import {
   SubmitTestDtoType,
   QaAuditDtoType,
   PerformancePageDtoType,
+  PointsLedgerPageDtoType,
   ProjectTaskRuleDtoType,
 } from "./task.dto";
 import logger from "@/core/logger";
 import {
   createFirstSettlementForAcceptedTask,
   createReversalSettlement,
+  buildRuleEvaluationDetail,
 } from "@/modules/performance/settlement.service";
 
 /** 仅软件开发类任务启用测试用例与提测/验收流程 */
@@ -1963,6 +1965,172 @@ export const taskService = new TaskService();
 // Performance Service
 // =====================================================================
 
+/** 积分详情：任务事实字段中文名（结算快照 task.*） */
+const TASK_FACT_FIELD_LABEL_ZH: Record<string, string> = {
+  id: "任务 ID",
+  projectId: "所属项目",
+  workDomain: "任务领域",
+  priority: "优先级",
+  dueDate: "截止日期",
+  acceptedAt: "验收通过时间",
+  estimatedHours: "预估工时",
+  actualHours: "实际工时",
+  mainAssigneeId: "主负责人",
+  testerId: "验收人",
+  coAssigneeIds: "协助人",
+  testCaseBugCount: "用例缺陷数",
+  delayHours: "延期小时数",
+  aheadDays: "提前完成天数",
+  baseScore: "基础积分",
+  complexity: "难度系数",
+};
+
+const TASK_WORK_DOMAIN_ZH: Record<string, string> = {
+  SOFTWARE_DEVELOPMENT: "软件开发",
+  PRODUCT_DESIGN: "产品与设计",
+  OPERATIONS_SUPPORT: "运维与实施",
+  DATA_ANALYTICS: "数据分析",
+  GENERAL: "综合与其他",
+};
+
+const TASK_PRIORITY_LABEL_ZH: Record<string, string> = {
+  P0: "P0（紧急）",
+  P1: "P1（高）",
+  P2: "P2（中）",
+  P3: "P3（低）",
+};
+
+type TaskFactLedgerRow = {
+  field: string;
+  label: string;
+  raw: unknown;
+  display: string;
+};
+
+/** 数值展示：最多 fractionDigits 位小数，并去掉末尾无意义的 0 */
+function trimNumberDisplay(n: number, fractionDigits: number): string {
+  const s = n.toFixed(fractionDigits);
+  if (!s.includes(".")) return s;
+  return s.replace(/\.?0+$/, "");
+}
+
+async function buildTaskFactRowsForLedger(taskFact: Record<string, unknown>): Promise<TaskFactLedgerRow[]> {
+  const userIds = new Set<number>();
+  if (typeof taskFact.mainAssigneeId === "number" && taskFact.mainAssigneeId > 0) {
+    userIds.add(taskFact.mainAssigneeId);
+  }
+  if (typeof taskFact.testerId === "number" && taskFact.testerId > 0) {
+    userIds.add(taskFact.testerId);
+  }
+  if (Array.isArray(taskFact.coAssigneeIds)) {
+    for (const id of taskFact.coAssigneeIds as unknown[]) {
+      if (typeof id === "number" && id > 0) userIds.add(id);
+    }
+  }
+
+  const users =
+    userIds.size === 0
+      ? []
+      : await prisma.user.findMany({
+          where: { id: { in: [...userIds] } },
+          select: { id: true, userName: true, nickName: true },
+        });
+  const userMap = new Map<number, string>(
+    users.map((u) => [u.id, (u.nickName || u.userName)?.trim() || `用户${u.id}`]),
+  );
+
+  let projectName: string | null = null;
+  if (typeof taskFact.projectId === "number" && taskFact.projectId > 0) {
+    const proj = await prisma.project.findUnique({
+      where: { id: taskFact.projectId },
+      select: { name: true },
+    });
+    projectName = proj?.name ?? null;
+  }
+
+  function formatDisplay(field: string, val: unknown): string {
+    if (val === null || val === undefined || val === "") return "—";
+    if (field === "mainAssigneeId" || field === "testerId") {
+      const id = Number(val);
+      if (!id) return "—";
+      const name = userMap.get(id);
+      return name ? `${name}（ID ${id}）` : `ID ${id}`;
+    }
+    if (field === "coAssigneeIds") {
+      if (!Array.isArray(val) || val.length === 0) return "—";
+      return (val as unknown[])
+        .map((id) => {
+          if (typeof id !== "number" || !id) return null;
+          const name = userMap.get(id);
+          return name ? `${name}（${id}）` : String(id);
+        })
+        .filter(Boolean)
+        .join("、");
+    }
+    if (field === "workDomain") {
+      const code = String(val);
+      const zh = TASK_WORK_DOMAIN_ZH[code];
+      return zh ? `${zh}（${code}）` : code;
+    }
+    if (field === "priority") {
+      const code = String(val);
+      const zh = TASK_PRIORITY_LABEL_ZH[code];
+      return zh ?? code;
+    }
+    if (field === "projectId") {
+      const id = Number(val);
+      if (!id) return "—";
+      return projectName ? `${projectName}（ID ${id}）` : `ID ${id}`;
+    }
+    if (typeof val === "object") return JSON.stringify(val);
+    if (typeof val === "number" && Number.isFinite(val)) {
+      if (Number.isInteger(val)) return String(val);
+      return trimNumberDisplay(val, 2);
+    }
+    if (typeof val === "string") {
+      const t = val.trim();
+      if (t !== "" && /^-?\d+(\.\d+)?$/.test(t)) {
+        const n = Number(t);
+        if (Number.isFinite(n)) {
+          if (Number.isInteger(n)) return String(Math.trunc(n));
+          return trimNumberDisplay(n, 2);
+        }
+      }
+    }
+    return String(val);
+  }
+
+  const preferredOrder = [
+    "id",
+    "projectId",
+    "workDomain",
+    "priority",
+    "dueDate",
+    "acceptedAt",
+    "estimatedHours",
+    "actualHours",
+    "mainAssigneeId",
+    "testerId",
+    "coAssigneeIds",
+    "testCaseBugCount",
+    "delayHours",
+    "aheadDays",
+    "baseScore",
+    "complexity",
+  ];
+  const keys = [
+    ...preferredOrder.filter((k) => Object.prototype.hasOwnProperty.call(taskFact, k)),
+    ...Object.keys(taskFact).filter((k) => !preferredOrder.includes(k)),
+  ];
+
+  return keys.map((field) => ({
+    field,
+    label: TASK_FACT_FIELD_LABEL_ZH[field] ?? field,
+    raw: taskFact[field],
+    display: formatDisplay(field, taskFact[field]),
+  }));
+}
+
 class PerformanceService {
   async myTotalPoints(userId: number) {
     const account = await prisma.pointsAccount.findUnique({
@@ -2150,6 +2318,355 @@ class PerformanceService {
       taskId,
       settlements,
       ledgers,
+    };
+  }
+
+  async ledgerPage(dto: PointsLedgerPageDtoType, userId: number) {
+    const orgIds = await projectService.getOrgIdsForUser(userId);
+    if (!orgIds.length) {
+      return { list: [], total: 0, summary: { sumAmount: 0 } };
+    }
+    const allowedProjects = await prisma.project.findMany({
+      where: { orgId: { in: orgIds }, deletedAt: null },
+      select: { id: true },
+    });
+    const allowedProjectIds = allowedProjects.map((p) => p.id);
+    if (!allowedProjectIds.length) {
+      return { list: [], total: 0, summary: { sumAmount: 0 } };
+    }
+
+    let projectFilter: number | { in: number[] };
+    if (dto.projectId) {
+      if (!allowedProjectIds.includes(dto.projectId)) {
+        return { list: [], total: 0, summary: { sumAmount: 0 } };
+      }
+      projectFilter = dto.projectId;
+    } else {
+      projectFilter = { in: allowedProjectIds };
+    }
+
+    const where: any = {
+      projectId: projectFilter,
+    };
+    if (dto.bizType) {
+      where.bizType = dto.bizType;
+    } else {
+      where.bizType = { in: ["task_settlement", "adjustment", "reversal", "manual"] };
+    }
+    if (dto.taskId) where.taskId = dto.taskId;
+    if (dto.userOwnerId) {
+      where.account = { ownerType: "USER", ownerId: dto.userOwnerId };
+    }
+    if (dto.startAt || dto.endAt) {
+      where.occurredAt = {
+        ...(dto.startAt ? { gte: new Date(dto.startAt) } : {}),
+        ...(dto.endAt ? { lte: new Date(dto.endAt) } : {}),
+      };
+    }
+
+    const [agg, total, rows] = await Promise.all([
+      prisma.pointsLedgerEntry.aggregate({
+        where,
+        _sum: { amount: true },
+      }),
+      prisma.pointsLedgerEntry.count({ where }),
+      prisma.pointsLedgerEntry.findMany({
+        where,
+        include: {
+          account: true,
+          ruleSetVersion: {
+            include: { ruleSet: { select: { id: true, name: true, code: true } } },
+          },
+        },
+        orderBy: { occurredAt: "desc" },
+        skip: (dto.page - 1) * dto.pageSize,
+        take: dto.pageSize,
+      }),
+    ]);
+
+    const taskIds = [...new Set(rows.map((r) => r.taskId).filter((x): x is number => x != null))];
+    const tasks =
+      taskIds.length === 0
+        ? []
+        : await prisma.task.findMany({
+            where: { id: { in: taskIds } },
+            select: { id: true, title: true },
+          });
+    const taskMap = new Map(tasks.map((t) => [t.id, t.title]));
+
+    const projectIds = [...new Set(rows.map((r) => r.projectId).filter((x): x is number => x != null))];
+    const projects =
+      projectIds.length === 0
+        ? []
+        : await prisma.project.findMany({
+            where: { id: { in: projectIds } },
+            select: { id: true, name: true },
+          });
+    const projectMap = new Map(projects.map((p) => [p.id, p.name]));
+
+    const ownerIds = [
+      ...new Set(rows.filter((r) => r.account?.ownerType === "USER").map((r) => r.account!.ownerId)),
+    ];
+    const users =
+      ownerIds.length === 0
+        ? []
+        : await prisma.user.findMany({
+            where: { id: { in: ownerIds } },
+            select: { id: true, userName: true, nickName: true },
+          });
+    const userMap = new Map(users.map((u) => [u.id, u]));
+
+    const list = rows.map((e) => ({
+      id: e.id.toString(),
+      bizType: e.bizType,
+      bizId: e.bizId,
+      projectId: e.projectId,
+      projectName: e.projectId != null ? projectMap.get(e.projectId) ?? null : null,
+      taskId: e.taskId,
+      taskTitle: e.taskId != null ? taskMap.get(e.taskId) ?? null : null,
+      occurredAt: e.occurredAt,
+      pointsType: e.pointsType,
+      amount: e.amount,
+      ownerUserId: e.account.ownerType === "USER" ? e.account.ownerId : null,
+      ownerDisplayName:
+        e.account.ownerType === "USER"
+          ? (userMap.get(e.account.ownerId)?.nickName ||
+              userMap.get(e.account.ownerId)?.userName ||
+              null)
+          : null,
+      ruleSetVersionId: e.ruleSetVersionId,
+      ruleSetName: e.ruleSetVersion?.ruleSet?.name ?? null,
+      ruleSetCode: e.ruleSetVersion?.ruleSet?.code ?? null,
+      ruleVersionNo: e.ruleSetVersion?.version ?? null,
+      explain: e.explain,
+    }));
+
+    return {
+      list,
+      total,
+      summary: { sumAmount: Number(agg._sum.amount ?? 0) },
+    };
+  }
+
+  async ledgerDetail(entryIdStr: string, userId: number) {
+    let id: bigint;
+    try {
+      id = BigInt(entryIdStr);
+    } catch {
+      throw Object.assign(new Error("无效的记录 ID"), { status: 400 });
+    }
+    const entry = await prisma.pointsLedgerEntry.findUnique({
+      where: { id },
+      include: {
+        account: true,
+        ruleSetVersion: { include: { ruleSet: true } },
+      },
+    });
+    if (!entry) {
+      throw Object.assign(new Error("记录不存在"), { status: 404 });
+    }
+    if (entry.projectId != null) {
+      await projectService.assertUserCanAccessProject(userId, entry.projectId);
+    }
+
+    const ownerUser =
+      entry.account.ownerType === "USER"
+        ? await prisma.user.findUnique({
+            where: { id: entry.account.ownerId },
+            select: { id: true, userName: true, nickName: true },
+          })
+        : null;
+
+    const task = entry.taskId
+      ? await prisma.task.findUnique({
+          where: { id: entry.taskId },
+          select: { id: true, title: true },
+        })
+      : null;
+
+    const project = entry.projectId
+      ? await prisma.project.findUnique({
+          where: { id: entry.projectId },
+          select: { id: true, name: true },
+        })
+      : null;
+
+    let settlement: any = null;
+    if (["task_settlement", "adjustment", "reversal"].includes(entry.bizType)) {
+      try {
+        const sid = BigInt(entry.bizId);
+        const s = await prisma.perfSettlement.findUnique({
+          where: { id: sid },
+          select: {
+            id: true,
+            settlementType: true,
+            settlementKey: true,
+            status: true,
+            ruleSetVersionId: true,
+            inputSnapshot: true,
+            outputSnapshot: true,
+            occurredAt: true,
+            taskId: true,
+            projectId: true,
+            replacesSettlementId: true,
+          },
+        });
+        settlement = s
+          ? {
+              ...s,
+              id: s.id.toString(),
+              replacesSettlementId: s.replacesSettlementId?.toString() ?? null,
+            }
+          : null;
+      } catch {
+        settlement = null;
+      }
+    }
+
+    const ex: any = entry.explain ?? {};
+
+    /** Prisma Json 可能为对象；若曾写入字符串或 rules 为 JSON 字符串则归一化 */
+    const coerceRuleDefinition = (raw: unknown): any => {
+      if (raw == null) return null;
+      if (typeof raw === "string") {
+        try {
+          const p = JSON.parse(raw);
+          return typeof p === "object" && p !== null ? p : null;
+        } catch {
+          return null;
+        }
+      }
+      if (typeof raw !== "object") return null;
+      const o = raw as Record<string, unknown>;
+      if (typeof o.rules === "string") {
+        try {
+          const p = JSON.parse(o.rules);
+          return typeof p === "object" && p !== null ? p : raw;
+        } catch {
+          return raw;
+        }
+      }
+      return raw;
+    };
+
+    let def: any = coerceRuleDefinition(entry.ruleSetVersion?.definition ?? null);
+    const settlementRsvId =
+      settlement != null && (settlement as any).ruleSetVersionId != null
+        ? Number((settlement as any).ruleSetVersionId)
+        : null;
+
+    if ((!def || !Array.isArray(def.rules)) && settlementRsvId != null) {
+      const v = await prisma.ruleSetVersion.findUnique({
+        where: { id: settlementRsvId },
+        select: { definition: true },
+      });
+      const alt = coerceRuleDefinition(v?.definition ?? null);
+      if (alt) def = alt;
+    }
+
+    if ((!def || !Array.isArray(def.rules)) && entry.ruleSetVersionId != null) {
+      const v = await prisma.ruleSetVersion.findUnique({
+        where: { id: entry.ruleSetVersionId },
+        select: { definition: true },
+      });
+      const alt = coerceRuleDefinition(v?.definition ?? null);
+      if (alt) def = alt;
+    }
+
+    const inputSnap = settlement?.inputSnapshot ?? null;
+    let evaluation = def
+      ? buildRuleEvaluationDetail(def, inputSnap ?? {}, {
+          preferredRuleId: ex.ruleId ?? null,
+        })
+      : null;
+    if (evaluation?.variableRows?.length) {
+      const codes = [...new Set(evaluation.variableRows.map((r) => r.code))];
+      const vr = await prisma.ruleVariable.findMany({
+        where: { code: { in: codes } },
+        select: { code: true, label: true },
+      });
+      const labelByCode = new Map(vr.map((v) => [v.code, (v.label ?? "").trim()]));
+      evaluation = {
+        ...evaluation,
+        variableRows: evaluation.variableRows.map((r) => {
+          const fromDb = labelByCode.get(r.code);
+          const fromDef = (r.name ?? "").trim();
+          return {
+            ...r,
+            name: fromDb || fromDef || "",
+          };
+        }),
+      };
+    }
+    const recordedPostings =
+      settlement?.outputSnapshot && typeof settlement.outputSnapshot === "object"
+        ? ((settlement.outputSnapshot as any).postings as any[]) ?? []
+        : [];
+
+    let matchedRecordedPosting: any = null;
+    for (const p of recordedPostings) {
+      if (
+        entry.account.ownerType === "USER" &&
+        p?.subjectId === entry.account.ownerId &&
+        p?.pointsType === entry.pointsType &&
+        Number(p?.amount) === entry.amount &&
+        (!ex.ruleId || p?.ruleId === ex.ruleId)
+      ) {
+        matchedRecordedPosting = p;
+        break;
+      }
+    }
+    if (!matchedRecordedPosting && recordedPostings.length) {
+      matchedRecordedPosting =
+        recordedPostings.find(
+          (p) =>
+            entry.account.ownerType === "USER" &&
+            p?.subjectId === entry.account.ownerId &&
+            p?.pointsType === entry.pointsType &&
+            Number(p?.amount) === entry.amount,
+        ) ?? null;
+    }
+
+    const taskFact = inputSnap && typeof inputSnap === "object" ? (inputSnap as any).task : null;
+    const taskFactRows =
+      taskFact && typeof taskFact === "object"
+        ? await buildTaskFactRowsForLedger(taskFact as Record<string, unknown>)
+        : [];
+
+    return {
+      entry: {
+        id: entry.id.toString(),
+        bizType: entry.bizType,
+        bizId: entry.bizId,
+        pointsType: entry.pointsType,
+        amount: entry.amount,
+        occurredAt: entry.occurredAt,
+        createdAt: entry.createdAt,
+        explain: entry.explain,
+        idempotencyKey: entry.idempotencyKey,
+      },
+      ownerUser,
+      task,
+      project,
+      ruleSetVersion: entry.ruleSetVersion
+        ? {
+            id: entry.ruleSetVersion.id,
+            version: entry.ruleSetVersion.version,
+            checksum: entry.ruleSetVersion.checksum,
+            ruleSet: entry.ruleSetVersion.ruleSet
+              ? {
+                  id: entry.ruleSetVersion.ruleSet.id,
+                  name: entry.ruleSetVersion.ruleSet.name,
+                  code: entry.ruleSetVersion.ruleSet.code,
+                }
+              : null,
+          }
+        : null,
+      settlement,
+      evaluation,
+      recordedPostings,
+      matchedRecordedPosting,
+      taskFactRows,
     };
   }
 }

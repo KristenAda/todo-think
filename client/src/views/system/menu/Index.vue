@@ -60,6 +60,7 @@
     fetchUpdateMenu
   } from '@/api/system-manage';
   import { ElTag, ElMessageBox } from 'element-plus';
+  import { formatDateTime } from '@/utils/date';
 
   defineOptions({ name: 'Menus' });
 
@@ -185,7 +186,9 @@
     {
       prop: 'createTime',
       label: '编辑时间',
-      formatter: () => new Date().toLocaleString()
+      minWidth: 175,
+      formatter: (row: Api.SystemManage.MenuItem & { createTime?: string }) =>
+        row.createTime ? formatDateTime(row.createTime) : ''
     },
     {
       prop: 'status',

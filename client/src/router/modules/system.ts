@@ -94,6 +94,17 @@ export const systemRoutes: AppRouteRecord = {
       }
     },
     {
+      path: 'points-ledger',
+      name: 'PointsLedgerLog',
+      component: '/system/points-ledger/index',
+      meta: {
+        title: '积分记录',
+        icon: 'mdi:history',
+        keepAlive: true,
+        roles: ['admin', 'R_SUPER', 'R_ADMIN']
+      }
+    },
+    {
       path: 'nested',
       name: 'Nested',
       component: '',

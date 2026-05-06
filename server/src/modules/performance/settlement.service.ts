@@ -63,9 +63,83 @@ type Rule = {
 
 type RuleSetDefinition = {
   params?: Record<string, number>;
-  variables?: { code: string; expr: Expr }[];
+  variables?: { code: string; expr: Expr; label?: string; name?: string }[];
   rules: Rule[];
 };
+
+/** JSON.rules 偶发为「类数组对象」；与对象键顺序无关，按数字键序还原为数组 */
+function normalizeRulesList(rules: unknown): Rule[] {
+  if (Array.isArray(rules)) return rules as Rule[];
+  if (rules != null && typeof rules === "object") {
+    const o = rules as Record<string, unknown>;
+    return Object.keys(o)
+      .sort((a, b) => {
+        const na = Number(a);
+        const nb = Number(b);
+        if (Number.isFinite(na) && Number.isFinite(nb)) return na - nb;
+        return a.localeCompare(b);
+      })
+      .map((k) => o[k])
+      .filter((x): x is Rule => x != null && typeof x === "object");
+  }
+  return [];
+}
+
+function normalizeThenList(rule: Rule): RuleAction[] {
+  const thenRaw = (rule as any).then ?? (rule as any).actions;
+  return Array.isArray(thenRaw) ? thenRaw : thenRaw ? [thenRaw] : [];
+}
+
+function actionKind(t: unknown): string {
+  return String(t ?? "")
+    .replace(/[-_\s]/g, "")
+    .toLowerCase();
+}
+
+function isEmitPostingAction(act: any): boolean {
+  return actionKind(act?.type) === "emitposting";
+}
+
+function isEmitMetricAction(act: any): boolean {
+  return actionKind(act?.type) === "emitmetric";
+}
+
+/** 流水 explain.ruleId 占位符，不是 DSL 里的规则 id，不参与「优先规则」解析 */
+function isSyntheticLedgerRuleId(id: unknown): boolean {
+  const s = String(id ?? "").trim().toUpperCase().replace(/-/g, "_");
+  return s === "ADJUSTMENT_DIFF";
+}
+
+/** 从 amount 表达式树中递归取出 formula 文本（支持 round(mul(formula(...))) 等嵌套） */
+function extractFormulaTextFromExpr(amount: any, depth = 0): string | null {
+  if (depth > 16 || amount == null) return null;
+  if (typeof amount === "string") {
+    const t = amount.trim();
+    return t || null;
+  }
+  if (typeof amount !== "object") return null;
+  const fn = String((amount as any).fn ?? "").toLowerCase();
+  if (fn === "formula") {
+    const arg0 = (amount as any).args?.[0];
+    if (typeof arg0 === "string") {
+      const t = arg0.trim();
+      if (t) return t;
+    }
+    if (arg0 != null && typeof arg0 === "object") {
+      const inner = extractFormulaTextFromExpr(arg0, depth + 1);
+      if (inner) return inner;
+    }
+    return null;
+  }
+  const args = (amount as any).args;
+  if (Array.isArray(args)) {
+    for (const a of args) {
+      const hit = extractFormulaTextFromExpr(a, depth + 1);
+      if (hit) return hit;
+    }
+  }
+  return null;
+}
 
 export function simulateRuleSetDefinition(def: RuleSetDefinition, inputSnapshot: any) {
   const ctx: any = {
@@ -82,34 +156,35 @@ export function simulateRuleSetDefinition(def: RuleSetDefinition, inputSnapshot:
   const metrics: any[] = [];
   const explains: any[] = [];
 
-  const rules = [...(def.rules ?? [])].sort((a, b) => (b.priority ?? 0) - (a.priority ?? 0));
+  const rules = normalizeRulesList(def.rules).sort((a, b) => (b.priority ?? 0) - (a.priority ?? 0));
   for (const r of rules) {
     const ok = evalCondition(r.when, ctx);
     if (!ok) continue;
-    for (const act of r.then ?? []) {
-      if (act.type === "emitPosting") {
-        const subjectId = Number(getPath(ctx, act.subject.ref) ?? 0);
+    for (const act of normalizeThenList(r)) {
+      const a = act as any;
+      if (isEmitPostingAction(act)) {
+        const subjectId = Number(getPath(ctx, a.subject.ref) ?? 0);
         if (!subjectId) continue;
-        const amount = Math.round(evalExpr(act.amount, ctx));
+        const amount = Math.round(evalExpr(a.amount, ctx));
         if (!amount) continue;
         postings.push({
           subjectType: "USER",
           subjectId,
-          pointsType: act.pointsType,
+          pointsType: a.pointsType,
           amount,
-          reasonCode: act.reasonCode ?? r.id,
+          reasonCode: a.reasonCode ?? r.id,
           ruleId: r.id,
         });
       }
-      if (act.type === "emitMetric") {
-        const subjectId = Number(getPath(ctx, act.subject.ref) ?? 0);
+      if (isEmitMetricAction(act)) {
+        const subjectId = Number(getPath(ctx, a.subject.ref) ?? 0);
         if (!subjectId) continue;
         metrics.push({
           subjectType: "USER",
           subjectId,
-          metricCode: act.metricCode,
-          value: evalExpr(act.value, ctx),
-          reasonCode: act.reasonCode ?? r.id,
+          metricCode: a.metricCode,
+          value: evalExpr(a.value, ctx),
+          reasonCode: a.reasonCode ?? r.id,
           ruleId: r.id,
         });
       }
@@ -118,6 +193,211 @@ export function simulateRuleSetDefinition(def: RuleSetDefinition, inputSnapshot:
   }
 
   return { postings, metrics, explains };
+}
+
+/** 定义里任意位置出现 formula DSL 时兜底取出（兼容 type/then 字段名不标准） */
+function deepFindFormulaInDefinition(
+  root: unknown,
+  depth = 0,
+  seen: WeakSet<object> = new WeakSet(),
+): string | null {
+  if (depth > 48 || root == null) return null;
+  if (typeof root !== "object") return null;
+  if (seen.has(root as object)) return null;
+  seen.add(root as object);
+  const o = root as any;
+  const fn = String(o.fn ?? "").toLowerCase();
+  if (fn === "formula" && Array.isArray(o.args) && typeof o.args[0] === "string") {
+    const t = o.args[0].trim();
+    if (t.length > 0) return t;
+  }
+  for (const v of Object.values(o)) {
+    if (v != null && typeof v === "object") {
+      const hit = deepFindFormulaInDefinition(v, depth + 1, seen);
+      if (hit) return hit;
+    }
+  }
+  return null;
+}
+
+/** 与 simulate 一致按 priority 从高到低；若提供 preferredRuleId 则优先从该条规则的 then 中取公式 */
+function extractPrimaryFormulaExpression(
+  def: RuleSetDefinition,
+  preferredRuleId?: string | null,
+): string | null {
+  const rulesSorted = normalizeRulesList(def.rules).sort(
+    (a, b) => (b.priority ?? 0) - (a.priority ?? 0),
+  );
+
+  const tryRule = (r: Rule): string | null => {
+    for (const act of normalizeThenList(r)) {
+      const a = act as any;
+      const postingLike =
+        isEmitPostingAction(act) ||
+        (a &&
+          typeof a === "object" &&
+          typeof a.pointsType === "string" &&
+          Object.prototype.hasOwnProperty.call(a, "amount"));
+      if (!postingLike) continue;
+      const text = extractFormulaTextFromExpr(a.amount);
+      if (text) return text;
+    }
+    return null;
+  };
+
+  const prefId =
+    preferredRuleId && !isSyntheticLedgerRuleId(preferredRuleId) ? preferredRuleId : null;
+  if (prefId) {
+    const pref = rulesSorted.find((r) => String(r.id) === String(prefId));
+    if (pref) {
+      const hit = tryRule(pref);
+      if (hit) return hit;
+    }
+  }
+  for (const r of rulesSorted) {
+    const hit = tryRule(r);
+    if (hit) return hit;
+  }
+  return deepFindFormulaInDefinition(def);
+}
+
+function escapeRegExpIdent(s: string) {
+  return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+/** 与 emitPosting formula 分支一致：params + 规则变量 + task 扁平字段参与运算 */
+function buildFormulaEvalMerged(ctx: any): Record<string, any> {
+  const taskVars = (ctx?.task ?? {}) as Record<string, any>;
+  return {
+    ...(ctx.__params ?? {}),
+    ...(ctx.__vars ?? {}),
+    ...taskVars,
+    max: Math.max,
+    min: Math.min,
+    abs: Math.abs,
+    round: Math.round,
+  };
+}
+
+function evalFormulaStringStandalone(formulaText: string, ctx: any): number {
+  const merged = buildFormulaEvalMerged(ctx);
+  const names = Object.keys(merged);
+  const values = Object.values(merged);
+  try {
+    const fn = new Function(...names, `return (${formulaText});`);
+    const result = fn(...values);
+    return Number.isFinite(Number(result)) ? Number(result) : 0;
+  } catch {
+    return 0;
+  }
+}
+
+/** 仅数值绑定（用于把公式里的标识符替换为字面量，便于展示） */
+function buildFormulaNumericMap(ctx: any): Record<string, number> {
+  const taskVars = (ctx?.task ?? {}) as Record<string, unknown>;
+  const out: Record<string, number> = {};
+  for (const [k, v] of Object.entries((ctx?.__params ?? {}) as Record<string, unknown>)) {
+    const n = Number(v);
+    if (!Number.isNaN(n)) out[k] = n;
+  }
+  for (const [k, v] of Object.entries((ctx?.__vars ?? {}) as Record<string, unknown>)) {
+    const n = Number(v);
+    out[k] = Number.isFinite(n) ? n : 0;
+  }
+  for (const [k, v] of Object.entries(taskVars)) {
+    const n = Number(v);
+    if (!Number.isNaN(n)) out[k] = n;
+  }
+  return out;
+}
+
+function formatScalarForFormulaDisplay(n: number): string {
+  if (!Number.isFinite(n)) return "0";
+  if (Math.abs(n - Math.round(n)) < 1e-9) return String(Math.round(n));
+  return String(Number(n.toFixed(4)));
+}
+
+/** 将公式中的标识符替换为当前数值（长标识符优先，避免短名误伤） */
+function substituteIdentifiersInFormula(formulaText: string, numericMap: Record<string, number>): string {
+  const keys = Object.keys(numericMap).sort((a, b) => b.length - a.length);
+  let out = formulaText;
+  for (const key of keys) {
+    const disp = formatScalarForFormulaDisplay(numericMap[key]!);
+    const re = new RegExp(`\\b${escapeRegExpIdent(key)}\\b`, "g");
+    out = out.replace(re, disp);
+  }
+  return out;
+}
+
+/** 基于规则定义 + 结算输入快照，推导公式、变量取值、规则命中与模拟分录（用于积分日志说明） */
+export function buildRuleEvaluationDetail(
+  def: RuleSetDefinition | null | undefined,
+  inputSnapshot: any,
+  opts?: { preferredRuleId?: string | null },
+): {
+  formulaExpression: string | null;
+  /** 将标识符替换为实际数值后的公式文本（便于阅读） */
+  formulaWithValues: string | null;
+  /** 与引擎一致的公式求值结果（取整前） */
+  formulaEvalRaw: number | null;
+  /** 与入账 Math.round 一致 */
+  formulaEvalRounded: number | null;
+  variableRows: { code: string; name?: string; sourcePath?: string; value: number }[];
+  triggeredRules: { ruleId: string; name?: string; matched: boolean }[];
+  simulatedPostings: any[];
+  simulatedMetrics: any[];
+} | null {
+  if (!def) return null;
+  const formulaExpression = extractPrimaryFormulaExpression(def, opts?.preferredRuleId ?? null);
+  const ctx: any = {
+    ...(inputSnapshot ?? {}),
+    __params: def.params ?? {},
+    __vars: {},
+  };
+  const variableRows: { code: string; name?: string; sourcePath?: string; value: number }[] = [];
+  for (const vv of def.variables ?? []) {
+    const val = evalExpr(vv.expr, ctx);
+    ctx.__vars[vv.code] = val;
+    let sourcePath: string | undefined;
+    if (vv.expr && typeof vv.expr === "object" && "path" in vv.expr) {
+      sourcePath = String((vv.expr as any).path);
+    }
+    const rawLabel = (vv as { label?: string; name?: string }).label ?? (vv as { name?: string }).name;
+    const nameFromDef =
+      typeof rawLabel === "string" && rawLabel.trim() ? rawLabel.trim() : undefined;
+    variableRows.push({ code: vv.code, name: nameFromDef, sourcePath, value: Number(val) });
+  }
+  const rules = normalizeRulesList(def.rules).sort((a, b) => (b.priority ?? 0) - (a.priority ?? 0));
+  const triggeredRules = rules.map((r) => ({
+    ruleId: r.id,
+    name: r.name,
+    matched: evalCondition(r.when, ctx),
+  }));
+  const sim = simulateRuleSetDefinition(def, inputSnapshot);
+
+  const numericMap = buildFormulaNumericMap(ctx);
+  let formulaWithValues: string | null = null;
+  let formulaEvalRaw: number | null = null;
+  let formulaEvalRounded: number | null = null;
+  if (formulaExpression) {
+    formulaWithValues =
+      substituteIdentifiersInFormula(formulaExpression, numericMap) || formulaExpression;
+    const raw = evalFormulaStringStandalone(formulaExpression, ctx);
+    formulaEvalRaw = Number.isFinite(raw) ? raw : null;
+    formulaEvalRounded =
+      formulaEvalRaw != null && Number.isFinite(formulaEvalRaw) ? Math.round(formulaEvalRaw) : null;
+  }
+
+  return {
+    formulaExpression,
+    formulaWithValues,
+    formulaEvalRaw,
+    formulaEvalRounded,
+    variableRows,
+    triggeredRules,
+    simulatedPostings: sim.postings,
+    simulatedMetrics: sim.metrics,
+  };
 }
 
 function sha256(text: string) {

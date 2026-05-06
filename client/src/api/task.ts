@@ -153,6 +153,21 @@ export function fetchMyTotalPoints() {
   });
 }
 
+/** 积分流水：分页列表（含当前筛选条件下的积分合计） */
+export function fetchPointsLedgerPage(params: Api.Task.PointsLedgerPageParams) {
+  return request.get<Api.Task.PointsLedgerPageData>({
+    url: `${BASE.performance}/points-ledger`,
+    params
+  });
+}
+
+/** 积分流水：单条详情（规则重算说明、结算快照） */
+export function fetchPointsLedgerDetail(entryId: string) {
+  return request.get<Api.Task.PointsLedgerDetail>({
+    url: `${BASE.performance}/points-ledger/${encodeURIComponent(entryId)}`
+  });
+}
+
 // ==================== Rule Engine API ====================
 
 export function fetchRuleSetList(params?: { projectId?: number }) {

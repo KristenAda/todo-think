@@ -197,6 +197,18 @@ export const PerformancePageDto = z.object({
 });
 export type PerformancePageDtoType = z.infer<typeof PerformancePageDto>;
 
+export const PointsLedgerPageDto = z.object({
+  page: z.coerce.number().int().positive().default(1),
+  pageSize: z.coerce.number().int().positive().max(200).default(20),
+  projectId: z.coerce.number().int().positive().optional(),
+  taskId: z.coerce.number().int().positive().optional(),
+  userOwnerId: z.coerce.number().int().positive().optional(),
+  bizType: z.enum(["task_settlement", "adjustment", "reversal", "manual"]).optional(),
+  startAt: z.string().datetime({ offset: true }).optional(),
+  endAt: z.string().datetime({ offset: true }).optional(),
+});
+export type PointsLedgerPageDtoType = z.infer<typeof PointsLedgerPageDto>;
+
 // ==================== ProjectTaskRule ====================
 
 export const ProjectTaskRuleDto = z.object({

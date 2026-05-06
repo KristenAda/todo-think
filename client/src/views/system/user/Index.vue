@@ -46,6 +46,7 @@
   import { ElTag, ElMessageBox, ElImage } from 'element-plus';
   import { DialogType } from '@/types';
   import { resolveComponent } from 'vue';
+  import { formatDateTime } from '@/utils/date';
 
   defineOptions({ name: 'User' });
 
@@ -158,7 +159,9 @@
         {
           prop: 'createTime',
           label: '创建日期',
-          sortable: true
+          minWidth: 175,
+          sortable: true,
+          formatter: (row: UserListItem) => (row.createTime ? formatDateTime(row.createTime) : '')
         },
         {
           prop: 'operation',

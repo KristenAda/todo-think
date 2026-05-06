@@ -18,6 +18,7 @@ import {
   SubmitTestDto,
   QaAuditDto,
   PerformancePageDto,
+  PointsLedgerPageDto,
 } from "./task.dto";
 
 /** 从 JWT 中取当前用户 ID */
@@ -373,6 +374,46 @@ class PerformanceController {
     }
     try {
       const data = await performanceService.reconcileTask(taskId, currentUserId(ctx));
+      ctx.body = Result.success(data);
+    } catch (e: any) {
+      ctx.status = e.status ?? 500;
+      ctx.body = Result.error(e.message ?? "操作失败", e.status ?? 500);
+    }
+  }
+
+  async pointsLedgerPage(ctx: Context) {
+    const parsed = PointsLedgerPageDto.safeParse(ctx.query);
+    if (!parsed.success) {
+      ctx.body = Result.error(parsed.error.issues?.[0]?.message ?? "参数错误");
+      return;
+    }
+    const { list, total, summary } = await performanceService.ledgerPage(
+      parsed.data,
+      currentUserId(ctx),
+    );
+    const { page, pageSize } = parsed.data;
+    ctx.body = {
+      code: 200,
+      message: "success",
+      data: {
+        list,
+        total,
+        page,
+        pageSize,
+        totalPage: Math.ceil(total / pageSize),
+        summary,
+      },
+    };
+  }
+
+  async pointsLedgerDetail(ctx: Context) {
+    const entryId = String(ctx.params.entryId ?? "").trim();
+    if (!entryId) {
+      ctx.body = Result.error("记录 ID 不能为空");
+      return;
+    }
+    try {
+      const data = await performanceService.ledgerDetail(entryId, currentUserId(ctx));
       ctx.body = Result.success(data);
     } catch (e: any) {
       ctx.status = e.status ?? 500;

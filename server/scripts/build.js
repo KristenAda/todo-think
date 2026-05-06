@@ -55,10 +55,22 @@ copyFiles.forEach((file) => {
   }
 });
 
+// 5.1 数据库初始化脚本（供 init-db.bat：建空库 + 迁移 + 种子；deploy.bat 不含种子）
+const releaseScriptsDir = path.join(RELEASE_DIR, "scripts");
+fs.mkdirSync(releaseScriptsDir, { recursive: true });
+for (const name of ["bootstrap-db.cjs", "init-database.cjs"]) {
+  const src = path.join(ROOT_DIR, "scripts", name);
+  if (fs.existsSync(src)) {
+    fs.copyFileSync(src, path.join(releaseScriptsDir, name));
+  } else {
+    console.warn(`\x1b[33m[警告] 找不到 scripts/${name}\x1b[0m`);
+  }
+}
+
 // 6. ★ 动态生成批处理脚本 (部署、重启、停止)
 console.log("正在动态生成 bat 运维脚本...");
 
-// 6.1 生成 deploy.bat (完整部署)
+// 6.1 生成 deploy.bat (完整部署：不含灌种子，请另运行 init-db.bat)
 const deployBatLines = [
   "@echo off",
   "chcp 65001 >nul",
@@ -99,6 +111,38 @@ const deployBatLines = [
 fs.writeFileSync(
   path.join(RELEASE_DIR, "deploy.bat"),
   deployBatLines.join("\r\n"),
+);
+
+// 6.1b 生成 init-db.bat（建空库 + 迁移建表 + 灌种子；不含 PM2）
+const initDbBatLines = [
+  "@echo off",
+  "chcp 65001 >nul",
+  "",
+  'cd /d "%~dp0"',
+  "",
+  "echo ========================================",
+  "echo   Todo-Think 数据库初始化",
+  "echo   建空库 + 迁移建表 + 种子（不启动服务）",
+  "echo ========================================",
+  "echo.",
+  "echo 请先确保：已配置本目录 .env 的 DATABASE_URL；已执行 npm install。",
+  "echo.",
+  "call node scripts\\init-database.cjs",
+  "if errorlevel 1 (",
+  "  echo.",
+  "  echo [失败] 请根据上方日志排查。",
+  "  pause",
+  "  exit /b 1",
+  ")",
+  "",
+  "echo.",
+  "echo [成功] 数据库初始化已完成。",
+  "echo.",
+  "pause",
+];
+fs.writeFileSync(
+  path.join(RELEASE_DIR, "init-db.bat"),
+  initDbBatLines.join("\r\n"),
 );
 
 // 6.2 生成 relaunch.bat (快速重启)
@@ -175,7 +219,8 @@ console.log("=========================================");
 console.log("  🎉 终极纯净版打包完成！");
 console.log("  发布包路径: server/dist/release");
 console.log("  生成脚本:");
-console.log("   - deploy.bat   (首次上线/全量更新部署)");
+console.log("   - deploy.bat   (依赖 + prisma generate + migrate + PM2)");
+console.log("   - init-db.bat  (建空库 + migrate + 灌种子；不含服务启动)");
 console.log("   - relaunch.bat (仅替换文件后快速重启)");
 console.log("   - stop.bat     (停止当前运行的后端服务)");
 console.log("=========================================");
