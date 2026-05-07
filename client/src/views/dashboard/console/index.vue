@@ -216,7 +216,8 @@
 </template>
 
 <script setup lang="ts">
-  import { ref, computed, onMounted, onBeforeUnmount } from 'vue';
+  import { ref, computed, onMounted, onBeforeUnmount, watch } from 'vue';
+  import { useRoute, useRouter } from 'vue-router';
   import { fetchWorkbench, type WorkbenchStats, type WorkbenchTask } from '@/api/dashboard';
   import { useUserStore } from '@/store/modules/user';
   // 根据你的实际路径引入任务详情组件
@@ -345,6 +346,25 @@
     drawerTaskId.value = taskId;
     drawerVisible.value = true;
   }
+
+  const route = useRoute();
+  const router = useRouter();
+
+  /** 从站内消息等跳转携带 query.openTaskId，避免 mitt 早于 Console 订阅触发丢失 */
+  watch(
+    () => route.query.openTaskId,
+    (raw) => {
+      if (raw === undefined || raw === null || raw === '') return;
+      const s = Array.isArray(raw) ? raw[0] : raw;
+      const id = Number(s);
+      if (!Number.isFinite(id) || id <= 0) return;
+      openDrawer(id);
+      const nextQuery = { ...route.query };
+      delete nextQuery.openTaskId;
+      router.replace({ path: route.path, query: nextQuery });
+    },
+    { immediate: true }
+  );
 
   // ===== 工具函数 =====
   type TagType = 'primary' | 'success' | 'warning' | 'info' | 'danger';

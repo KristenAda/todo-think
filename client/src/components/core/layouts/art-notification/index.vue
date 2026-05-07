@@ -84,8 +84,8 @@
   import { storeToRefs } from 'pinia';
   import { useMessageStore } from '@/store/modules/message';
   import { useRouter } from 'vue-router';
+  import { pushWorkbenchOpenTask } from '@/utils/navigation';
   import { ElTag } from 'element-plus';
-  import mittBus from '@/utils/sys/mittBus';
 
   defineOptions({ name: 'ArtNotification' });
 
@@ -238,9 +238,7 @@
     // TASK 类型消息：尝试根据 extra.taskId 定位任务抽屉
     const taskId = Number(item?.extra?.taskId);
     if (item.messageType === 'TASK' && taskId) {
-      await router.push({ name: 'Console' });
-      // 再延后一个 tick，避免目标页面 onMounted 订阅尚未就绪
-      setTimeout(() => mittBus.emit('openTaskDetail', taskId), 0);
+      await pushWorkbenchOpenTask(taskId);
     }
 
     emit('update:value', false);

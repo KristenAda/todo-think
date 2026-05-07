@@ -20,7 +20,8 @@ export type AppRouteRecordRaw = RouteRecordRaw & {
 export const configureNProgress = () => {
   NProgress.configure({
     easing: 'ease',
-    speed: 600,
+    // 导航完成后尽快结束条带动画，避免「地址已变但顶部条仍在拖」的观感
+    speed: 280,
     showSpinner: false,
     parent: 'body'
   });

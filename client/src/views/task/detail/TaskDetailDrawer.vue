@@ -314,7 +314,21 @@
                 <art-svg-icon icon="mdi:comment-text-multiple-outline" />
                 <span>评论记录</span>
               </div>
-              <div class="comment-editor">
+              <div v-if="taskCollaborationClosed" class="comment-editor comment-editor--closed">
+                <el-alert type="info" :closable="false" show-icon title="该任务已结束，不可再发表评论" />
+              </div>
+              <div
+                v-else-if="taskInQaReview && !canPostTaskComment"
+                class="comment-editor comment-editor--closed"
+              >
+                <el-alert
+                  type="info"
+                  :closable="false"
+                  show-icon
+                  title="验收中的任务仅验收相关角色可发表评论"
+                />
+              </div>
+              <div v-else class="comment-editor">
                 <el-input
                   v-model="commentForm.content"
                   type="textarea"
@@ -448,7 +462,7 @@
           <art-svg-icon icon="mdi:play-circle-outline" style="margin-right: 4px" /> 开始开发
         </el-button>
 
-        <el-button v-if="isMainAssignee || isCoAssignee" @click="workLogDialogVisible = true">
+        <el-button v-if="canLogWorkHours" @click="workLogDialogVisible = true">
           <art-svg-icon icon="mdi:clock-plus-outline" style="margin-right: 4px" /> 登记工时
         </el-button>
 
@@ -630,6 +644,12 @@
   const userStore = useUserStore();
   const currentUserId = computed(() => userStore.info?.userId);
 
+  /** 避免接口/序列化导致 id 为 number|string 时 === 误判，进而底部操作按钮全部消失 */
+  function uidEq(a: unknown, b: unknown): boolean {
+    if (a == null || b == null) return false;
+    return Number(a) === Number(b);
+  }
+
   const task = ref<Api.Task.Task | null>(null);
   const loadingDetail = ref(false);
 
@@ -663,12 +683,12 @@
 
   // ==================== 身份计算 ====================
   const isMainAssignee = computed(
-    () => !!currentUserId.value && task.value?.mainAssigneeId === currentUserId.value
+    () => !!currentUserId.value && uidEq(task.value?.mainAssigneeId, currentUserId.value)
   );
   const isCoAssignee = computed(
     () =>
       !!currentUserId.value &&
-      (task.value?.coAssignees ?? []).some((ca) => ca.userId === currentUserId.value)
+      (task.value?.coAssignees ?? []).some((ca) => uidEq(ca.userId, currentUserId.value))
   );
 
   // 项目规则（主线B）：决定 QA 是否允许协助人发起、打回是否需要工时
@@ -682,12 +702,12 @@
   const isQA = computed(
     () =>
       !!currentUserId.value &&
-      (task.value?.testerId === currentUserId.value ||
+      (uidEq(task.value?.testerId, currentUserId.value) ||
         (allowCoAssigneeSubmitQa.value && isCoAssignee.value))
   );
   /** 任务“管理者”上升到项目层面：项目负责人可管理项目下任务 */
   const isTaskManager = computed(
-    () => !!currentUserId.value && task.value?.project?.managerId === currentUserId.value
+    () => !!currentUserId.value && uidEq(task.value?.project?.managerId, currentUserId.value)
   );
 
   const taskSupportsTestCases = computed(
@@ -776,6 +796,28 @@
     const sum = workLogsHoursSum.value;
     if (sum > 0) return sum;
     return t.actualHours != null ? Number(t.actualHours) : null;
+  });
+
+  /** 已结束：不可再登记工时、发表评论（已完成 / 已取消） */
+  const taskCollaborationClosed = computed(() => {
+    const s = task.value?.status;
+    return s === 'COMPLETED' || s === 'CANCELLED';
+  });
+
+  /** 验收中：开发侧不可登记工时；评论仅验收相关角色（验收人或规则允许的协助验收人）可发 */
+  const taskInQaReview = computed(() => task.value?.status === 'QA_REVIEW');
+
+  const canLogWorkHours = computed(
+    () =>
+      (isMainAssignee.value || isCoAssignee.value) &&
+      !taskCollaborationClosed.value &&
+      !taskInQaReview.value
+  );
+
+  const canPostTaskComment = computed(() => {
+    if (taskCollaborationClosed.value) return false;
+    if (!taskInQaReview.value) return true;
+    return isQA.value;
   });
 
   // ==================== 枚举工具 ====================
@@ -908,6 +950,14 @@
   });
 
   async function handleAddComment() {
+    if (taskCollaborationClosed.value) {
+      ElMessage.warning('已结束的任务不可发表评论');
+      return;
+    }
+    if (taskInQaReview.value && !canPostTaskComment.value) {
+      ElMessage.warning('验收中的任务仅验收相关角色可发表评论');
+      return;
+    }
     if (!commentForm.content.trim()) {
       ElMessage.warning('请填写评论内容');
       return;
@@ -950,6 +1000,16 @@
 
   // ==================== 登记工时 ====================
   async function handleAddWorkLog() {
+    if (taskCollaborationClosed.value) {
+      ElMessage.warning('已结束的任务不可登记工时');
+      workLogDialogVisible.value = false;
+      return;
+    }
+    if (taskInQaReview.value) {
+      ElMessage.warning('验收中的任务不可登记工时');
+      workLogDialogVisible.value = false;
+      return;
+    }
     await workLogFormRef.value?.validate();
     actionLoading.value = true;
     try {

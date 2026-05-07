@@ -47,9 +47,19 @@ const SPECIAL_COLUMNS: Record<string, { prop: string; label: string }> = {
 
 /**
  * 获取列的唯一标识
+ * 无 `prop` 的列（如仅 render）若直接得到 `undefined`，会在 Map/去重 中互相覆盖，导致多列错用同一配置。
  */
-export const getColumnKey = <T>(col: ColumnOption<T>) =>
-  SPECIAL_COLUMNS[col.type as keyof typeof SPECIAL_COLUMNS]?.prop ?? (col.prop as string);
+export const getColumnKey = <T>(col: ColumnOption<T>): string => {
+  const special = col.type && SPECIAL_COLUMNS[col.type as keyof typeof SPECIAL_COLUMNS];
+  if (special) return special.prop;
+  if (col.prop !== undefined && col.prop !== null && String(col.prop) !== '') {
+    return String(col.prop);
+  }
+  if (col.label != null && String(col.label) !== '') {
+    return String(col.label);
+  }
+  return '__anonymous_column__';
+};
 
 /**
  * 获取列的显示状态

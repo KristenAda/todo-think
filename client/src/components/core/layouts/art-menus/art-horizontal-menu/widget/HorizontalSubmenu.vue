@@ -1,5 +1,10 @@
 <template>
-  <ElSubMenu v-if="hasChildren" :index="item.path || item.meta.title" class="!p-0">
+  <ElSubMenu
+    v-if="hasChildren"
+    :index="item.path || item.meta.title"
+    class="!p-0"
+    @mouseenter="prefetchMenuRouteChunks(item)"
+  >
     <template #title>
       <ArtSvgIcon
         :icon="resolveMenuIconifyIcon(item.meta?.icon)"
@@ -28,6 +33,7 @@
   <ElMenuItem
     v-else-if="!item.meta.isHide"
     :index="item.path || item.meta.title"
+    @mouseenter="prefetchMenuRouteChunks(item)"
     @click="goPage(item)"
   >
     <ArtSvgIcon
@@ -51,7 +57,7 @@
 <script lang="ts" setup>
   import { computed, type PropType } from 'vue';
   import { AppRouteRecord } from '@/types/router';
-  import { handleMenuJump } from '@/utils/navigation';
+  import { handleMenuJump, prefetchMenuRouteChunks } from '@/utils/navigation';
   import { formatMenuTitle } from '@/utils/router';
   import { resolveMenuIconifyIcon } from '@/utils/iconify';
 

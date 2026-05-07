@@ -8,3 +8,5 @@
 export * from './jump';
 export * from './worktab';
 export * from './route';
+export * from './prefetch';
+export * from './workbench';

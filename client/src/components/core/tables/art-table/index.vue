@@ -9,7 +9,7 @@
       v-loading="!!loading"
       v-bind="{ ...$attrs, ...props, height, stripe, border, size, headerCellStyle }"
     >
-      <template v-for="col in columns" :key="col.prop || col.type">
+      <template v-for="(col, colIndex) in columns" :key="col.prop ?? col.type ?? col.label ?? colIndex">
         <!-- 渲染全局序号列 -->
         <ElTableColumn v-if="col.type === 'globalIndex'" v-bind="{ ...col }">
           <template #default="{ $index }">
@@ -44,6 +44,9 @@
               }"
             />
           </template>
+          <template v-else-if="col.render" #default="slotScope">
+            <ArtTableCellRender :render="col.render!" :scope="slotScope" />
+          </template>
         </ElTableColumn>
       </template>
 
@@ -75,7 +78,7 @@
 </template>
 
 <script setup lang="ts">
-  import { ref, computed, nextTick, watchEffect } from 'vue';
+  import { ref, computed, nextTick, watchEffect, defineComponent } from 'vue';
   import type { ElTable, TableProps } from 'element-plus';
   import { storeToRefs } from 'pinia';
   import { ColumnOption } from '@/types';
@@ -85,6 +88,18 @@
   import { useResizeObserver, useWindowSize } from '@vueuse/core';
 
   defineOptions({ name: 'ArtTable' });
+
+  /** 将 ColumnOption.render 接到 el-table-column 默认插槽（与 useSlot 互斥） */
+  const ArtTableCellRender = defineComponent({
+    name: 'ArtTableCellRender',
+    props: {
+      render: { type: Function, required: true },
+      scope: { type: Object, required: true }
+    },
+    setup(props) {
+      return () => (props.render as (s: typeof props.scope) => unknown)(props.scope);
+    }
+  });
 
   const { width } = useWindowSize();
   const elTableRef = ref<InstanceType<typeof ElTable> | null>(null);
@@ -261,6 +276,7 @@
     delete columnProps.headerSlotName;
     delete columnProps.useSlot;
     delete columnProps.slotName;
+    delete columnProps.render;
     return columnProps;
   };
 

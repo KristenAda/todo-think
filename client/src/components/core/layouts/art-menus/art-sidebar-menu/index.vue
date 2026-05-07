@@ -15,7 +15,12 @@
 
       <ElScrollbar style="height: calc(100% - 135px)">
         <ul>
-          <li v-for="menu in firstLevelMenus" :key="menu.path" @click="handleMenuJump(menu, true)">
+          <li
+            v-for="menu in firstLevelMenus"
+            :key="menu.path"
+            @mouseenter="prefetchMenuRouteChunks(menu)"
+            @click="handleMenuJump(menu, true)"
+          >
             <ElTooltip
               class="box-item"
               effect="dark"
@@ -142,7 +147,7 @@
   import { MenuTypeEnum, MenuWidth } from '@/enums/appEnum';
   import { useMenuStore } from '@/store/modules/menu';
   import { isIframe } from '@/utils/navigation';
-  import { handleMenuJump } from '@/utils/navigation';
+  import { handleMenuJump, prefetchMenuRouteChunks } from '@/utils/navigation';
   import { resolveMenuIconifyIcon } from '@/utils/iconify';
   import SidebarSubmenu from './widget/SidebarSubmenu.vue';
   import { useCommon } from '@/hooks/core/useCommon';

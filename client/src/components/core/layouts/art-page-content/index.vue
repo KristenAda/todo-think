@@ -14,29 +14,41 @@
       </div>
     </div>
 
-    <RouterView v-if="isRefresh" v-slot="{ Component, route }" :style="contentStyle">
-      <!-- 缓存路由动画 -->
-      <Transition :name="showTransitionMask ? '' : actualTransition" mode="out-in" appear>
-        <KeepAlive :max="10" :exclude="keepAliveExclude">
+    <div class="layout-content-router-wrap" :style="contentStyle">
+      <RouterView v-if="isRefresh" v-slot="{ Component, route }">
+        <!-- 缓存路由动画 -->
+        <Transition :name="showTransitionMask ? '' : actualTransition" mode="out-in" appear>
+          <KeepAlive :max="10" :exclude="keepAliveExclude">
+            <component
+              class="art-page-view"
+              :is="Component"
+              :key="route.path"
+              v-if="route.meta.keepAlive"
+            />
+          </KeepAlive>
+        </Transition>
+
+        <!-- 非缓存路由动画 -->
+        <Transition :name="showTransitionMask ? '' : actualTransition" mode="out-in" appear>
           <component
             class="art-page-view"
             :is="Component"
             :key="route.path"
-            v-if="route.meta.keepAlive"
+            v-if="!route.meta.keepAlive"
           />
-        </KeepAlive>
-      </Transition>
+        </Transition>
+      </RouterView>
 
-      <!-- 非缓存路由动画 -->
-      <Transition :name="showTransitionMask ? '' : actualTransition" mode="out-in" appear>
-        <component
-          class="art-page-view"
-          :is="Component"
-          :key="route.path"
-          v-if="!route.meta.keepAlive"
-        />
+      <Transition name="route-skeleton-fade">
+        <div
+          v-if="routeContentSkeletonVisible"
+          class="route-content-skeleton-overlay"
+          aria-hidden="true"
+        >
+          <ArtRouteSkeleton />
+        </div>
       </Transition>
-    </RouterView>
+    </div>
 
     <!-- 全屏页面切换过渡遮罩（用于提升页面切换视觉体验） -->
     <Teleport to="body">
@@ -53,6 +65,8 @@
   import { useAutoLayoutHeight } from '@/hooks/core/useLayoutHeight';
   import { useSettingStore } from '@/store/modules/setting';
   import { useWorktabStore } from '@/store/modules/worktab';
+  import ArtRouteSkeleton from '@/components/core/layouts/art-route-skeleton/index.vue';
+  import { routeContentSkeletonVisible } from '@/utils/router/routeContentSkeleton';
 
   defineOptions({ name: 'ArtPageContent' });
 
@@ -134,3 +148,29 @@
     });
   });
 </script>
+
+<style scoped lang="scss">
+  .layout-content-router-wrap {
+    position: relative;
+    width: 100%;
+  }
+
+  .route-content-skeleton-overlay {
+    position: absolute;
+    inset: 0;
+    z-index: 25;
+    overflow: auto;
+    background: var(--default-bg-color);
+    pointer-events: auto;
+  }
+
+  .route-skeleton-fade-enter-active,
+  .route-skeleton-fade-leave-active {
+    transition: opacity 0.2s ease;
+  }
+
+  .route-skeleton-fade-enter-from,
+  .route-skeleton-fade-leave-to {
+    opacity: 0;
+  }
+</style>

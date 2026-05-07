@@ -70,6 +70,13 @@ export const staticRoutes: AppRouteRecordRaw[] = [
         component: () => import('@/views/message-center/index.vue'),
         meta: { title: '站内消息', requiresAuth: true }
       },
+      /** 与动态路由 Console 同页，供无工作台菜单账号从消息打开任务详情 */
+      {
+        path: '/outside/workbench',
+        name: 'OutsideWorkbench',
+        component: () => import('@/views/dashboard/console/index.vue'),
+        meta: { title: '工作台', requiresAuth: true }
+      },
       // iframe 内嵌页面
       {
         path: '/outside/iframe/:path',

@@ -13,7 +13,12 @@
       />
     </template>
 
-    <ElSubMenu v-else-if="hasChildren(item)" :index="item.path || item.meta.title" :level="level">
+    <ElSubMenu
+      v-else-if="hasChildren(item)"
+      :index="item.path || item.meta.title"
+      :level="level"
+      @mouseenter="prefetchMenuRouteChunks(item)"
+    >
       <template #title>
         <div class="menu-icon flex-cc">
           <ArtSvgIcon
@@ -41,6 +46,7 @@
       v-else
       :index="isExternalLink(item) ? undefined : item.path || item.meta.title"
       :level-item="level + 1"
+      @mouseenter="prefetchMenuRouteChunks(item)"
       @click="goPage(item)"
     >
       <div class="menu-icon flex-cc">
@@ -74,7 +80,7 @@
   import type { AppRouteRecord } from '@/types/router';
   import { formatMenuTitle } from '@/utils/router';
   import { resolveMenuIconifyIcon } from '@/utils/iconify';
-  import { handleMenuJump } from '@/utils/navigation';
+  import { handleMenuJump, prefetchMenuRouteChunks } from '@/utils/navigation';
   import { useSettingStore } from '@/store/modules/setting';
   import { MenuThemeEnum } from '@/enums/appEnum';
   import type { MenuThemeType } from '@/types/store';

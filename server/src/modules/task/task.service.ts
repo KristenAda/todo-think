@@ -1272,6 +1272,14 @@ class TaskService {
     });
     if (!task) throw { status: 404, message: "任务不存在" };
 
+    if (task.status === "COMPLETED" || task.status === "CANCELLED") {
+      throw { status: 400, message: "已结束的任务不可登记工时" };
+    }
+
+    if (task.status === "QA_REVIEW") {
+      throw { status: 400, message: "验收中的任务不可登记工时" };
+    }
+
     const isMainAssignee = task.mainAssigneeId === userId;
     const isCoAssignee = task.coAssignees.some((ca) => ca.userId === userId);
     if (!isMainAssignee && !isCoAssignee) {
@@ -1355,6 +1363,27 @@ class TaskService {
       include: { coAssignees: true, project: { select: { name: true } } },
     });
     if (!task) throw { status: 404, message: "任务不存在" };
+
+    if (task.status === "COMPLETED" || task.status === "CANCELLED") {
+      throw { status: 400, message: "已结束的任务不可发表评论" };
+    }
+
+    if (task.status === "QA_REVIEW") {
+      const isTester =
+        task.testerId != null && Number(task.testerId) === Number(userId);
+      const isCo = task.coAssignees.some((ca) => Number(ca.userId) === Number(userId));
+      const rule = await prisma.projectTaskRule.findUnique({
+        where: { projectId: task.projectId },
+        select: { allowCoAssigneeSubmitQa: true },
+      });
+      const allowCoQa = rule?.allowCoAssigneeSubmitQa ?? false;
+      if (!isTester && !(allowCoQa && isCo)) {
+        throw {
+          status: 400,
+          message: "验收中的任务仅验收人或协助验收人可发表评论",
+        };
+      }
+    }
 
     await assertAttachmentsOwnedByUser(dto.attachmentIds, userId);
 
@@ -2144,15 +2173,20 @@ function perfNormMinMax(value: number, min: number, max: number): number {
   return Math.max(0, Math.min(100, ((value - min) / (max - min)) * 100));
 }
 
-function perfTierFromRank(rank: number, total: number): "S" | "A" | "B" | "C" {
-  if (total <= 0) return "C";
-  const sEnd = Math.max(1, Math.ceil(total * 0.2));
-  const aEnd = Math.max(sEnd, Math.ceil(total * 0.5));
-  const bEnd = Math.max(aEnd, Math.ceil(total * 0.8));
-  if (rank < sEnd) return "S";
-  if (rank < aEnd) return "A";
-  if (rank < bEnd) return "B";
-  return "C";
+type PerfCompositeTier = "C" | "B" | "A" | "S-" | "S" | "S+" | "SS" | "SSS";
+
+/** 综合效能分档位（按分数区间，不按队内排名） */
+function perfTierFromScore(score: number): PerfCompositeTier {
+  if (!Number.isFinite(score)) return "C";
+  const s = Math.max(0, Math.min(100, Math.round(score)));
+  if (s <= 49) return "C";
+  if (s <= 69) return "B";
+  if (s <= 79) return "A";
+  if (s <= 84) return "S-";
+  if (s <= 89) return "S";
+  if (s <= 94) return "S+";
+  if (s <= 98) return "SS";
+  return "SSS";
 }
 
 /**
@@ -2389,7 +2423,20 @@ class PerformanceService {
             },
           },
           testCases: true,
-          coAssignees: { select: { userId: true } },
+          workLogs: { select: { userId: true, hours: true } },
+          coAssignees: {
+            include: {
+              user: {
+                select: {
+                  id: true,
+                  userName: true,
+                  nickName: true,
+                  avatar: true,
+                  userEmail: true,
+                },
+              },
+            },
+          },
         },
       }),
       prisma.pointsLedgerEntry.findMany({
@@ -2407,7 +2454,12 @@ class PerformanceService {
         },
         select: {
           taskId: true,
-          task: { select: { mainAssigneeId: true } },
+          task: {
+            select: {
+              mainAssigneeId: true,
+              coAssignees: { select: { userId: true } },
+            },
+          },
         },
       }),
       prisma.workLog.groupBy({
@@ -2433,11 +2485,17 @@ class PerformanceService {
       }),
     ]);
 
-    const qaRejectByMain = new Map<number, number>();
+    /** 验收打回次数：任务维度每条时间线计一次，主责与协助人同时计入（协同交付共担） */
+    const qaRejectByUser = new Map<number, number>();
     for (const row of rejectTimelines) {
-      const mid = row.task?.mainAssigneeId;
-      if (!mid) continue;
-      qaRejectByMain.set(mid, (qaRejectByMain.get(mid) ?? 0) + 1);
+      const t = row.task;
+      if (!t) continue;
+      const ids = new Set<number>();
+      if (t.mainAssigneeId != null) ids.add(t.mainAssigneeId);
+      for (const ca of t.coAssignees ?? []) ids.add(ca.userId);
+      for (const uid of ids) {
+        qaRejectByUser.set(uid, (qaRejectByUser.get(uid) ?? 0) + 1);
+      }
     }
 
     const workLogByUser = new Map<number, number>();
@@ -2467,6 +2525,8 @@ class PerformanceService {
     type Agg = {
       user: any;
       totalTasks: number;
+      /** 仅担任主责且完成的条数（展示用；totalTasks 含协助参与） */
+      mainResponsibleTasks: number;
       totalActualHours: number;
       totalEstimatedHours: number;
       totalBugCount: number;
@@ -2485,8 +2545,12 @@ class PerformanceService {
     const testerCompleted = new Map<number, number>();
     const tasksByType: Record<string, number> = {};
     const tasksByPriority: Record<string, number> = {};
+    /** 本统计口径下已完成任务的主责 + 协助人（用于补全列表行，避免协助人不在部门花名册时不展示） */
+    const completedTaskParticipantIds = new Set<number>();
 
     for (const task of completedTasks) {
+      if (task.mainAssigneeId) completedTaskParticipantIds.add(task.mainAssigneeId);
+
       const t = String(task.type ?? "FEATURE");
       tasksByType[t] = (tasksByType[t] ?? 0) + 1;
       const pr = String(task.priority ?? "P2");
@@ -2496,65 +2560,144 @@ class PerformanceService {
         testerCompleted.set(task.testerId, (testerCompleted.get(task.testerId) ?? 0) + 1);
       }
       for (const ca of task.coAssignees ?? []) {
-        if (ca.userId && ca.userId !== task.mainAssigneeId) {
+        if (!ca.userId) continue;
+        completedTaskParticipantIds.add(ca.userId);
+        if (ca.userId !== task.mainAssigneeId) {
           coAssigneeCompleted.set(ca.userId, (coAssigneeCompleted.get(ca.userId) ?? 0) + 1);
         }
       }
 
-      if (!task.mainAssigneeId || !task.mainAssignee) continue;
-      const uid = task.mainAssigneeId;
-      if (!map.has(uid)) {
-        map.set(uid, {
-          user: task.mainAssignee,
-          totalTasks: 0,
-          totalActualHours: 0,
-          totalEstimatedHours: 0,
-          totalBugCount: 0,
-          firstPassCount: 0,
-          leadDaysList: [],
-          onTimeWithDue: 0,
-          onTimeHits: 0,
-          delayHoursSum: 0,
-          tasksWithDue: 0,
-          hoursAccuracySum: 0,
-          hoursAccuracyTasks: 0,
-        });
+      const logs = task.workLogs ?? [];
+      let sumLogged = 0;
+      const hoursByUserId = new Map<number, number>();
+      for (const w of logs) {
+        const h = Number(w.hours ?? 0);
+        sumLogged += h;
+        hoursByUserId.set(w.userId, (hoursByUserId.get(w.userId) ?? 0) + h);
       }
-      const stat = map.get(uid)!;
-      stat.totalTasks += 1;
-      stat.totalActualHours += task.actualHours ?? 0;
-      stat.totalEstimatedHours += task.estimatedHours ?? 0;
+      const hoursAllocDen = sumLogged > 0 ? sumLogged : Math.max(0, task.actualHours ?? 0);
 
-      const bugCount = task.testCases.reduce((sum, tc) => sum + tc.bugCount, 0);
-      stat.totalBugCount += bugCount;
-      if (bugCount === 0) stat.firstPassCount += 1;
+      if (task.mainAssigneeId && task.mainAssignee) {
+        const uid = task.mainAssigneeId;
+        if (!map.has(uid)) {
+          map.set(uid, {
+            user: task.mainAssignee,
+            totalTasks: 0,
+            mainResponsibleTasks: 0,
+            totalActualHours: 0,
+            totalEstimatedHours: 0,
+            totalBugCount: 0,
+            firstPassCount: 0,
+            leadDaysList: [],
+            onTimeWithDue: 0,
+            onTimeHits: 0,
+            delayHoursSum: 0,
+            tasksWithDue: 0,
+            hoursAccuracySum: 0,
+            hoursAccuracyTasks: 0,
+          });
+        }
+        const stat = map.get(uid)!;
+        stat.totalTasks += 1;
+        stat.mainResponsibleTasks += 1;
+        stat.totalActualHours += task.actualHours ?? 0;
+        stat.totalEstimatedHours += task.estimatedHours ?? 0;
 
-      const createdAt = new Date(task.createdAt);
-      const acceptedAt = task.acceptedAt ? new Date(task.acceptedAt) : new Date(task.updatedAt);
-      const leadDays = (acceptedAt.getTime() - createdAt.getTime()) / (24 * 3600000);
-      stat.leadDaysList.push(Math.max(0, leadDays));
+        const bugCount = task.testCases.reduce((sum, tc) => sum + tc.bugCount, 0);
+        stat.totalBugCount += bugCount;
+        if (bugCount === 0) stat.firstPassCount += 1;
 
-      const dueDate = task.dueDate ? new Date(task.dueDate) : null;
-      if (dueDate) {
-        stat.tasksWithDue += 1;
-        const delayHours = Math.max(0, (acceptedAt.getTime() - dueDate.getTime()) / 3600000);
-        stat.delayHoursSum += delayHours;
-        if (delayHours <= 0) stat.onTimeHits += 1;
-        stat.onTimeWithDue += 1;
+        const createdAt = new Date(task.createdAt);
+        const acceptedAt = task.acceptedAt ? new Date(task.acceptedAt) : new Date(task.updatedAt);
+        const leadDays = (acceptedAt.getTime() - createdAt.getTime()) / (24 * 3600000);
+        stat.leadDaysList.push(Math.max(0, leadDays));
+
+        const dueDate = task.dueDate ? new Date(task.dueDate) : null;
+        if (dueDate) {
+          stat.tasksWithDue += 1;
+          const delayHours = Math.max(0, (acceptedAt.getTime() - dueDate.getTime()) / 3600000);
+          stat.delayHoursSum += delayHours;
+          if (delayHours <= 0) stat.onTimeHits += 1;
+          stat.onTimeWithDue += 1;
+        }
+
+        const est = task.estimatedHours;
+        if (est != null && est > 0) {
+          const act = task.actualHours ?? 0;
+          const acc = 100 - Math.min(100, (Math.abs(act - est) / est) * 100);
+          stat.hoursAccuracySum += acc;
+          stat.hoursAccuracyTasks += 1;
+        }
       }
 
-      const est = task.estimatedHours;
-      if (est != null && est > 0) {
-        const act = task.actualHours ?? 0;
-        const acc = 100 - Math.min(100, (Math.abs(act - est) / est) * 100);
-        stat.hoursAccuracySum += acc;
-        stat.hoursAccuracyTasks += 1;
+      /** 协助人：每条已完成任务计入综合样本（产出/质量/准时/速度等同任务结果共担；工时按登记拆分） */
+      for (const ca of task.coAssignees ?? []) {
+        const cuid = ca.userId;
+        if (!cuid || cuid === task.mainAssigneeId) continue;
+        const coUser = ca.user;
+        if (!coUser) continue;
+
+        if (!map.has(cuid)) {
+          map.set(cuid, {
+            user: coUser,
+            totalTasks: 0,
+            mainResponsibleTasks: 0,
+            totalActualHours: 0,
+            totalEstimatedHours: 0,
+            totalBugCount: 0,
+            firstPassCount: 0,
+            leadDaysList: [],
+            onTimeWithDue: 0,
+            onTimeHits: 0,
+            delayHoursSum: 0,
+            tasksWithDue: 0,
+            hoursAccuracySum: 0,
+            hoursAccuracyTasks: 0,
+          });
+        }
+        const cstat = map.get(cuid)!;
+        const userHours = hoursByUserId.get(cuid) ?? 0;
+        cstat.totalTasks += 1;
+        cstat.totalActualHours += userHours;
+
+        const te = task.estimatedHours;
+        if (te != null && te > 0 && hoursAllocDen > 0) {
+          const estShare = te * (userHours / hoursAllocDen);
+          cstat.totalEstimatedHours += estShare;
+          if (estShare > 0) {
+            const acc = 100 - Math.min(100, (Math.abs(userHours - estShare) / estShare) * 100);
+            cstat.hoursAccuracySum += acc;
+            cstat.hoursAccuracyTasks += 1;
+          }
+        }
+
+        const bugCountCo = task.testCases.reduce((sum, tc) => sum + tc.bugCount, 0);
+        cstat.totalBugCount += bugCountCo;
+        if (bugCountCo === 0) cstat.firstPassCount += 1;
+
+        const createdAtCo = new Date(task.createdAt);
+        const acceptedAtCo = task.acceptedAt ? new Date(task.acceptedAt) : new Date(task.updatedAt);
+        const leadDaysCo = (acceptedAtCo.getTime() - createdAtCo.getTime()) / (24 * 3600000);
+        cstat.leadDaysList.push(Math.max(0, leadDaysCo));
+
+        const dueDateCo = task.dueDate ? new Date(task.dueDate) : null;
+        if (dueDateCo) {
+          cstat.tasksWithDue += 1;
+          const delayHoursCo = Math.max(
+            0,
+            (acceptedAtCo.getTime() - dueDateCo.getTime()) / 3600000,
+          );
+          cstat.delayHoursSum += delayHoursCo;
+          if (delayHoursCo <= 0) cstat.onTimeHits += 1;
+          cstat.onTimeWithDue += 1;
+        }
       }
     }
 
     type StatRow = {
       user: any;
       totalTasks: number;
+      mainResponsibleTasks: number;
       totalActualHours: number;
       totalEstimatedHours: number;
       totalBugCount: number;
@@ -2572,7 +2715,7 @@ class PerformanceService {
       testerCompletedCount: number;
       wipCount: number;
       compositeScore: number;
-      compositeTier: "S" | "A" | "B" | "C";
+      compositeTier: PerfCompositeTier;
       subScores: {
         throughput: number;
         quality: number;
@@ -2590,11 +2733,11 @@ class PerformanceService {
       const medianLeadTimeDays = perfMedian(s.leadDaysList);
       const avgDelayHours = s.tasksWithDue > 0 ? s.delayHoursSum / s.tasksWithDue : 0;
       const onTimeRate =
-        s.onTimeWithDue > 0 ? Math.round((s.onTimeHits / s.onTimeWithDue) * 100) : 100;
+        s.onTimeWithDue > 0 ? Math.round((s.onTimeHits / s.onTimeWithDue) * 100) : 0;
       const hoursAccuracyAvg =
         s.hoursAccuracyTasks > 0 ? Math.round(s.hoursAccuracySum / s.hoursAccuracyTasks) : 0;
       const uid = s.user.id;
-      const qaRejectCount = qaRejectByMain.get(uid) ?? 0;
+      const qaRejectCount = qaRejectByUser.get(uid) ?? 0;
       const workLogHours = workLogByUser.get(uid) ?? 0;
       const coAssigneeCompletedCount = coAssigneeCompleted.get(uid) ?? 0;
       const testerCompletedCount = testerCompleted.get(uid) ?? 0;
@@ -2603,6 +2746,7 @@ class PerformanceService {
       rows.push({
         user: s.user,
         totalTasks: s.totalTasks,
+        mainResponsibleTasks: s.mainResponsibleTasks,
         totalActualHours: s.totalActualHours,
         totalEstimatedHours: s.totalEstimatedHours,
         totalBugCount: s.totalBugCount,
@@ -2631,13 +2775,15 @@ class PerformanceService {
       });
     }
 
-    /** 花名册：本人 + 管理部门成员（或同组织全员），无主责完成数据也展示为 0 */
+    /** 无主责行补全：部门花名册 ∪ 已完成任务参与者，字段仍为 0 或由协作/工时等旁路填充 */
     const rosterUserIds = await performanceRosterUserIds(orgIds, userId);
-    const seenRoster = new Set(rows.map((r) => r.user.id));
-    const missingUserIds = rosterUserIds.filter((id) => !seenRoster.has(id));
-    if (missingUserIds.length > 0) {
+    const seenRowIds = new Set(rows.map((r) => r.user.id));
+    const fillerCandidateIds = [...new Set([...rosterUserIds, ...completedTaskParticipantIds])].filter(
+      (id) => !seenRowIds.has(id),
+    );
+    if (fillerCandidateIds.length > 0) {
       const fillerUsers = await prisma.user.findMany({
-        where: { id: { in: missingUserIds } },
+        where: { id: { in: fillerCandidateIds } },
         select: {
           id: true,
           userName: true,
@@ -2651,6 +2797,7 @@ class PerformanceService {
         rows.push({
           user: u,
           totalTasks: 0,
+          mainResponsibleTasks: 0,
           totalActualHours: 0,
           totalEstimatedHours: 0,
           totalBugCount: 0,
@@ -2660,9 +2807,9 @@ class PerformanceService {
           pointsByType: pointsByUser.get(uid2)?.byType ?? {},
           medianLeadTimeDays: 0,
           avgDelayHours: 0,
-          onTimeRate: 100,
+          onTimeRate: 0,
           hoursAccuracyAvg: 0,
-          qaRejectCount: qaRejectByMain.get(uid2) ?? 0,
+          qaRejectCount: qaRejectByUser.get(uid2) ?? 0,
           workLogHours: Math.round((workLogByUser.get(uid2) ?? 0) * 10) / 10,
           coAssigneeCompletedCount: coAssigneeCompleted.get(uid2) ?? 0,
           testerCompletedCount: testerCompleted.get(uid2) ?? 0,
@@ -2702,11 +2849,24 @@ class PerformanceService {
     const rpMax = Math.max(...rejPerTask);
 
     for (const r of rows) {
+      /** 无主责完成任务：无样本，维度与综合分一律为 0（不参与队内归一化“刷满”） */
+      if (r.totalTasks === 0) {
+        r.subScores = {
+          throughput: 0,
+          quality: 0,
+          punctuality: 0,
+          speed: 0,
+          stability: 0,
+        };
+        r.compositeScore = 0;
+        continue;
+      }
+
       const throughput = perfNormMinMax(r.totalTasks, tMin, tMax);
       const speed = 100 - perfNormMinMax(r.medianLeadTimeDays, leadMin, leadMax);
       const punctuality = perfNormMinMax(r.onTimeRate, otMin, otMax);
       const quality = perfNormMinMax(r.firstPassRate, qMin, qMax);
-      const stability = 100 - perfNormMinMax(r.totalTasks > 0 ? r.qaRejectCount / r.totalTasks : 0, rpMin, rpMax);
+      const stability = 100 - perfNormMinMax(r.qaRejectCount / r.totalTasks, rpMin, rpMax);
 
       r.subScores = {
         throughput: Math.round(throughput),
@@ -2724,10 +2884,15 @@ class PerformanceService {
       );
     }
 
-    rows.sort((a, b) => b.compositeScore - a.compositeScore);
-    rows.forEach((r, idx) => {
-      r.compositeTier = perfTierFromRank(idx, rows.length);
+    rows.sort((a, b) => {
+      const d = b.compositeScore - a.compositeScore;
+      if (d !== 0) return d;
+      return a.user.id - b.user.id;
     });
+
+    for (const r of rows) {
+      r.compositeTier = perfTierFromScore(r.compositeScore);
+    }
 
     const totalWorkLogHours = Array.from(workLogByUser.values()).reduce((a, b) => a + b, 0);
     const summary = {

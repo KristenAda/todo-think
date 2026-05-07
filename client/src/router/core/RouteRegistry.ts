@@ -9,13 +9,13 @@
 
 import type { Router, RouteRecordRaw } from 'vue-router';
 import type { AppRouteRecord } from '@/types/router';
-import { ComponentLoader } from './ComponentLoader';
+import { componentLoader } from './ComponentLoader';
 import { RouteValidator } from './RouteValidator';
 import { RouteTransformer } from './RouteTransformer';
 
 export class RouteRegistry {
   private router: Router;
-  private componentLoader: ComponentLoader;
+  private componentLoader: typeof componentLoader;
   private validator: RouteValidator;
   private transformer: RouteTransformer;
   private removeRouteFns: (() => void)[] = [];
@@ -23,7 +23,7 @@ export class RouteRegistry {
 
   constructor(router: Router) {
     this.router = router;
-    this.componentLoader = new ComponentLoader();
+    this.componentLoader = componentLoader;
     this.validator = new RouteValidator();
     this.transformer = new RouteTransformer(this.componentLoader);
   }

@@ -24,6 +24,7 @@
             :class="{
               'menu-item-active text-theme': item.isActive
             }"
+            @mouseenter="prefetchMenuRouteChunks(item)"
             @click="handleMenuJump(item, true)"
           >
             <ArtSvgIcon
@@ -58,7 +59,7 @@
   import { useThrottleFn } from '@vueuse/core';
   import { formatMenuTitle } from '@/utils/router';
   import { resolveMenuIconifyIcon } from '@/utils/iconify';
-  import { handleMenuJump } from '@/utils/navigation';
+  import { handleMenuJump, prefetchMenuRouteChunks } from '@/utils/navigation';
   import type { AppRouteRecord } from '@/types/router';
 
   defineOptions({ name: 'ArtMixedMenu' });

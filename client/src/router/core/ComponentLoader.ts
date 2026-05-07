@@ -61,6 +61,14 @@ export class ComponentLoader {
   }
 
   /**
+   * 预取视图 chunk（悬停菜单等场景，减轻首次点击时的白屏/等待）
+   */
+  prefetch(componentPath: string): void {
+    const loader = this.load(componentPath);
+    void loader().catch(() => {});
+  }
+
+  /**
    * 加载布局组件
    */
   loadLayout(): () => Promise<any> {
@@ -98,3 +106,6 @@ export class ComponentLoader {
       });
   }
 }
+
+/** 与动态路由注册共用同一套 glob，保证预取与点击加载为同一模块实例 */
+export const componentLoader = new ComponentLoader();

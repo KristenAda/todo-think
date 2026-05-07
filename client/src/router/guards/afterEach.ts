@@ -20,7 +20,7 @@ export function setupAfterEachGuard(router: Router) {
       // 确保进度条完全移除，避免残影
       setTimeout(() => {
         NProgress.remove();
-      }, 600);
+      }, 320);
     }
 
     // 关闭 loading 效果

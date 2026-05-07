@@ -75,6 +75,8 @@ export interface ColumnOption<T = any> {
   checked?: boolean;
   // 自定义渲染函数
   formatter?: (row: T) => any;
+  /** ArtTable：单元格自定义渲染，作用域同 el-table-column 默认插槽 `{ row, column, $index }` */
+  render?: (scope: { row: T; column: unknown; $index: number }) => unknown;
   // 插槽相关配置
   // 是否使用插槽渲染内容
   useSlot?: boolean;

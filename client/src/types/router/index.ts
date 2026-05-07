@@ -66,6 +66,8 @@ export interface RouteMeta extends Record<string | number | symbol, unknown> {
   authMark?: string;
   /** 父级路径 */
   parentPath?: string;
+  /** 为 true 时路由切换不在内容区显示骨架（默认显示） */
+  hideRouteSkeleton?: boolean;
 }
 
 /**

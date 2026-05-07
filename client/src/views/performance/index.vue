@@ -1,60 +1,69 @@
 <template>
-  <div class="perf art-full-height" :class="{ 'perf--entered': pageEntered }">
-    <div class="perf-hero">
-      <div class="perf-hero__bg" aria-hidden="true" />
-      <div class="perf-hero__bg-shimmer" aria-hidden="true" />
-      <div class="perf-hero__inner">
-        <div class="perf-hero__left">
-          <div class="perf-hero__icon-wrap">
-            <art-svg-icon icon="mdi:chart-timeline-variant" class="perf-hero__icon" />
-          </div>
-          <div>
-            <h1 class="perf-hero__title">研发效能驾驶舱</h1>
-            <p class="perf-hero__sub">{{ heroSubtitle }}</p>
-          </div>
+  <div class="perf-dashboard art-full-height">
+    <header class="perf-header perf-panel">
+      <div class="perf-header__left">
+        <div class="perf-header__icon-wrap">
+          <art-svg-icon icon="mdi:chart-timeline-variant" class="perf-header__icon" />
         </div>
-        <div class="perf-hero__toolbar">
-          <el-select
-            v-model="filterProjectId"
-            placeholder="全部项目"
-            clearable
-            style="width: 200px"
-            @change="onFilterChange"
-          >
-            <el-option v-for="p in projectList" :key="p.id" :label="p.name" :value="p.id" />
-          </el-select>
-          <el-date-picker
-            v-model="periodRange"
-            type="daterange"
-            value-format="YYYY-MM-DDTHH:mm:ssZ"
-            range-separator="至"
-            start-placeholder="账期开始"
-            end-placeholder="账期结束"
-            style="width: 300px"
-            @change="onFilterChange"
-          />
-          <el-button type="primary" :loading="loading" @click="refreshAll">刷新</el-button>
+        <div class="perf-header__title-wrap">
+          <h1 class="perf-header__title">研发效能统计</h1>
+          <p class="perf-header__sub">{{ heroSubtitle }}</p>
         </div>
       </div>
-    </div>
-
-    <div class="perf-kpi-row">
-      <div v-for="card in kpiCards" :key="card.key" class="perf-kpi">
-        <div class="perf-kpi__icon" :style="{ background: card.iconBg }">
-          <art-svg-icon :icon="card.icon" class="perf-kpi__svg" />
-        </div>
-        <div class="perf-kpi__body">
-          <div class="perf-kpi__val">{{ card.value }}</div>
-          <div class="perf-kpi__lab">{{ card.label }}</div>
-        </div>
+      <div class="perf-header__toolbar">
+        <el-select
+          v-model="filterProjectId"
+          placeholder="全部项目"
+          clearable
+          style="width: 200px"
+          @change="onFilterChange"
+        >
+          <el-option v-for="p in projectList" :key="p.id" :label="p.name" :value="p.id" />
+        </el-select>
+        <el-date-picker
+          v-model="periodRange"
+          type="daterange"
+          value-format="YYYY-MM-DDTHH:mm:ssZ"
+          range-separator="至"
+          start-placeholder="统计开始"
+          end-placeholder="统计结束"
+          style="width: 300px"
+          @change="onFilterChange"
+        />
+        <el-button type="primary" :loading="loading" @click="refreshAll">查询</el-button>
       </div>
-    </div>
+    </header>
 
-    <div class="perf-section perf-section--charts">
+    <section class="perf-kpi-strip" aria-label="统计范围内汇总指标">
+      <article
+        v-for="card in kpiCards"
+        :key="card.key"
+        class="premium-kpi-card"
+        :style="{ '--kpi-accent': card.accent }"
+      >
+        <div class="premium-kpi-card__inner">
+          <header class="premium-kpi-card__meta">
+            <span class="premium-kpi-card__label">{{ card.label }}</span>
+            <div class="premium-kpi-card__icon-wrap">
+              <art-svg-icon :icon="card.icon" class="premium-kpi-card__icon" aria-hidden="true" />
+            </div>
+          </header>
+          <div class="premium-kpi-card__data">
+            <p class="premium-kpi-card__value">{{ card.value }}</p>
+          </div>
+        </div>
+
+        <div class="premium-kpi-card__watermark">
+          <art-svg-icon :icon="card.icon" aria-hidden="true" />
+        </div>
+      </article>
+    </section>
+
+    <div class="perf-charts">
       <PerformanceDashboardCharts :all-stats="allStats" :summary="summary" />
     </div>
 
-    <ElCard class="perf-section perf-section--table perf-table-card art-table-card" shadow="never">
+    <ElCard class="perf-table-card art-table-card" shadow="never">
       <ArtTableHeader v-model:columns="columnChecks" :loading="loading" @refresh="refreshAll">
         <template #left>
           <span class="perf-table-title">成员绩效明细</span>
@@ -76,15 +85,16 @@
 </template>
 
 <script setup lang="ts">
-  import { ref, computed, onMounted, nextTick, h, resolveComponent } from 'vue';
-  import { ElTag, ElProgress, ElImage, ElButton } from 'element-plus';
+  import { ref, computed, onMounted, h, resolveComponent } from 'vue';
+  import { ElProgress, ElImage, ElButton } from 'element-plus';
   import { fetchPerformanceStats, fetchProjectList } from '@/api/task';
   import { useTable } from '@/hooks/core/useTable';
   import { defaultResponseAdapter } from '@/utils/table/tableUtils';
   import type { ApiResponse } from '@/utils/table/tableCache';
   import PerformanceDashboardCharts from './components/PerformanceDashboardCharts.vue';
   import EmployeeStatsDetailDialog from './components/EmployeeStatsDetailDialog.vue';
-  import { COMPOSITE_TIER_META } from '@/enums/modules/performanceEnum';
+  import RankIcon from '@/components/core/base/rank-icon/index.vue';
+  import type { RankIconTier } from '@/components/core/base/rank-icon/types';
 
   defineOptions({ name: 'Performance' });
 
@@ -98,19 +108,11 @@
   const detailVisible = ref(false);
   const detailStat = ref<PerformanceStat | null>(null);
 
-  /** 首屏入场动画：下一帧再点亮，避免首 paint 与动画抢帧 */
-  const pageEntered = ref(false);
-
-  function tierTagType(t: string): 'success' | 'primary' | 'warning' | 'danger' | 'info' {
-    const m = COMPOSITE_TIER_META[t as keyof typeof COMPOSITE_TIER_META];
-    return m?.elTag ?? 'info';
-  }
-
   const heroSubtitle = computed(() => {
     const pr = periodRange.value;
     if (pr?.[0] && pr?.[1])
-      return `当前账期：${pr[0].slice(0, 10)} — ${pr[1].slice(0, 10)} · 队内相对排名`;
-    return '筛选项目与账期后，综合分与档位为队内相对比较';
+      return `本期统计：${pr[0].slice(0, 10)} — ${pr[1].slice(0, 10)} · 绩效评级按得分区间划分`;
+    return '筛选项目与统计区间后，绩效评级由综合得分区间决定，不按队内名次排队';
   });
 
   const kpiCards = computed(() => {
@@ -118,52 +120,52 @@
     return [
       {
         key: 'head',
-        label: '参与人数',
+        label: '统计人数',
         value: s?.headcount ?? allStats.value.length,
         icon: 'mdi:account-group',
-        iconBg: 'linear-gradient(135deg,#e8f4fd,#dbeafe)'
+        accent: '#409EFF' // Element Primary
       },
       {
         key: 'done',
-        label: '主责完成数',
+        label: '本期交付数',
         value: s?.completedTasks ?? 0,
         icon: 'mdi:check-decagram',
-        iconBg: 'linear-gradient(135deg,#e8f9f0,#d1fae5)'
+        accent: '#67C23A' // Element Success
       },
       {
         key: 'wl',
-        label: '登记工时(h)',
+        label: '提报总工时 (h)',
         value: s?.totalWorkLogHours ?? 0,
         icon: 'mdi:clock-outline',
-        iconBg: 'linear-gradient(135deg,#fff8e6,#fef3c7)'
+        accent: '#E6A23C' // Element Warning
       },
       {
         key: 'pt',
         label: '总积分',
         value: s?.totalPoints ?? 0,
         icon: 'mdi:star-circle',
-        iconBg: 'linear-gradient(135deg,#eef9ff,#e0f2fe)'
+        accent: '#ca8a04' // 琥珀强调积分（避免紫系）
       },
       {
         key: 'rej',
-        label: '验收打回(次)',
+        label: '验收返工 (次)',
         value: s?.totalQaRejects ?? 0,
         icon: 'mdi:undo-variant',
-        iconBg: 'linear-gradient(135deg,#fef0f0,#fee2e2)'
+        accent: '#F56C6C' // Element Danger
       },
       {
         key: 'avg',
-        label: '平均综合分',
+        label: '人均综合分',
         value: s?.avgCompositeScore ?? '—',
         icon: 'mdi:speedometer',
-        iconBg: 'linear-gradient(135deg,#f3e8ff,#ede9fe)'
+        accent: '#73767A' // Element Info
       },
       {
         key: 'ot',
-        label: '平均准时率%',
+        label: '整体按期交付率 (%)',
         value: s?.avgOnTimeRate ?? '—',
         icon: 'mdi:calendar-check',
-        iconBg: 'linear-gradient(135deg,#ecfeff,#cffafe)'
+        accent: '#00DDCB' // A cool teal for time
       }
     ];
   });
@@ -202,7 +204,6 @@
       columnsFactory: () => buildColumns()
     },
     transform: {
-      // PageResult 与 useTable 基于 PaginatedResponse 的推断不一致
       responseAdapter: perfResponseAdapter as typeof defaultResponseAdapter
     }
   });
@@ -220,7 +221,7 @@
       {
         prop: 'user',
         label: '成员',
-        minWidth: 220,
+        minWidth: 256,
         fixed: 'left',
         showOverflowTooltip: true,
         formatter: (row: PerformanceStat) => {
@@ -248,8 +249,8 @@
       },
       {
         prop: 'compositeScore',
-        label: '综合效能分',
-        width: 128,
+        label: '综合得分',
+        minWidth: 116,
         align: 'center',
         sortable: true,
         showOverflowTooltip: true,
@@ -257,39 +258,64 @@
       },
       {
         prop: 'compositeTier',
-        label: '综合档位',
-        minWidth: 96,
+        label: '绩效评级',
+        minWidth: 132,
         align: 'center',
+        showOverflowTooltip: true,
         formatter: (row: PerformanceStat) => {
-          const t = row.compositeTier ?? 'C';
-          const meta = COMPOSITE_TIER_META[t as keyof typeof COMPOSITE_TIER_META];
-          return h(
-            ElTag,
-            { type: tierTagType(t), size: 'small', effect: 'dark' },
-            () => meta?.label ?? t
-          );
+          const t = (row.compositeTier ?? 'C') as RankIconTier;
+          return h('div', { class: 'perf-tier-cell' }, [h(RankIcon, { tier: t, size: 40 })]);
         }
       },
       {
         prop: 'totalTasks',
-        label: '主责完成任务',
-        minWidth: 130,
+        label: '计入考核任务数',
+        minWidth: 168,
         align: 'center',
-        sortable: true
+        sortable: true,
+        showOverflowTooltip: true
+      },
+      {
+        prop: 'mainResponsibleTasks',
+        label: '主责任务数',
+        minWidth: 120,
+        align: 'center',
+        sortable: true,
+        showOverflowTooltip: true,
+        formatter: (row: PerformanceStat) => row.mainResponsibleTasks ?? 0
+      },
+      {
+        prop: 'firstPassRate',
+        label: '首通率',
+        minWidth: 156,
+        align: 'center',
+        sortable: true,
+        showOverflowTooltip: true,
+        formatter: (row: PerformanceStat) =>
+          h(ElProgress, {
+            percentage: row.firstPassRate,
+            strokeWidth: 8,
+            color:
+              row.firstPassRate >= 80 ? '#67c23a' : row.firstPassRate >= 50 ? '#e6a23c' : '#f56c6c'
+          })
       },
       {
         prop: 'medianLeadTimeDays',
-        label: '交付周期中位(天)',
-        minWidth: 150,
+        label: '交付周期中位数',
+        showOverflowTooltip: true,
+        minWidth: 172,
         align: 'center',
-        sortable: true
+        sortable: true,
+        formatter: (row: PerformanceStat) =>
+          row.medianLeadTimeDays != null ? `${row.medianLeadTimeDays} 天` : '—'
       },
       {
         prop: 'onTimeRate',
-        label: '准时率',
-        minWidth: 132,
+        label: '按期交付率',
+        minWidth: 156,
         align: 'center',
         sortable: true,
+        showOverflowTooltip: true,
         formatter: (row: PerformanceStat) =>
           h(ElProgress, {
             percentage: row.onTimeRate ?? 0,
@@ -303,70 +329,63 @@
           })
       },
       {
-        prop: 'firstPassRate',
-        label: '一次通过率',
-        minWidth: 132,
-        align: 'center',
-        sortable: true,
-        formatter: (row: PerformanceStat) =>
-          h(ElProgress, {
-            percentage: row.firstPassRate,
-            strokeWidth: 8,
-            color:
-              row.firstPassRate >= 80 ? '#67c23a' : row.firstPassRate >= 50 ? '#e6a23c' : '#f56c6c'
-          })
-      },
-      {
         prop: 'hoursAccuracyAvg',
-        label: '估时准确率',
-        minWidth: 128,
+        label: '工时估算准确率',
+        minWidth: 164,
         align: 'center',
         sortable: true,
+        showOverflowTooltip: true,
         formatter: (row: PerformanceStat) =>
           row.hoursAccuracyAvg != null ? `${row.hoursAccuracyAvg}%` : '—'
       },
       {
         prop: 'qaRejectCount',
-        label: '验收打回次数',
-        minWidth: 130,
+        label: '验收返工次数',
+        minWidth: 148,
         align: 'center',
-        sortable: true
-      },
-      {
-        prop: 'wipCount',
-        label: '在制 WIP',
-        minWidth: 100,
-        align: 'center',
-        sortable: true
-      },
-      {
-        prop: 'totalPoints',
-        label: '总积分',
-        minWidth: 88,
-        align: 'center',
-        sortable: true
+        sortable: true,
+        showOverflowTooltip: true
       },
       {
         prop: 'workLogHours',
-        label: '登记工时(h)',
-        minWidth: 116,
+        label: '提报总工时',
+        minWidth: 132,
         align: 'center',
         sortable: true,
-        formatter: (row: PerformanceStat) => `${row.workLogHours ?? 0}`
+        showOverflowTooltip: true,
+        formatter: (row: PerformanceStat) => `${row.workLogHours ?? 0}h`
       },
       {
         prop: 'coAssigneeCompletedCount',
-        label: '协作参与次数',
-        minWidth: 130,
+        label: '协作完成的任务数',
+        minWidth: 188,
         align: 'center',
-        sortable: true
+        sortable: true,
+        showOverflowTooltip: true
       },
       {
         prop: 'testerCompletedCount',
-        label: '验收任务数',
-        minWidth: 128,
+        label: '参与验收的次数',
+        minWidth: 164,
         align: 'center',
-        sortable: true
+        sortable: true,
+        showOverflowTooltip: true
+      },
+      {
+        prop: 'wipCount',
+        label: '处理中任务（主要负责人）',
+        minWidth: 236,
+        align: 'center',
+        sortable: true,
+        showOverflowTooltip: true
+      },
+      {
+        prop: 'totalPoints',
+        label: '积分合计',
+        minWidth: 108,
+        align: 'center',
+        sortable: true,
+        showOverflowTooltip: true
       },
       {
         prop: '_actions',
@@ -422,13 +441,6 @@
   }
 
   onMounted(() => {
-    void nextTick(() => {
-      requestAnimationFrame(() => {
-        requestAnimationFrame(() => {
-          pageEntered.value = true;
-        });
-      });
-    });
     loadProjects();
     applySearchParams();
     void Promise.all([getData(), loadAllStats()]);
@@ -436,362 +448,264 @@
 </script>
 
 <style scoped lang="scss">
-  .perf {
-    padding: 16px 20px 24px;
+  /* 基础布局：统一 8px 规范倍数 */
+  .perf-dashboard {
+    padding: 24px;
     display: flex;
     flex-direction: column;
-    gap: 18px;
+    gap: 24px;
     box-sizing: border-box;
     min-height: 100%;
+    // background-color: var(--el-bg-color-page);
   }
 
-  .perf-hero {
-    position: relative;
-    border-radius: 16px;
-    overflow: hidden;
-    box-shadow: 0 4px 24px rgba(15, 23, 42, 0.08);
-    opacity: 0;
-    transform: translateY(18px);
+  /* 统一面板基础样式 (顶部操作栏使用) */
+  .perf-panel {
+    background-color: var(--el-bg-color-overlay);
+    border-radius: 12px; /* 更圆润的大气感 */
+    border: 1px solid var(--el-border-color-light);
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.03); /* 细腻的阴影 */
   }
 
-  .perf--entered .perf-hero {
-    animation: perfEnterHero 0.62s cubic-bezier(0.22, 1, 0.36, 1) forwards;
-  }
-
-  .perf-section--charts,
-  .perf-section--table {
-    opacity: 0;
-    transform: translateY(20px);
-  }
-
-  .perf--entered .perf-section--charts {
-    animation: perfEnterSection 0.58s cubic-bezier(0.22, 1, 0.36, 1) 0.28s forwards;
-  }
-
-  .perf--entered .perf-section--table {
-    animation: perfEnterSection 0.58s cubic-bezier(0.22, 1, 0.36, 1) 0.42s forwards;
-  }
-
-  @keyframes perfEnterHero {
-    to {
-      opacity: 1;
-      transform: translateY(0);
-    }
-  }
-
-  @keyframes perfEnterKpi {
-    to {
-      opacity: 1;
-      transform: translateY(0);
-    }
-  }
-
-  @keyframes perfEnterSection {
-    to {
-      opacity: 1;
-      transform: translateY(0);
-    }
-  }
-
-  @keyframes perfHeroBgPulse {
-    0%,
-    100% {
-      filter: saturate(1);
-    }
-    50% {
-      filter: saturate(1.12);
-    }
-  }
-
-  @keyframes perfHeroShimmer {
-    0%,
-    100% {
-      background-position: 130% 0;
-    }
-    50% {
-      background-position: -30% 0;
-    }
-  }
-
-  @keyframes perfIconFloat {
-    0%,
-    100% {
-      transform: translateY(0);
-    }
-    50% {
-      transform: translateY(-3px);
-    }
-  }
-
-  @keyframes perfIconGlow {
-    0%,
-    100% {
-      box-shadow: 0 0 0 0 rgba(147, 197, 253, 0.35);
-    }
-    50% {
-      box-shadow: 0 0 20px 2px rgba(147, 197, 253, 0.22);
-    }
-  }
-
-  @media (prefers-reduced-motion: reduce) {
-    .perf-hero,
-    .perf-kpi,
-    .perf-section--charts,
-    .perf-section--table {
-      opacity: 1 !important;
-      transform: none !important;
-      animation: none !important;
-    }
-
-    .perf-hero__bg,
-    .perf-hero__bg-shimmer {
-      animation: none !important;
-    }
-
-    .perf-hero__icon-wrap,
-    .perf-hero__icon {
-      animation: none !important;
-    }
-
-    .perf-kpi__val {
-      transition: none;
-    }
-
-    .perf--entered .perf-kpi:hover .perf-kpi__val {
-      transform: none;
-    }
-  }
-
-  .perf-hero__bg {
-    position: absolute;
-    inset: 0;
-    background:
-      radial-gradient(1200px 400px at 10% -20%, rgba(64, 158, 255, 0.35), transparent 55%),
-      radial-gradient(900px 360px at 90% 0%, rgba(103, 194, 58, 0.22), transparent 50%),
-      linear-gradient(135deg, #0f172a 0%, #1e293b 48%, #0f172a 100%);
-    opacity: 0.96;
-    animation: perfHeroBgPulse 14s ease-in-out infinite;
-  }
-
-  /* 轻微高光扫过，不挡操作 */
-  .perf-hero__bg-shimmer {
-    position: absolute;
-    inset: 0;
-    pointer-events: none;
-    background: linear-gradient(
-      105deg,
-      transparent 38%,
-      rgba(255, 255, 255, 0.07) 50%,
-      transparent 62%
-    );
-    background-size: 220% 100%;
-    animation: perfHeroShimmer 9s ease-in-out infinite;
-    mix-blend-mode: overlay;
-  }
-
-  .perf-hero__inner {
-    position: relative;
-    z-index: 1;
+  /* ========== 顶部操作栏 ========== */
+  .perf-header {
     display: flex;
-    flex-wrap: wrap;
     align-items: center;
     justify-content: space-between;
-    gap: 16px;
-    padding: 20px 22px;
-    color: #e2e8f0;
+    flex-wrap: wrap;
+    gap: 24px;
+    padding: 20px 24px;
+    flex-shrink: 0;
   }
 
-  .perf-hero__left {
+  .perf-header__left {
     display: flex;
     align-items: center;
-    gap: 14px;
-    min-width: 0;
+    gap: 16px;
   }
 
-  .perf-hero__icon-wrap {
+  .perf-header__icon-wrap {
+    display: flex;
+    align-items: center;
+    justify-content: center;
     width: 48px;
     height: 48px;
-    border-radius: 14px;
-    background: rgba(255, 255, 255, 0.12);
+    border-radius: 10px;
+    background-color: var(--el-color-primary-light-9);
+    color: var(--el-color-primary);
+  }
+
+  .perf-header__icon {
+    font-size: 28px;
+  }
+
+  .perf-header__title-wrap {
     display: flex;
-    align-items: center;
-    justify-content: center;
-    border: 1px solid rgba(255, 255, 255, 0.18);
-    animation: perfIconGlow 4s ease-in-out infinite;
+    flex-direction: column;
+    gap: 4px;
   }
 
-  .perf-hero__icon {
-    font-size: 26px;
-    color: #93c5fd;
-    animation: perfIconFloat 4.5s ease-in-out infinite;
-  }
-
-  .perf-hero__title {
+  .perf-header__title {
     margin: 0;
     font-size: 20px;
-    font-weight: 800;
-    letter-spacing: 0.02em;
-    color: #f8fafc;
+    font-weight: 600;
+    color: var(--el-text-color-primary);
+    line-height: 1.2;
   }
 
-  .perf-hero__sub {
-    margin: 6px 0 0;
+  .perf-header__sub {
+    margin: 0;
     font-size: 13px;
-    color: rgba(226, 232, 240, 0.78);
-    max-width: 520px;
-    line-height: 1.45;
+    color: var(--el-text-color-secondary);
   }
 
-  .perf-hero__toolbar {
+  .perf-header__toolbar {
     display: flex;
+    align-items: center;
+    gap: 16px;
     flex-wrap: wrap;
-    gap: 10px;
-    align-items: center;
   }
 
-  .perf-hero__toolbar :deep(.el-input__wrapper),
-  .perf-hero__toolbar :deep(.el-select__wrapper) {
-    background: rgba(15, 23, 42, 0.35);
-    box-shadow: none;
+  /* ========== KPI 炫酷长条 (强制一行) ========== */
+  .perf-kpi-strip {
+    display: flex; /* 改用 Flex 强制一行 */
+    align-items: stretch;
+    gap: 16px;
+    flex-shrink: 0;
+    width: 100%;
+    /* 处理极端小屏下的溢出 */
+    @media (max-width: 1200px) {
+      overflow-x: auto;
+      padding-bottom: 8px; /* 为滚动条留空 */
+    }
   }
 
-  .perf-kpi-row {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
-    gap: 14px;
+  .premium-kpi-card {
+    flex: 1; /* 核心：平均分配空间并允许压缩 */
+    min-width: 180px; /* 保证卡片即使被挤压也不会完全变形 */
+    background-color: var(--el-bg-color-overlay);
+    border-radius: 12px;
+    position: relative;
+    overflow: hidden; /* 裁剪水印图标 */
+    transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.04);
+    box-sizing: border-box;
+    cursor: default;
+
+    /* 极轻微的背景渐变纹理 */
+    &::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(
+        135deg,
+        color-mix(in srgb, var(--kpi-accent) 4%, transparent) 0%,
+        rgba(255, 255, 255, 0) 100%
+      );
+      opacity: 0.6;
+      z-index: 1;
+    }
+
+    &:hover {
+      transform: translateY(-5px);
+      box-shadow: 0 12px 24px -8px color-mix(in srgb, var(--kpi-accent) 25%, rgba(0, 0, 0, 0.15));
+      // border: 1px solid color-mix(in srgb, var(--kpi-accent) 20%, var(--el-border-color-light));
+
+      .premium-kpi-card__watermark {
+        opacity: 0.12;
+        transform: rotate(-5deg) scale(1.05);
+      }
+    }
   }
 
-  .perf-kpi {
+  /* 内部内容布局 */
+  .premium-kpi-card__inner {
+    position: relative;
+    z-index: 2; /* 浮于纹理之上 */
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    height: 100%;
+    box-sizing: border-box;
+  }
+
+  .premium-kpi-card__meta {
     display: flex;
     align-items: center;
+    justify-content: space-between;
     gap: 12px;
-    padding: 14px 16px;
-    border-radius: 14px;
-    background: var(--art-main-bg-color, #fff);
-    border: 1px solid rgba(64, 158, 255, 0.12);
-    box-shadow: 0 2px 12px rgba(15, 23, 42, 0.05);
-    backdrop-filter: blur(8px);
-    opacity: 0;
-    transform: translateY(16px);
-    transition:
-      transform 0.2s ease,
-      box-shadow 0.2s ease;
   }
 
-  .perf--entered .perf-kpi {
-    animation: perfEnterKpi 0.52s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+  .premium-kpi-card__label {
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--el-text-color-secondary);
+    letter-spacing: 0.5px;
   }
 
-  .perf--entered .perf-kpi:nth-child(1) {
-    animation-delay: 0.08s;
-  }
-  .perf--entered .perf-kpi:nth-child(2) {
-    animation-delay: 0.13s;
-  }
-  .perf--entered .perf-kpi:nth-child(3) {
-    animation-delay: 0.18s;
-  }
-  .perf--entered .perf-kpi:nth-child(4) {
-    animation-delay: 0.23s;
-  }
-  .perf--entered .perf-kpi:nth-child(5) {
-    animation-delay: 0.28s;
-  }
-  .perf--entered .perf-kpi:nth-child(6) {
-    animation-delay: 0.33s;
-  }
-  .perf--entered .perf-kpi:nth-child(7) {
-    animation-delay: 0.38s;
-  }
-  .perf--entered .perf-kpi:nth-child(8) {
-    animation-delay: 0.43s;
-  }
-  .perf--entered .perf-kpi:nth-child(9) {
-    animation-delay: 0.48s;
-  }
-  .perf--entered .perf-kpi:nth-child(10) {
-    animation-delay: 0.53s;
-  }
-
-  .perf-kpi:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 8px 22px rgba(15, 23, 42, 0.08);
-  }
-
-  .perf-kpi__icon {
-    width: 44px;
-    height: 44px;
-    border-radius: 12px;
+  .premium-kpi-card__icon-wrap {
     display: flex;
     align-items: center;
     justify-content: center;
+    width: 28px;
+    height: 28px;
+    border-radius: 7px;
+    background-color: color-mix(in srgb, var(--kpi-accent) 12%, transparent);
+    color: var(--kpi-accent);
+    flex-shrink: 0;
   }
 
-  .perf-kpi__svg {
-    font-size: 22px;
-    color: #409eff;
+  .premium-kpi-card__icon {
+    font-size: 16px;
   }
 
-  .perf-kpi__val {
-    font-size: 22px;
-    font-weight: 800;
-    line-height: 1.1;
-    font-variant-numeric: tabular-nums;
+  .premium-kpi-card__data {
+    display: flex;
+    align-items: flex-end;
+  }
+
+  .premium-kpi-card__value {
+    margin: 0;
+    font-size: 32px; /* 更醒目的大数字 */
+    font-weight: 800; /* 更厚实的字重 */
     color: var(--el-text-color-primary);
-    transition: transform 0.35s cubic-bezier(0.22, 1, 0.36, 1);
+    line-height: 1;
+    font-variant-numeric: tabular-nums;
+    font-family: var(--el-font-family); /* 确保使用 Element 标准字体，看起来专业序列 */
   }
 
-  .perf--entered .perf-kpi:hover .perf-kpi__val {
-    transform: scale(1.04);
+  /* 背景水印图标 (炫酷感核心) */
+  .premium-kpi-card__watermark {
+    position: absolute;
+    bottom: -15px;
+    right: -10px;
+    font-size: 90px;
+    color: var(--kpi-accent);
+    opacity: 0.06; /* 极轻微的显示 */
+    transform: rotate(-10deg);
+    transition: all 0.3s ease-in-out;
+    z-index: 0; /* 在最底层 */
+
+    :deep(.art-svg-icon) {
+      fill: currentColor;
+    }
   }
 
-  .perf-kpi__lab {
-    font-size: 12px;
-    color: var(--el-text-color-secondary);
-    margin-top: 4px;
+  /* ========== 图表与表格 ========== */
+  .perf-charts {
+    flex-shrink: 0;
   }
 
   .perf-table-card {
     flex: 1;
-    min-height: 420px;
-    border-radius: 14px;
-    border: 1px solid rgba(64, 158, 255, 0.08);
-    overflow-x: auto;
+    min-height: 480px;
+    border-radius: 12px;
+    border: 1px solid var(--el-border-color-light);
+    display: flex;
+    flex-direction: column;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.03);
   }
 
-  /* 表头：完整列名、单行、留白充足 */
+  .perf-table-title {
+    font-weight: 600;
+    font-size: 16px;
+    color: var(--el-text-color-primary);
+  }
+
+  /* 修复表格内部撑开问题 */
+  .perf-table-card :deep(.el-card__body) {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    padding: 16px;
+    min-height: 0;
+  }
+
+  /* 表头样式微调，保持专业留白 */
   .perf-table-card :deep(.perf-art-table .el-table__header th.el-table__cell) {
     background: var(--el-fill-color-light);
   }
 
   .perf-table-card :deep(.perf-art-table .el-table__header th.el-table__cell .cell) {
-    white-space: nowrap;
-    line-height: 1.35;
-    padding: 10px 10px;
+    white-space: normal;
+    line-height: 1.38;
+    word-break: keep-all;
+    padding: 12px 10px;
     font-size: 13px;
     font-weight: 600;
-    color: var(--el-text-color-primary);
   }
 
   .perf-table-card :deep(.perf-art-table .el-table__body td.el-table__cell .cell) {
-    padding: 8px 10px;
+    padding: 10px;
     font-size: 13px;
   }
 
-  .perf-table-title {
-    font-weight: 700;
-    font-size: 15px;
-  }
-
+  /* 成员信息列 */
   :deep(.perf-member-cell) {
     display: flex;
     align-items: center;
     gap: 12px;
-    line-height: 1.4;
-  }
-
-  :deep(.perf-member-cell__avatar) {
-    flex-shrink: 0;
   }
 
   :deep(.perf-member-cell__text) {
@@ -803,13 +717,23 @@
   }
 
   :deep(.perf-member-cell__name) {
-    font-size: 13px;
+    font-size: 14px;
     font-weight: 500;
+    color: var(--el-text-color-primary);
   }
 
   :deep(.perf-member-cell__email) {
     font-size: 12px;
     color: var(--el-text-color-secondary);
-    word-break: break-all;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  :deep(.perf-tier-cell) {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 44px;
   }
 </style>

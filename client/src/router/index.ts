@@ -4,6 +4,7 @@ import { staticRoutes } from './routes/staticRoutes';
 import { configureNProgress } from '@/utils/router';
 import { setupBeforeEachGuard } from './guards/beforeEach';
 import { setupAfterEachGuard } from './guards/afterEach';
+import { setupRouteContentSkeletonGuard } from './guards/routeContentSkeleton';
 
 // 创建路由实例
 export const router = createRouter({
@@ -15,6 +16,7 @@ export const router = createRouter({
 export function initRouter(app: App<Element>): void {
   configureNProgress(); // 顶部进度条
   setupBeforeEachGuard(router); // 路由前置守卫
+  setupRouteContentSkeletonGuard(router); // 主布局内容区路由骨架（须在 beforeEach 之后注册）
   setupAfterEachGuard(router); // 路由后置守卫
   app.use(router);
 }

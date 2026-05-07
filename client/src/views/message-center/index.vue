@@ -33,16 +33,13 @@
   import { fetchMessagePage } from '@/api/message';
   import { useMessageStore } from '@/store/modules/message';
   import { storeToRefs } from 'pinia';
-  import { useRouter } from 'vue-router';
-  import mittBus from '@/utils/sys/mittBus';
+  import { pushWorkbenchOpenTask } from '@/utils/navigation';
   import { formatDateTime } from '@/utils/date';
 
   defineOptions({ name: 'MessageCenter' });
 
   const messageStore = useMessageStore();
   const { unreadCount, hasUnread } = storeToRefs(messageStore);
-  const router = useRouter();
-
   const { columns, data, loading, pagination, refreshData, handleSizeChange, handleCurrentChange } =
     useTable({
       core: {
@@ -55,6 +52,7 @@
         immediate: true,
         columnsFactory: () => [
           {
+            prop: 'title',
             label: '标题',
             minWidth: 180,
             showOverflowTooltip: true,
@@ -79,8 +77,7 @@
                         }
                       }
 
-                      await router.push({ name: 'Console' });
-                      setTimeout(() => mittBus.emit('openTaskDetail', taskId), 0);
+                      await pushWorkbenchOpenTask(taskId);
                     }
                   },
                   () => title
@@ -99,13 +96,13 @@
           {
             prop: 'sender',
             label: '发送者',
-            minWidth: 160,
+            width: 120,
             formatter: (row: any) => row?.sender?.nickName || row?.sender?.userName || '系统'
           },
           {
             prop: 'createTime',
             label: '时间',
-            minWidth: 180,
+            width: 170,
             formatter: (row: any) => (row?.createTime ? formatDateTime(row.createTime) : '')
           },
           {
@@ -115,9 +112,9 @@
             formatter: (row: any) => (row?.isRead ? '已读' : '未读')
           },
           {
+            prop: '__actions__',
             label: '操作',
-            width: 120,
-            fixed: 'right',
+            width: 180,
             render: ({ row }: any) => {
               const taskId = Number(row?.extra?.taskId);
 
@@ -158,8 +155,7 @@
                             }
                           }
 
-                          await router.push({ name: 'Console' });
-                          setTimeout(() => mittBus.emit('openTaskDetail', taskId), 0);
+                          await pushWorkbenchOpenTask(taskId);
                         }
                       },
                       () => '查看任务'
