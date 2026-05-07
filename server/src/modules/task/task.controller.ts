@@ -359,11 +359,23 @@ class PerformanceController {
       ctx.body = Result.error(parsed.error.issues?.[0]?.message ?? "参数错误");
       return;
     }
-    const { list, total } = await performanceService.stats(
+    const { list, total, summary } = await performanceService.stats(
       parsed.data,
       currentUserId(ctx),
     );
-    ctx.body = Result.page(list, total, parsed.data.page, parsed.data.pageSize);
+    const { page, pageSize } = parsed.data;
+    ctx.body = {
+      code: 200,
+      message: "success",
+      data: {
+        list,
+        total,
+        page,
+        pageSize,
+        totalPage: Math.ceil(total / pageSize),
+        summary,
+      },
+    };
   }
 
   async reconcileTask(ctx: Context) {

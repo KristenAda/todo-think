@@ -2131,6 +2131,108 @@ async function buildTaskFactRowsForLedger(taskFact: Record<string, unknown>): Pr
   }));
 }
 
+function perfMedian(nums: number[]): number {
+  if (!nums.length) return 0;
+  const s = [...nums].sort((a, b) => a - b);
+  const m = Math.floor(s.length / 2);
+  return s.length % 2 ? (s[m] as number) : ((s[m - 1] as number) + (s[m] as number)) / 2;
+}
+
+function perfNormMinMax(value: number, min: number, max: number): number {
+  if (!Number.isFinite(value)) return 50;
+  if (max <= min) return 50;
+  return Math.max(0, Math.min(100, ((value - min) / (max - min)) * 100));
+}
+
+function perfTierFromRank(rank: number, total: number): "S" | "A" | "B" | "C" {
+  if (total <= 0) return "C";
+  const sEnd = Math.max(1, Math.ceil(total * 0.2));
+  const aEnd = Math.max(sEnd, Math.ceil(total * 0.5));
+  const bEnd = Math.max(aEnd, Math.ceil(total * 0.8));
+  if (rank < sEnd) return "S";
+  if (rank < aEnd) return "A";
+  if (rank < bEnd) return "B";
+  return "C";
+}
+
+/**
+ * 效能统计应展示的用户 ID：当前用户 + 其管理部门（DeptManager 所辖部门及子部门）内全部成员；
+ * 若无部门管理关系，则退化为「与当前用户同属根组织」的全部部门成员。
+ * 仅包含部门树根在 orgIds 范围内的部门，避免跨组织数据。
+ */
+async function performanceRosterUserIds(orgIds: number[], viewerUserId: number): Promise<number[]> {
+  const orgSet = new Set(orgIds);
+  const allDepts = await prisma.department.findMany({
+    where: { deletedAt: null },
+    select: { id: true, parentId: true },
+  });
+  const byId = new Map(allDepts.map((d) => [d.id, d]));
+
+  const rootOf = (deptId: number): number | null => {
+    const seen = new Set<number>();
+    let cur: number | null = deptId;
+    while (cur != null && !seen.has(cur)) {
+      seen.add(cur);
+      const node = byId.get(cur);
+      if (!node) return null;
+      if (node.parentId == null) return node.id;
+      cur = node.parentId;
+    }
+    return null;
+  };
+
+  const inOrgScope = (deptId: number) => {
+    const r = rootOf(deptId);
+    return r != null && orgSet.has(r);
+  };
+
+  const childrenByParent = new Map<number, number[]>();
+  for (const d of allDepts) {
+    const pk = d.parentId == null ? -1 : d.parentId;
+    if (!childrenByParent.has(pk)) childrenByParent.set(pk, []);
+    childrenByParent.get(pk)!.push(d.id);
+  }
+
+  const collectSubtreeDeptIds = (startIds: number[]) => {
+    const out = new Set<number>();
+    for (const sid of startIds) {
+      const st: number[] = [sid];
+      while (st.length) {
+        const id = st.pop()!;
+        if (out.has(id)) continue;
+        out.add(id);
+        const kids = childrenByParent.get(id) ?? [];
+        for (const k of kids) st.push(k);
+      }
+    }
+    return out;
+  };
+
+  const managed = await prisma.deptManager.findMany({
+    where: { userId: viewerUserId },
+    select: { deptId: true },
+  });
+  const managedInScope = managed.map((m) => m.deptId).filter((id) => inOrgScope(id));
+
+  let deptIdsForRoster: Set<number>;
+  if (managedInScope.length > 0) {
+    deptIdsForRoster = collectSubtreeDeptIds(managedInScope);
+  } else {
+    deptIdsForRoster = new Set(allDepts.map((d) => d.id).filter((id) => inOrgScope(id)));
+  }
+
+  const roster = new Set<number>([viewerUserId]);
+  const deptList = Array.from(deptIdsForRoster);
+  if (deptList.length > 0) {
+    const members = await prisma.deptMember.groupBy({
+      by: ["userId"],
+      where: { deptId: { in: deptList } },
+    });
+    for (const m of members) roster.add(m.userId);
+  }
+  return Array.from(roster);
+}
+
 class PerformanceService {
   async myTotalPoints(userId: number) {
     const account = await prisma.pointsAccount.findUnique({
@@ -2146,86 +2248,259 @@ class PerformanceService {
   }
 
   async stats(dto: PerformancePageDtoType, userId: number) {
+    const emptySummary = () => ({
+      tasksByType: {} as Record<string, number>,
+      tasksByPriority: {} as Record<string, number>,
+      totals: {
+        headcount: 0,
+        completedTasks: 0,
+        totalWorkLogHours: 0,
+        totalPoints: 0,
+        totalQaRejects: 0,
+        avgCompositeScore: 0,
+        avgOnTimeRate: 0,
+      },
+    });
+
     const orgIds = await projectService.getOrgIdsForUser(userId);
     if (orgIds.length === 0) {
-      return { list: [], total: 0 };
+      return { list: [], total: 0, summary: emptySummary() };
     }
 
     const { page, pageSize, projectId, startAt, endAt } = dto;
-    const where: any = {
-      status: "COMPLETED",
-      OR: [
-        { orgId: { in: orgIds } },
-        {
-          AND: [
-            { orgId: null },
-            {
-              project: {
-                orgId: { in: orgIds },
-                deletedAt: null,
-              },
-            },
-          ],
-        },
-      ],
-    };
-    if (projectId) where.projectId = projectId;
-    // 账期按业务发生时间：验收通过时间（acceptedAt）；若历史数据缺失则退化为 updatedAt
-    if (startAt || endAt) {
-      where.AND = where.AND ?? [];
-      where.AND.push({
-        OR: [
+
+    const allowedProjects = await prisma.project.findMany({
+      where: { orgId: { in: orgIds }, deletedAt: null },
+      select: { id: true },
+    });
+    const allowedProjectIds = allowedProjects.map((p) => p.id);
+    if (!allowedProjectIds.length) {
+      return { list: [], total: 0, summary: emptySummary() };
+    }
+
+    let projectFilter: number | { in: number[] };
+    if (projectId) {
+      if (!allowedProjectIds.includes(projectId)) {
+        return { list: [], total: 0, summary: emptySummary() };
+      }
+      projectFilter = projectId;
+    } else {
+      projectFilter = { in: allowedProjectIds };
+    }
+
+    const orgAccessOr = [
+      { orgId: { in: orgIds } },
+      {
+        AND: [
+          { orgId: null },
           {
-            acceptedAt: {
-              ...(startAt ? { gte: new Date(startAt) } : {}),
-              ...(endAt ? { lte: new Date(endAt) } : {}),
+            project: {
+              orgId: { in: orgIds },
+              deletedAt: null,
             },
           },
-          {
-            AND: [
-              { acceptedAt: null },
+        ],
+      },
+    ];
+
+    const dateClause =
+      startAt || endAt
+        ? {
+            OR: [
               {
-                updatedAt: {
+                acceptedAt: {
                   ...(startAt ? { gte: new Date(startAt) } : {}),
                   ...(endAt ? { lte: new Date(endAt) } : {}),
                 },
               },
+              {
+                AND: [
+                  { acceptedAt: null },
+                  {
+                    updatedAt: {
+                      ...(startAt ? { gte: new Date(startAt) } : {}),
+                      ...(endAt ? { lte: new Date(endAt) } : {}),
+                    },
+                  },
+                ],
+              },
             ],
-          },
-        ],
-      });
+          }
+        : null;
+
+    const completedWhere: any = {
+      status: "COMPLETED",
+      projectId: projectFilter,
+      OR: orgAccessOr,
+    };
+    if (dateClause) {
+      completedWhere.AND = completedWhere.AND ?? [];
+      completedWhere.AND.push(dateClause);
     }
 
-    const completedTasks = await prisma.task.findMany({
-      where,
-      include: {
-        mainAssignee: {
-          select: {
-            id: true,
-            userName: true,
-            nickName: true,
-            avatar: true,
-            userEmail: true,
+    const pointsWhere: any = {
+      bizType: { in: ["task_settlement", "adjustment", "reversal"] },
+      projectId: projectFilter,
+    };
+    if (startAt || endAt) {
+      pointsWhere.occurredAt = {
+        ...(startAt ? { gte: new Date(startAt) } : {}),
+        ...(endAt ? { lte: new Date(endAt) } : {}),
+      };
+    }
+
+    const timelineDate =
+      startAt || endAt
+        ? {
+            createdAt: {
+              ...(startAt ? { gte: new Date(startAt) } : {}),
+              ...(endAt ? { lte: new Date(endAt) } : {}),
+            },
+          }
+        : {};
+
+    const workLogDate =
+      startAt || endAt
+        ? {
+            createdAt: {
+              ...(startAt ? { gte: new Date(startAt) } : {}),
+              ...(endAt ? { lte: new Date(endAt) } : {}),
+            },
+          }
+        : {};
+
+    const [
+      completedTasks,
+      ledger,
+      rejectTimelines,
+      workLogGroups,
+      wipGroups,
+    ] = await Promise.all([
+      prisma.task.findMany({
+        where: completedWhere,
+        include: {
+          mainAssignee: {
+            select: {
+              id: true,
+              userName: true,
+              nickName: true,
+              avatar: true,
+              userEmail: true,
+            },
+          },
+          testCases: true,
+          coAssignees: { select: { userId: true } },
+        },
+      }),
+      prisma.pointsLedgerEntry.findMany({
+        where: pointsWhere,
+        include: { account: true },
+      }),
+      prisma.taskTimeline.findMany({
+        where: {
+          eventType: "QA_REJECTED",
+          ...timelineDate,
+          task: {
+            projectId: projectFilter,
+            OR: orgAccessOr,
           },
         },
-        testCases: true,
-      },
-    });
+        select: {
+          taskId: true,
+          task: { select: { mainAssigneeId: true } },
+        },
+      }),
+      prisma.workLog.groupBy({
+        by: ["userId"],
+        where: {
+          ...workLogDate,
+          task: {
+            projectId: projectFilter,
+            OR: orgAccessOr,
+          },
+        },
+        _sum: { hours: true },
+      }),
+      prisma.task.groupBy({
+        by: ["mainAssigneeId"],
+        where: {
+          projectId: projectFilter,
+          OR: orgAccessOr,
+          mainAssigneeId: { not: null },
+          status: { notIn: ["COMPLETED", "CANCELLED", "PAUSED"] },
+        },
+        _count: { _all: true },
+      }),
+    ]);
 
-    // 按主负责人聚合
-    const map = new Map<
-      number,
-      {
-        user: any;
-        totalTasks: number;
-        totalActualHours: number;
-        totalEstimatedHours: number;
-        totalBugCount: number;
-        firstPassCount: number;
+    const qaRejectByMain = new Map<number, number>();
+    for (const row of rejectTimelines) {
+      const mid = row.task?.mainAssigneeId;
+      if (!mid) continue;
+      qaRejectByMain.set(mid, (qaRejectByMain.get(mid) ?? 0) + 1);
+    }
+
+    const workLogByUser = new Map<number, number>();
+    for (const g of workLogGroups) {
+      workLogByUser.set(g.userId, Number(g._sum.hours ?? 0));
+    }
+
+    const wipByMain = new Map<number, number>();
+    for (const g of wipGroups) {
+      if (g.mainAssigneeId != null) {
+        wipByMain.set(g.mainAssigneeId, g._count._all);
       }
-    >();
+    }
+
+    const pointsByUser = new Map<number, { totalPoints: number; byType: Record<string, number> }>();
+    let totalPointsAll = 0;
+    for (const e of ledger) {
+      if (e.account?.ownerType !== "USER") continue;
+      const uid = e.account.ownerId;
+      if (!pointsByUser.has(uid)) pointsByUser.set(uid, { totalPoints: 0, byType: {} });
+      const p = pointsByUser.get(uid)!;
+      p.totalPoints += e.amount;
+      p.byType[e.pointsType] = (p.byType[e.pointsType] ?? 0) + e.amount;
+      totalPointsAll += e.amount;
+    }
+
+    type Agg = {
+      user: any;
+      totalTasks: number;
+      totalActualHours: number;
+      totalEstimatedHours: number;
+      totalBugCount: number;
+      firstPassCount: number;
+      leadDaysList: number[];
+      onTimeWithDue: number;
+      onTimeHits: number;
+      delayHoursSum: number;
+      tasksWithDue: number;
+      hoursAccuracySum: number;
+      hoursAccuracyTasks: number;
+    };
+
+    const map = new Map<number, Agg>();
+    const coAssigneeCompleted = new Map<number, number>();
+    const testerCompleted = new Map<number, number>();
+    const tasksByType: Record<string, number> = {};
+    const tasksByPriority: Record<string, number> = {};
 
     for (const task of completedTasks) {
+      const t = String(task.type ?? "FEATURE");
+      tasksByType[t] = (tasksByType[t] ?? 0) + 1;
+      const pr = String(task.priority ?? "P2");
+      tasksByPriority[pr] = (tasksByPriority[pr] ?? 0) + 1;
+
+      if (task.testerId) {
+        testerCompleted.set(task.testerId, (testerCompleted.get(task.testerId) ?? 0) + 1);
+      }
+      for (const ca of task.coAssignees ?? []) {
+        if (ca.userId && ca.userId !== task.mainAssigneeId) {
+          coAssigneeCompleted.set(ca.userId, (coAssigneeCompleted.get(ca.userId) ?? 0) + 1);
+        }
+      }
+
       if (!task.mainAssigneeId || !task.mainAssignee) continue;
       const uid = task.mainAssigneeId;
       if (!map.has(uid)) {
@@ -2236,6 +2511,13 @@ class PerformanceService {
           totalEstimatedHours: 0,
           totalBugCount: 0,
           firstPassCount: 0,
+          leadDaysList: [],
+          onTimeWithDue: 0,
+          onTimeHits: 0,
+          delayHoursSum: 0,
+          tasksWithDue: 0,
+          hoursAccuracySum: 0,
+          hoursAccuracyTasks: 0,
         });
       }
       const stat = map.get(uid)!;
@@ -2246,49 +2528,228 @@ class PerformanceService {
       const bugCount = task.testCases.reduce((sum, tc) => sum + tc.bugCount, 0);
       stat.totalBugCount += bugCount;
       if (bugCount === 0) stat.firstPassCount += 1;
+
+      const createdAt = new Date(task.createdAt);
+      const acceptedAt = task.acceptedAt ? new Date(task.acceptedAt) : new Date(task.updatedAt);
+      const leadDays = (acceptedAt.getTime() - createdAt.getTime()) / (24 * 3600000);
+      stat.leadDaysList.push(Math.max(0, leadDays));
+
+      const dueDate = task.dueDate ? new Date(task.dueDate) : null;
+      if (dueDate) {
+        stat.tasksWithDue += 1;
+        const delayHours = Math.max(0, (acceptedAt.getTime() - dueDate.getTime()) / 3600000);
+        stat.delayHoursSum += delayHours;
+        if (delayHours <= 0) stat.onTimeHits += 1;
+        stat.onTimeWithDue += 1;
+      }
+
+      const est = task.estimatedHours;
+      if (est != null && est > 0) {
+        const act = task.actualHours ?? 0;
+        const acc = 100 - Math.min(100, (Math.abs(act - est) / est) * 100);
+        stat.hoursAccuracySum += acc;
+        stat.hoursAccuracyTasks += 1;
+      }
     }
 
-    // 新增：积分统计（按 occurredAt 账期聚合）
-    const pointsWhere: any = {
-      bizType: { in: ["task_settlement", "adjustment", "reversal"] },
-      projectId: projectId ?? undefined,
-    };
-    if (startAt || endAt) {
-      pointsWhere.occurredAt = {
-        ...(startAt ? { gte: new Date(startAt) } : {}),
-        ...(endAt ? { lte: new Date(endAt) } : {}),
+    type StatRow = {
+      user: any;
+      totalTasks: number;
+      totalActualHours: number;
+      totalEstimatedHours: number;
+      totalBugCount: number;
+      firstPassCount: number;
+      firstPassRate: number;
+      totalPoints: number;
+      pointsByType: Record<string, number>;
+      medianLeadTimeDays: number;
+      avgDelayHours: number;
+      onTimeRate: number;
+      hoursAccuracyAvg: number;
+      qaRejectCount: number;
+      workLogHours: number;
+      coAssigneeCompletedCount: number;
+      testerCompletedCount: number;
+      wipCount: number;
+      compositeScore: number;
+      compositeTier: "S" | "A" | "B" | "C";
+      subScores: {
+        throughput: number;
+        quality: number;
+        punctuality: number;
+        speed: number;
+        stability: number;
       };
+    };
+
+    const rows: StatRow[] = [];
+
+    for (const s of map.values()) {
+      const firstPassRate =
+        s.totalTasks > 0 ? Math.round((s.firstPassCount / s.totalTasks) * 100) : 0;
+      const medianLeadTimeDays = perfMedian(s.leadDaysList);
+      const avgDelayHours = s.tasksWithDue > 0 ? s.delayHoursSum / s.tasksWithDue : 0;
+      const onTimeRate =
+        s.onTimeWithDue > 0 ? Math.round((s.onTimeHits / s.onTimeWithDue) * 100) : 100;
+      const hoursAccuracyAvg =
+        s.hoursAccuracyTasks > 0 ? Math.round(s.hoursAccuracySum / s.hoursAccuracyTasks) : 0;
+      const uid = s.user.id;
+      const qaRejectCount = qaRejectByMain.get(uid) ?? 0;
+      const workLogHours = workLogByUser.get(uid) ?? 0;
+      const coAssigneeCompletedCount = coAssigneeCompleted.get(uid) ?? 0;
+      const testerCompletedCount = testerCompleted.get(uid) ?? 0;
+      const wipCount = wipByMain.get(uid) ?? 0;
+
+      rows.push({
+        user: s.user,
+        totalTasks: s.totalTasks,
+        totalActualHours: s.totalActualHours,
+        totalEstimatedHours: s.totalEstimatedHours,
+        totalBugCount: s.totalBugCount,
+        firstPassCount: s.firstPassCount,
+        firstPassRate,
+        totalPoints: pointsByUser.get(uid)?.totalPoints ?? 0,
+        pointsByType: pointsByUser.get(uid)?.byType ?? {},
+        medianLeadTimeDays: Math.round(medianLeadTimeDays * 10) / 10,
+        avgDelayHours: Math.round(avgDelayHours * 10) / 10,
+        onTimeRate,
+        hoursAccuracyAvg,
+        qaRejectCount,
+        workLogHours: Math.round(workLogHours * 10) / 10,
+        coAssigneeCompletedCount,
+        testerCompletedCount,
+        wipCount,
+        compositeScore: 0,
+        compositeTier: "C",
+        subScores: {
+          throughput: 0,
+          quality: 0,
+          punctuality: 0,
+          speed: 0,
+          stability: 0,
+        },
+      });
     }
 
-    const ledger = await prisma.pointsLedgerEntry.findMany({
-      where: pointsWhere,
-      include: { account: true },
+    /** 花名册：本人 + 管理部门成员（或同组织全员），无主责完成数据也展示为 0 */
+    const rosterUserIds = await performanceRosterUserIds(orgIds, userId);
+    const seenRoster = new Set(rows.map((r) => r.user.id));
+    const missingUserIds = rosterUserIds.filter((id) => !seenRoster.has(id));
+    if (missingUserIds.length > 0) {
+      const fillerUsers = await prisma.user.findMany({
+        where: { id: { in: missingUserIds } },
+        select: {
+          id: true,
+          userName: true,
+          nickName: true,
+          avatar: true,
+          userEmail: true,
+        },
+      });
+      for (const u of fillerUsers) {
+        const uid2 = u.id;
+        rows.push({
+          user: u,
+          totalTasks: 0,
+          totalActualHours: 0,
+          totalEstimatedHours: 0,
+          totalBugCount: 0,
+          firstPassCount: 0,
+          firstPassRate: 0,
+          totalPoints: pointsByUser.get(uid2)?.totalPoints ?? 0,
+          pointsByType: pointsByUser.get(uid2)?.byType ?? {},
+          medianLeadTimeDays: 0,
+          avgDelayHours: 0,
+          onTimeRate: 100,
+          hoursAccuracyAvg: 0,
+          qaRejectCount: qaRejectByMain.get(uid2) ?? 0,
+          workLogHours: Math.round((workLogByUser.get(uid2) ?? 0) * 10) / 10,
+          coAssigneeCompletedCount: coAssigneeCompleted.get(uid2) ?? 0,
+          testerCompletedCount: testerCompleted.get(uid2) ?? 0,
+          wipCount: wipByMain.get(uid2) ?? 0,
+          compositeScore: 0,
+          compositeTier: "C",
+          subScores: {
+            throughput: 0,
+            quality: 0,
+            punctuality: 0,
+            speed: 0,
+            stability: 0,
+          },
+        });
+      }
+    }
+
+    if (rows.length === 0) {
+      return { list: [], total: 0, summary: emptySummary() };
+    }
+
+    const tasksArr = rows.map((r) => r.totalTasks);
+    const leadArr = rows.map((r) => r.medianLeadTimeDays);
+    const onTimeArr = rows.map((r) => r.onTimeRate);
+    const qualArr = rows.map((r) => r.firstPassRate);
+    const rejPerTask = rows.map((r) => (r.totalTasks > 0 ? r.qaRejectCount / r.totalTasks : 0));
+
+    const tMin = Math.min(...tasksArr);
+    const tMax = Math.max(...tasksArr);
+    const leadMin = Math.min(...leadArr);
+    const leadMax = Math.max(...leadArr);
+    const otMin = Math.min(...onTimeArr);
+    const otMax = Math.max(...onTimeArr);
+    const qMin = Math.min(...qualArr);
+    const qMax = Math.max(...qualArr);
+    const rpMin = Math.min(...rejPerTask);
+    const rpMax = Math.max(...rejPerTask);
+
+    for (const r of rows) {
+      const throughput = perfNormMinMax(r.totalTasks, tMin, tMax);
+      const speed = 100 - perfNormMinMax(r.medianLeadTimeDays, leadMin, leadMax);
+      const punctuality = perfNormMinMax(r.onTimeRate, otMin, otMax);
+      const quality = perfNormMinMax(r.firstPassRate, qMin, qMax);
+      const stability = 100 - perfNormMinMax(r.totalTasks > 0 ? r.qaRejectCount / r.totalTasks : 0, rpMin, rpMax);
+
+      r.subScores = {
+        throughput: Math.round(throughput),
+        quality: Math.round(quality),
+        punctuality: Math.round(punctuality),
+        speed: Math.round(speed),
+        stability: Math.round(stability),
+      };
+      r.compositeScore = Math.round(
+        throughput * 0.18 +
+          quality * 0.22 +
+          punctuality * 0.22 +
+          speed * 0.22 +
+          stability * 0.16,
+      );
+    }
+
+    rows.sort((a, b) => b.compositeScore - a.compositeScore);
+    rows.forEach((r, idx) => {
+      r.compositeTier = perfTierFromRank(idx, rows.length);
     });
 
-    const pointsByUser = new Map<number, { totalPoints: number; byType: Record<string, number> }>();
-    for (const e of ledger) {
-      if (e.account?.ownerType !== "USER") continue;
-      const uid = e.account.ownerId;
-      if (!pointsByUser.has(uid)) pointsByUser.set(uid, { totalPoints: 0, byType: {} });
-      const p = pointsByUser.get(uid)!;
-      p.totalPoints += e.amount;
-      p.byType[e.pointsType] = (p.byType[e.pointsType] ?? 0) + e.amount;
-    }
+    const totalWorkLogHours = Array.from(workLogByUser.values()).reduce((a, b) => a + b, 0);
+    const summary = {
+      tasksByType,
+      tasksByPriority,
+      totals: {
+        headcount: rows.length,
+        completedTasks: completedTasks.length,
+        totalWorkLogHours: Math.round(totalWorkLogHours * 10) / 10,
+        totalPoints: totalPointsAll,
+        totalQaRejects: rejectTimelines.length,
+        avgCompositeScore:
+          Math.round((rows.reduce((s, r) => s + r.compositeScore, 0) / rows.length) * 10) / 10,
+        avgOnTimeRate:
+          Math.round((rows.reduce((s, r) => s + r.onTimeRate, 0) / rows.length) * 10) / 10,
+      },
+    };
 
-    const allStats = Array.from(map.values()).map((s) => ({
-      ...s,
-      firstPassRate:
-        s.totalTasks > 0
-          ? Math.round((s.firstPassCount / s.totalTasks) * 100)
-          : 0,
-      totalPoints: pointsByUser.get(s.user.id)?.totalPoints ?? 0,
-      pointsByType: pointsByUser.get(s.user.id)?.byType ?? {},
-    }));
-
-    const total = allStats.length;
+    const total = rows.length;
     const skip = (page - 1) * pageSize;
-    const list = allStats.slice(skip, skip + pageSize);
-    return { list, total };
+    const list = rows.slice(skip, skip + pageSize);
+    return { list, total, summary };
   }
 
   async reconcileTask(taskId: number, userId: number) {

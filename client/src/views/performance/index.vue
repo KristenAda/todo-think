@@ -1,122 +1,67 @@
 <template>
-  <div class="performance-wrapper art-full-height">
-    <div class="page-header">
-      <div class="header-left">
-        <art-svg-icon
-          icon="mdi:chart-bar"
-          style="font-size: 22px; color: var(--el-color-primary)"
-        />
-        <span class="page-title">研发效能统计</span>
-        <span class="page-sub">基于已完成任务的绩效数据分析</span>
-      </div>
-      <div class="header-right">
-        <el-select
-          v-model="filterProjectId"
-          placeholder="全部项目"
-          clearable
-          style="width: 200px"
-          @change="onProjectChange"
-        >
-          <el-option v-for="p in projectList" :key="p.id" :label="p.name" :value="p.id" />
-        </el-select>
-        <el-date-picker
-          v-model="periodRange"
-          type="daterange"
-          value-format="YYYY-MM-DDTHH:mm:ssZ"
-          range-separator="至"
-          start-placeholder="账期开始"
-          end-placeholder="账期结束"
-          style="width: 300px"
-          @change="onPeriodChange"
-        />
-        <el-button :loading="loading" @click="refreshData">刷新</el-button>
-      </div>
-    </div>
-
-    <!-- 汇总卡片 -->
-    <div class="summary-cards">
-      <div class="s-card">
-        <div class="s-icon" style="background: #e8f4fd">
-          <art-svg-icon icon="mdi:account-group" style="color: #409eff; font-size: 26px" />
+  <div class="perf art-full-height" :class="{ 'perf--entered': pageEntered }">
+    <div class="perf-hero">
+      <div class="perf-hero__bg" aria-hidden="true" />
+      <div class="perf-hero__bg-shimmer" aria-hidden="true" />
+      <div class="perf-hero__inner">
+        <div class="perf-hero__left">
+          <div class="perf-hero__icon-wrap">
+            <art-svg-icon icon="mdi:chart-timeline-variant" class="perf-hero__icon" />
+          </div>
+          <div>
+            <h1 class="perf-hero__title">研发效能驾驶舱</h1>
+            <p class="perf-hero__sub">{{ heroSubtitle }}</p>
+          </div>
         </div>
-        <div class="s-info">
-          <div class="s-val">{{ allStats.length }}</div>
-          <div class="s-label">参与人数</div>
-        </div>
-      </div>
-      <div class="s-card">
-        <div class="s-icon" style="background: #e8f9f0">
-          <art-svg-icon icon="mdi:check-decagram" style="color: #67c23a; font-size: 26px" />
-        </div>
-        <div class="s-info">
-          <div class="s-val">{{ totalTasks }}</div>
-          <div class="s-label">总完成任务</div>
-        </div>
-      </div>
-      <div class="s-card">
-        <div class="s-icon" style="background: #fff8e6">
-          <art-svg-icon icon="mdi:clock-check" style="color: #e6a23c; font-size: 26px" />
-        </div>
-        <div class="s-info">
-          <div class="s-val">{{ totalHours }}h</div>
-          <div class="s-label">总实际工时</div>
-        </div>
-      </div>
-      <div class="s-card">
-        <div class="s-icon" style="background: #eef9ff">
-          <art-svg-icon icon="mdi:star-circle" style="color: #2f88ff; font-size: 26px" />
-        </div>
-        <div class="s-info">
-          <div class="s-val">{{ totalPoints }}</div>
-          <div class="s-label">总积分</div>
-        </div>
-      </div>
-      <div class="s-card">
-        <div class="s-icon" style="background: #fef0f0">
-          <art-svg-icon icon="mdi:bug" style="color: #f56c6c; font-size: 26px" />
-        </div>
-        <div class="s-info">
-          <div class="s-val">{{ totalBugs }}</div>
-          <div class="s-label">总Bug数</div>
+        <div class="perf-hero__toolbar">
+          <el-select
+            v-model="filterProjectId"
+            placeholder="全部项目"
+            clearable
+            style="width: 200px"
+            @change="onFilterChange"
+          >
+            <el-option v-for="p in projectList" :key="p.id" :label="p.name" :value="p.id" />
+          </el-select>
+          <el-date-picker
+            v-model="periodRange"
+            type="daterange"
+            value-format="YYYY-MM-DDTHH:mm:ssZ"
+            range-separator="至"
+            start-placeholder="账期开始"
+            end-placeholder="账期结束"
+            style="width: 300px"
+            @change="onFilterChange"
+          />
+          <el-button type="primary" :loading="loading" @click="refreshAll">刷新</el-button>
         </div>
       </div>
     </div>
 
-    <el-card shadow="never" class="points-type-card">
-      <template #header>
-        <div class="points-type-title">积分科目分布（当前筛选范围）</div>
-      </template>
-      <div class="points-type-wrap">
-        <el-tag v-for="item in pointsTypeStats" :key="item.type" size="large">
-          {{ item.type }}：{{ item.value }}
-        </el-tag>
-        <span v-if="!pointsTypeStats.length" class="points-empty">暂无积分数据</span>
-      </div>
-    </el-card>
-
-    <!-- 图表区 -->
-    <div class="charts-row">
-      <div class="chart-card">
-        <div class="chart-title">预估 vs 实际工时对比</div>
-        <div ref="hoursChartRef" class="chart-box"></div>
-      </div>
-      <div class="chart-card">
-        <div class="chart-title">多维绩效雷达图</div>
-        <div ref="bugChartRef" class="chart-box"></div>
+    <div class="perf-kpi-row">
+      <div v-for="card in kpiCards" :key="card.key" class="perf-kpi">
+        <div class="perf-kpi__icon" :style="{ background: card.iconBg }">
+          <art-svg-icon :icon="card.icon" class="perf-kpi__svg" />
+        </div>
+        <div class="perf-kpi__body">
+          <div class="perf-kpi__val">{{ card.value }}</div>
+          <div class="perf-kpi__lab">{{ card.label }}</div>
+        </div>
       </div>
     </div>
 
-    <!-- 明细表格 -->
-    <ElCard class="art-table-card detail-table-card" shadow="never">
-      <!-- 表格头部 -->
-      <ArtTableHeader v-model:columns="columnChecks" :loading="loading" @refresh="refreshData">
+    <div class="perf-section perf-section--charts">
+      <PerformanceDashboardCharts :all-stats="allStats" :summary="summary" />
+    </div>
+
+    <ElCard class="perf-section perf-section--table perf-table-card art-table-card" shadow="never">
+      <ArtTableHeader v-model:columns="columnChecks" :loading="loading" @refresh="refreshAll">
         <template #left>
-          <span class="table-section-title">个人绩效明细</span>
+          <span class="perf-table-title">成员绩效明细</span>
         </template>
       </ArtTableHeader>
-
-      <!-- 表格 -->
       <ArtTable
+        class="perf-art-table"
         :loading="loading"
         :data="data"
         :columns="columns"
@@ -125,75 +70,118 @@
         @pagination:current-change="handleCurrentChange"
       />
     </ElCard>
+
+    <EmployeeStatsDetailDialog v-model:visible="detailVisible" :stat="detailStat" />
   </div>
 </template>
 
 <script setup lang="ts">
-  import { ref, computed, onMounted, onUnmounted, nextTick, h, resolveComponent } from 'vue';
-  import { ElTag, ElProgress, ElImage } from 'element-plus';
+  import { ref, computed, onMounted, nextTick, h, resolveComponent } from 'vue';
+  import { ElTag, ElProgress, ElImage, ElButton } from 'element-plus';
   import { fetchPerformanceStats, fetchProjectList } from '@/api/task';
   import { useTable } from '@/hooks/core/useTable';
-  import * as echarts from 'echarts/core';
-  import { BarChart, RadarChart } from 'echarts/charts';
-  import { TooltipComponent, GridComponent, LegendComponent, RadarComponent } from 'echarts/components';
-  import { CanvasRenderer } from 'echarts/renderers';
-
-  echarts.use([BarChart, RadarChart, TooltipComponent, GridComponent, LegendComponent, RadarComponent, CanvasRenderer]);
+  import { defaultResponseAdapter } from '@/utils/table/tableUtils';
+  import type { ApiResponse } from '@/utils/table/tableCache';
+  import PerformanceDashboardCharts from './components/PerformanceDashboardCharts.vue';
+  import EmployeeStatsDetailDialog from './components/EmployeeStatsDetailDialog.vue';
+  import { COMPOSITE_TIER_META } from '@/enums/modules/performanceEnum';
 
   defineOptions({ name: 'Performance' });
 
   type PerformanceStat = Api.Task.PerformanceStat;
-  type SimpleUser = Api.Task.SimpleUser;
 
   const filterProjectId = ref<number | undefined>(undefined);
   const periodRange = ref<[string, string] | null>(null);
   const projectList = ref<Api.Task.SimpleProject[]>([]);
-  const hoursChartRef = ref<HTMLElement | null>(null);
-  const bugChartRef = ref<HTMLElement | null>(null);
-  let hoursChart: echarts.ECharts | null = null;
-  let bugChart: echarts.ECharts | null = null;
-
-  // 全量数据：用于图表和汇总卡片
   const allStats = ref<PerformanceStat[]>([]);
+  const summary = ref<Api.Task.PerformanceStatsSummary | null>(null);
+  const detailVisible = ref(false);
+  const detailStat = ref<PerformanceStat | null>(null);
 
-  const totalTasks = computed(() => allStats.value.reduce((s, r) => s + r.totalTasks, 0));
-  const totalHours = computed(() =>
-    allStats.value.reduce((s, r) => s + r.totalActualHours, 0).toFixed(1)
-  );
-  const totalBugs = computed(() => allStats.value.reduce((s, r) => s + r.totalBugCount, 0));
-  const totalPoints = computed(() => allStats.value.reduce((s, r) => s + (r.totalPoints ?? 0), 0));
-  const pointsTypeStats = computed(() => {
-    const merged: Record<string, number> = {};
-    for (const row of allStats.value) {
-      const byType = row.pointsByType ?? {};
-      for (const [k, v] of Object.entries(byType)) merged[k] = (merged[k] ?? 0) + Number(v ?? 0);
-    }
-    return Object.entries(merged)
-      .map(([type, value]) => ({ type, value }))
-      .sort((a, b) => b.value - a.value);
+  /** 首屏入场动画：下一帧再点亮，避免首 paint 与动画抢帧 */
+  const pageEntered = ref(false);
+
+  function tierTagType(t: string): 'success' | 'primary' | 'warning' | 'danger' | 'info' {
+    const m = COMPOSITE_TIER_META[t as keyof typeof COMPOSITE_TIER_META];
+    return m?.elTag ?? 'info';
+  }
+
+  const heroSubtitle = computed(() => {
+    const pr = periodRange.value;
+    if (pr?.[0] && pr?.[1])
+      return `当前账期：${pr[0].slice(0, 10)} — ${pr[1].slice(0, 10)} · 队内相对排名`;
+    return '筛选项目与账期后，综合分与档位为队内相对比较';
   });
 
-  function initials(u: SimpleUser) {
-    return (u.nickName || u.userName)?.[0]?.toUpperCase() ?? '?';
+  const kpiCards = computed(() => {
+    const s = summary.value?.totals;
+    return [
+      {
+        key: 'head',
+        label: '参与人数',
+        value: s?.headcount ?? allStats.value.length,
+        icon: 'mdi:account-group',
+        iconBg: 'linear-gradient(135deg,#e8f4fd,#dbeafe)'
+      },
+      {
+        key: 'done',
+        label: '主责完成数',
+        value: s?.completedTasks ?? 0,
+        icon: 'mdi:check-decagram',
+        iconBg: 'linear-gradient(135deg,#e8f9f0,#d1fae5)'
+      },
+      {
+        key: 'wl',
+        label: '登记工时(h)',
+        value: s?.totalWorkLogHours ?? 0,
+        icon: 'mdi:clock-outline',
+        iconBg: 'linear-gradient(135deg,#fff8e6,#fef3c7)'
+      },
+      {
+        key: 'pt',
+        label: '总积分',
+        value: s?.totalPoints ?? 0,
+        icon: 'mdi:star-circle',
+        iconBg: 'linear-gradient(135deg,#eef9ff,#e0f2fe)'
+      },
+      {
+        key: 'rej',
+        label: '验收打回(次)',
+        value: s?.totalQaRejects ?? 0,
+        icon: 'mdi:undo-variant',
+        iconBg: 'linear-gradient(135deg,#fef0f0,#fee2e2)'
+      },
+      {
+        key: 'avg',
+        label: '平均综合分',
+        value: s?.avgCompositeScore ?? '—',
+        icon: 'mdi:speedometer',
+        iconBg: 'linear-gradient(135deg,#f3e8ff,#ede9fe)'
+      },
+      {
+        key: 'ot',
+        label: '平均准时率%',
+        value: s?.avgOnTimeRate ?? '—',
+        icon: 'mdi:calendar-check',
+        iconBg: 'linear-gradient(135deg,#ecfeff,#cffafe)'
+      }
+    ];
+  });
+
+  function applySearchParams() {
+    const sp = searchParams as Record<string, unknown>;
+    sp.projectId = filterProjectId.value;
+    sp.startAt = periodRange.value?.[0];
+    sp.endAt = periodRange.value?.[1];
   }
 
-  function passRateColor(rate: number) {
-    return rate >= 80 ? '#67c23a' : rate >= 50 ? '#e6a23c' : '#f56c6c';
+  function perfResponseAdapter(raw: unknown): ApiResponse<PerformanceStat> {
+    if (raw && typeof raw === 'object' && 'summary' in raw) {
+      summary.value = (raw as Api.Task.PerformanceStatsPageData).summary ?? null;
+    }
+    return defaultResponseAdapter(raw);
   }
 
-  function grade(row: PerformanceStat) {
-    if (row.firstPassRate >= 80 && row.totalBugCount === 0) return 'S';
-    if (row.firstPassRate >= 60) return 'A';
-    if (row.firstPassRate >= 40) return 'B';
-    return 'C';
-  }
-
-  function gradeTagType(row: PerformanceStat): 'success' | 'primary' | 'warning' | 'danger' {
-    const g = grade(row);
-    return g === 'S' ? 'success' : g === 'A' ? 'primary' : g === 'B' ? 'warning' : 'danger';
-  }
-
-  // ==================== useTable ====================
   const {
     columns,
     columnChecks,
@@ -208,391 +196,593 @@
   } = useTable({
     core: {
       apiFn: fetchPerformanceStats,
-      apiParams: {
-        page: 1,
-        pageSize: 10
-      },
-
-      // 后端用 page/pageSize，而非默认的 current/size
+      apiParams: { page: 1, pageSize: 10 },
       paginationKey: { current: 'page', size: 'pageSize' },
       immediate: false,
-      columnsFactory: () => [
-        {
-          prop: 'user',
-          label: '成员',
-          minWidth: 200,
-          formatter: (row: PerformanceStat) => {
-            const ColorAvatar = resolveComponent('ColorAvatar');
-            const displayName = row.user.nickName || row.user.userName;
-            const avatarNode = row.user.avatar
-              ? h(ElImage, {
-                  class: 'size-9 rounded-full flex-shrink-0',
-                  src: row.user.avatar,
-                  previewSrcList: [row.user.avatar],
-                  previewTeleported: true,
-                  fit: 'cover'
-                })
-              : h('div', { class: 'size-9 rounded-full overflow-hidden flex-shrink-0' }, [
-                  h(ColorAvatar, { name: displayName || '?', gender: '', size: 36 })
-                ]);
-            return h('div', { class: 'perf-member-cell' }, [
-              h('div', { class: 'perf-member-cell__avatar' }, [avatarNode]),
-              h('div', { class: 'perf-member-cell__text' }, [
-                h('span', { class: 'perf-member-cell__name' }, displayName),
-                h('span', { class: 'perf-member-cell__email' }, row.user.userEmail ?? '')
-              ])
-            ]);
-          }
-        },
-        {
-          prop: 'totalTasks',
-          label: '完成任务',
-          width: 150,
-          align: 'center',
-          sortable: true
-        },
-        {
-          prop: 'totalEstimatedHours',
-          label: '预估工时',
-          width: 150,
-          align: 'center',
-          sortable: true,
-          formatter: (row: PerformanceStat) => `${row.totalEstimatedHours.toFixed(1)}h`
-        },
-        {
-          prop: 'totalActualHours',
-          label: '实际工时',
-          width: 150,
-          align: 'center',
-          sortable: true,
-          formatter: (row: PerformanceStat) => `${row.totalActualHours.toFixed(1)}h`
-        },
-        {
-          prop: 'hoursDiff',
-          label: '工时偏差',
-          width: 150,
-          align: 'center',
-          formatter: (row: PerformanceStat) => {
-            const diff = row.totalActualHours - row.totalEstimatedHours;
-            const cls = diff > 0 ? 'text-danger' : 'text-success';
-            return h('span', { class: cls }, `${diff.toFixed(1)}h`);
-          }
-        },
-        {
-          prop: 'totalBugCount',
-          label: 'Bug数',
-          width: 150,
-          align: 'center',
-          sortable: true
-        },
-        {
-          prop: 'firstPassRate',
-          label: '一次通过率',
-          width: 150,
-          align: 'center',
-          sortable: true,
-          formatter: (row: PerformanceStat) =>
-            h(ElProgress, {
-              percentage: row.firstPassRate,
-              strokeWidth: 8,
-              color: passRateColor(row.firstPassRate)
-            })
-        },
-        {
-          prop: 'totalPoints',
-          label: '总积分',
-          width: 120,
-          align: 'center',
-          sortable: true,
-          formatter: (row: PerformanceStat) => row.totalPoints ?? 0
-        },
-        {
-          prop: 'grade',
-          label: '综合评级',
-          width: 100,
-          align: 'center',
-          formatter: (row: PerformanceStat) =>
-            h(ElTag, { type: gradeTagType(row), size: 'small' }, () => grade(row))
-        }
-      ]
+      columnsFactory: () => buildColumns()
     },
-    hooks: {
-      onSuccess: () => {
-        // 数据加载成功后更新图表（使用当前分页数据）
-        nextTick(() => renderCharts());
-      }
+    transform: {
+      // PageResult 与 useTable 基于 PaginatedResponse 的推断不一致
+      responseAdapter: perfResponseAdapter as typeof defaultResponseAdapter
     }
   });
 
-  /** 加载全量数据（用于图表和汇总卡片） */
+  function buildColumns() {
+    const cols: import('@/types/component').ColumnOption<PerformanceStat>[] = [
+      {
+        type: 'index',
+        label: '序号',
+        width: 64,
+        fixed: 'left',
+        align: 'center',
+        showOverflowTooltip: true
+      },
+      {
+        prop: 'user',
+        label: '成员',
+        minWidth: 220,
+        fixed: 'left',
+        showOverflowTooltip: true,
+        formatter: (row: PerformanceStat) => {
+          const ColorAvatar = resolveComponent('ColorAvatar');
+          const displayName = row.user.nickName || row.user.userName;
+          const avatarNode = row.user.avatar
+            ? h(ElImage, {
+                class: 'size-9 rounded-full flex-shrink-0',
+                src: row.user.avatar,
+                previewSrcList: [row.user.avatar],
+                previewTeleported: true,
+                fit: 'cover'
+              })
+            : h('div', { class: 'size-9 rounded-full overflow-hidden flex-shrink-0' }, [
+                h(ColorAvatar, { name: displayName || '?', gender: '', size: 36 })
+              ]);
+          return h('div', { class: 'perf-member-cell' }, [
+            h('div', { class: 'perf-member-cell__avatar' }, [avatarNode]),
+            h('div', { class: 'perf-member-cell__text' }, [
+              h('span', { class: 'perf-member-cell__name' }, displayName),
+              h('span', { class: 'perf-member-cell__email' }, row.user.userEmail ?? '')
+            ])
+          ]);
+        }
+      },
+      {
+        prop: 'compositeScore',
+        label: '综合效能分',
+        width: 128,
+        align: 'center',
+        sortable: true,
+        showOverflowTooltip: true,
+        formatter: (row: PerformanceStat) => row.compositeScore ?? '—'
+      },
+      {
+        prop: 'compositeTier',
+        label: '综合档位',
+        minWidth: 96,
+        align: 'center',
+        formatter: (row: PerformanceStat) => {
+          const t = row.compositeTier ?? 'C';
+          const meta = COMPOSITE_TIER_META[t as keyof typeof COMPOSITE_TIER_META];
+          return h(
+            ElTag,
+            { type: tierTagType(t), size: 'small', effect: 'dark' },
+            () => meta?.label ?? t
+          );
+        }
+      },
+      {
+        prop: 'totalTasks',
+        label: '主责完成任务',
+        minWidth: 130,
+        align: 'center',
+        sortable: true
+      },
+      {
+        prop: 'medianLeadTimeDays',
+        label: '交付周期中位(天)',
+        minWidth: 150,
+        align: 'center',
+        sortable: true
+      },
+      {
+        prop: 'onTimeRate',
+        label: '准时率',
+        minWidth: 132,
+        align: 'center',
+        sortable: true,
+        formatter: (row: PerformanceStat) =>
+          h(ElProgress, {
+            percentage: row.onTimeRate ?? 0,
+            strokeWidth: 8,
+            color:
+              (row.onTimeRate ?? 0) >= 80
+                ? '#67c23a'
+                : (row.onTimeRate ?? 0) >= 60
+                  ? '#409eff'
+                  : '#f56c6c'
+          })
+      },
+      {
+        prop: 'firstPassRate',
+        label: '一次通过率',
+        minWidth: 132,
+        align: 'center',
+        sortable: true,
+        formatter: (row: PerformanceStat) =>
+          h(ElProgress, {
+            percentage: row.firstPassRate,
+            strokeWidth: 8,
+            color:
+              row.firstPassRate >= 80 ? '#67c23a' : row.firstPassRate >= 50 ? '#e6a23c' : '#f56c6c'
+          })
+      },
+      {
+        prop: 'hoursAccuracyAvg',
+        label: '估时准确率',
+        minWidth: 128,
+        align: 'center',
+        sortable: true,
+        formatter: (row: PerformanceStat) =>
+          row.hoursAccuracyAvg != null ? `${row.hoursAccuracyAvg}%` : '—'
+      },
+      {
+        prop: 'qaRejectCount',
+        label: '验收打回次数',
+        minWidth: 130,
+        align: 'center',
+        sortable: true
+      },
+      {
+        prop: 'wipCount',
+        label: '在制 WIP',
+        minWidth: 100,
+        align: 'center',
+        sortable: true
+      },
+      {
+        prop: 'totalPoints',
+        label: '总积分',
+        minWidth: 88,
+        align: 'center',
+        sortable: true
+      },
+      {
+        prop: 'workLogHours',
+        label: '登记工时(h)',
+        minWidth: 116,
+        align: 'center',
+        sortable: true,
+        formatter: (row: PerformanceStat) => `${row.workLogHours ?? 0}`
+      },
+      {
+        prop: 'coAssigneeCompletedCount',
+        label: '协作参与次数',
+        minWidth: 130,
+        align: 'center',
+        sortable: true
+      },
+      {
+        prop: 'testerCompletedCount',
+        label: '验收任务数',
+        minWidth: 128,
+        align: 'center',
+        sortable: true
+      },
+      {
+        prop: '_actions',
+        label: '操作',
+        width: 96,
+        align: 'center',
+        fixed: 'right',
+        formatter: (row: PerformanceStat) =>
+          h(
+            ElButton,
+            {
+              type: 'primary',
+              link: true,
+              onClick: () => openDetail(row)
+            },
+            () => '详情'
+          )
+      }
+    ];
+
+    return cols;
+  }
+
+  function openDetail(row: PerformanceStat) {
+    detailStat.value = row;
+    detailVisible.value = true;
+  }
+
   async function loadAllStats() {
-    const result = await fetchPerformanceStats({
+    const raw = await fetchPerformanceStats({
       page: 1,
       pageSize: 1000,
       projectId: filterProjectId.value,
       startAt: periodRange.value?.[0],
       endAt: periodRange.value?.[1]
     });
-    allStats.value = result.list;
-    await nextTick();
-    renderCharts();
+    allStats.value = raw.list ?? [];
+    summary.value = raw.summary ?? null;
   }
 
   async function loadProjects() {
-    const list = await fetchProjectList();
-    projectList.value = list;
+    projectList.value = await fetchProjectList();
   }
 
-  /** 切换项目时同步搜索参数并重新加载 */
-  async function onProjectChange() {
-    (searchParams as Record<string, unknown>).projectId = filterProjectId.value;
-    (searchParams as Record<string, unknown>).startAt = periodRange.value?.[0];
-    (searchParams as Record<string, unknown>).endAt = periodRange.value?.[1];
+  async function onFilterChange() {
+    applySearchParams();
     await Promise.all([refreshData(), loadAllStats()]);
   }
 
-  async function onPeriodChange() {
-    (searchParams as Record<string, unknown>).projectId = filterProjectId.value;
-    (searchParams as Record<string, unknown>).startAt = periodRange.value?.[0];
-    (searchParams as Record<string, unknown>).endAt = periodRange.value?.[1];
+  async function refreshAll() {
+    applySearchParams();
     await Promise.all([refreshData(), loadAllStats()]);
-  }
-
-  function renderCharts() {
-    const names = allStats.value.map((s) => s.user.nickName || s.user.userName);
-
-    // 预估 vs 实际工时柱状图
-    if (hoursChartRef.value) {
-      if (!hoursChart) hoursChart = echarts.init(hoursChartRef.value);
-      hoursChart.setOption({
-        tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' } },
-        legend: { data: ['预估工时', '实际工时'], top: 8, itemWidth: 12, itemHeight: 12 },
-        grid: { left: 48, right: 16, bottom: 56, top: 48 },
-        xAxis: {
-          type: 'category',
-          data: names,
-          axisLabel: { rotate: names.length > 4 ? 30 : 0, interval: 0 }
-        },
-        yAxis: { type: 'value', name: '小时', nameTextStyle: { padding: [0, 30, 0, 0] } },
-        series: [
-          {
-            name: '预估工时',
-            type: 'bar',
-            barMaxWidth: 36,
-            data: allStats.value.map((s) => +s.totalEstimatedHours.toFixed(1)),
-            itemStyle: { color: '#409eff', borderRadius: [4, 4, 0, 0] }
-          },
-          {
-            name: '实际工时',
-            type: 'bar',
-            barMaxWidth: 36,
-            data: allStats.value.map((s) => +s.totalActualHours.toFixed(1)),
-            itemStyle: { color: '#67c23a', borderRadius: [4, 4, 0, 0] }
-          }
-        ]
-      });
-    }
-
-    // 雷达图：多维度绩效
-    if (bugChartRef.value) {
-      if (!bugChart) bugChart = echarts.init(bugChartRef.value);
-      const radarStats = allStats.value.slice(0, 6);
-      const maxTasks = Math.max(...radarStats.map((s) => s.totalTasks), 1);
-      const maxHours = Math.max(...radarStats.map((s) => s.totalActualHours), 1);
-      bugChart.setOption({
-        tooltip: { trigger: 'item' },
-        legend: {
-          type: 'scroll',
-          bottom: 4,
-          itemWidth: 10,
-          itemHeight: 10,
-          data: radarStats.map((s) => s.user.nickName || s.user.userName)
-        },
-        radar: {
-          center: ['50%', '46%'],
-          radius: '58%',
-          indicator: [
-            { name: '完成任务', max: maxTasks },
-            { name: '通过率', max: 100 },
-            { name: '实际工时', max: maxHours },
-            { name: '零Bug', max: 1 },
-            { name: '工时准确度', max: 100 }
-          ],
-          axisName: { fontSize: 11 }
-        },
-        series: [{
-          type: 'radar',
-          data: radarStats.map((s) => {
-            const accuracy = s.totalEstimatedHours > 0
-              ? Math.max(0, 100 - Math.abs(s.totalActualHours - s.totalEstimatedHours) / s.totalEstimatedHours * 100)
-              : 100;
-            return {
-              name: s.user.nickName || s.user.userName,
-              value: [s.totalTasks, s.firstPassRate, s.totalActualHours, s.totalBugCount === 0 ? 1 : 0, +accuracy.toFixed(0)],
-              areaStyle: { opacity: 0.15 }
-            };
-          })
-        }]
-      });
-    }
-  }
-
-  function handleResize() {
-    hoursChart?.resize();
-    bugChart?.resize();
   }
 
   onMounted(() => {
+    void nextTick(() => {
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          pageEntered.value = true;
+        });
+      });
+    });
     loadProjects();
-    (searchParams as Record<string, unknown>).projectId = filterProjectId.value;
-    (searchParams as Record<string, unknown>).startAt = periodRange.value?.[0];
-    (searchParams as Record<string, unknown>).endAt = periodRange.value?.[1];
-    Promise.all([getData(), loadAllStats()]);
-    window.addEventListener('resize', handleResize);
-  });
-
-  onUnmounted(() => {
-    window.removeEventListener('resize', handleResize);
-    hoursChart?.dispose();
-    bugChart?.dispose();
+    applySearchParams();
+    void Promise.all([getData(), loadAllStats()]);
   });
 </script>
 
 <style scoped lang="scss">
-  .performance-wrapper {
-    padding: 20px;
+  .perf {
+    padding: 16px 20px 24px;
     display: flex;
     flex-direction: column;
-    gap: 20px;
+    gap: 18px;
     box-sizing: border-box;
+    min-height: 100%;
   }
 
-  .page-header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    background: var(--art-main-bg-color, #fff);
-    padding: 16px 20px;
-    border-radius: 8px;
-    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.06);
-
-    .header-left {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-    }
-
-    .page-title {
-      font-size: 18px;
-      font-weight: 700;
-    }
-
-    .page-sub {
-      font-size: 13px;
-      color: #999;
-    }
-
-    .header-right {
-      display: flex;
-      gap: 10px;
-      align-items: center;
-    }
+  .perf-hero {
+    position: relative;
+    border-radius: 16px;
+    overflow: hidden;
+    box-shadow: 0 4px 24px rgba(15, 23, 42, 0.08);
+    opacity: 0;
+    transform: translateY(18px);
   }
 
-  .summary-cards {
-    display: grid;
-    grid-template-columns: repeat(5, 1fr);
-    gap: 16px;
+  .perf--entered .perf-hero {
+    animation: perfEnterHero 0.62s cubic-bezier(0.22, 1, 0.36, 1) forwards;
   }
 
-  .points-type-card {
-    :deep(.el-card__body) {
-      padding-top: 12px;
+  .perf-section--charts,
+  .perf-section--table {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+
+  .perf--entered .perf-section--charts {
+    animation: perfEnterSection 0.58s cubic-bezier(0.22, 1, 0.36, 1) 0.28s forwards;
+  }
+
+  .perf--entered .perf-section--table {
+    animation: perfEnterSection 0.58s cubic-bezier(0.22, 1, 0.36, 1) 0.42s forwards;
+  }
+
+  @keyframes perfEnterHero {
+    to {
+      opacity: 1;
+      transform: translateY(0);
     }
   }
 
-  .points-type-title {
-    font-weight: 600;
+  @keyframes perfEnterKpi {
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
   }
 
-  .points-type-wrap {
+  @keyframes perfEnterSection {
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  @keyframes perfHeroBgPulse {
+    0%,
+    100% {
+      filter: saturate(1);
+    }
+    50% {
+      filter: saturate(1.12);
+    }
+  }
+
+  @keyframes perfHeroShimmer {
+    0%,
+    100% {
+      background-position: 130% 0;
+    }
+    50% {
+      background-position: -30% 0;
+    }
+  }
+
+  @keyframes perfIconFloat {
+    0%,
+    100% {
+      transform: translateY(0);
+    }
+    50% {
+      transform: translateY(-3px);
+    }
+  }
+
+  @keyframes perfIconGlow {
+    0%,
+    100% {
+      box-shadow: 0 0 0 0 rgba(147, 197, 253, 0.35);
+    }
+    50% {
+      box-shadow: 0 0 20px 2px rgba(147, 197, 253, 0.22);
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .perf-hero,
+    .perf-kpi,
+    .perf-section--charts,
+    .perf-section--table {
+      opacity: 1 !important;
+      transform: none !important;
+      animation: none !important;
+    }
+
+    .perf-hero__bg,
+    .perf-hero__bg-shimmer {
+      animation: none !important;
+    }
+
+    .perf-hero__icon-wrap,
+    .perf-hero__icon {
+      animation: none !important;
+    }
+
+    .perf-kpi__val {
+      transition: none;
+    }
+
+    .perf--entered .perf-kpi:hover .perf-kpi__val {
+      transform: none;
+    }
+  }
+
+  .perf-hero__bg {
+    position: absolute;
+    inset: 0;
+    background:
+      radial-gradient(1200px 400px at 10% -20%, rgba(64, 158, 255, 0.35), transparent 55%),
+      radial-gradient(900px 360px at 90% 0%, rgba(103, 194, 58, 0.22), transparent 50%),
+      linear-gradient(135deg, #0f172a 0%, #1e293b 48%, #0f172a 100%);
+    opacity: 0.96;
+    animation: perfHeroBgPulse 14s ease-in-out infinite;
+  }
+
+  /* 轻微高光扫过，不挡操作 */
+  .perf-hero__bg-shimmer {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    background: linear-gradient(
+      105deg,
+      transparent 38%,
+      rgba(255, 255, 255, 0.07) 50%,
+      transparent 62%
+    );
+    background-size: 220% 100%;
+    animation: perfHeroShimmer 9s ease-in-out infinite;
+    mix-blend-mode: overlay;
+  }
+
+  .perf-hero__inner {
+    position: relative;
+    z-index: 1;
     display: flex;
     flex-wrap: wrap;
-    gap: 8px;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    padding: 20px 22px;
+    color: #e2e8f0;
   }
 
-  .points-empty {
-    color: var(--el-text-color-secondary);
-  }
-
-  .s-card {
-    background: var(--art-main-bg-color, #fff);
-    border-radius: 10px;
-    padding: 20px;
-    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.06);
+  .perf-hero__left {
     display: flex;
     align-items: center;
-    gap: 16px;
-
-    .s-icon {
-      width: 52px;
-      height: 52px;
-      border-radius: 12px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-    }
-
-    .s-val {
-      font-size: 28px;
-      font-weight: 700;
-      line-height: 1;
-    }
-
-    .s-label {
-      font-size: 13px;
-      color: #999;
-      margin-top: 4px;
-    }
+    gap: 14px;
+    min-width: 0;
   }
 
-  .charts-row {
+  .perf-hero__icon-wrap {
+    width: 48px;
+    height: 48px;
+    border-radius: 14px;
+    background: rgba(255, 255, 255, 0.12);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid rgba(255, 255, 255, 0.18);
+    animation: perfIconGlow 4s ease-in-out infinite;
+  }
+
+  .perf-hero__icon {
+    font-size: 26px;
+    color: #93c5fd;
+    animation: perfIconFloat 4.5s ease-in-out infinite;
+  }
+
+  .perf-hero__title {
+    margin: 0;
+    font-size: 20px;
+    font-weight: 800;
+    letter-spacing: 0.02em;
+    color: #f8fafc;
+  }
+
+  .perf-hero__sub {
+    margin: 6px 0 0;
+    font-size: 13px;
+    color: rgba(226, 232, 240, 0.78);
+    max-width: 520px;
+    line-height: 1.45;
+  }
+
+  .perf-hero__toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    align-items: center;
+  }
+
+  .perf-hero__toolbar :deep(.el-input__wrapper),
+  .perf-hero__toolbar :deep(.el-select__wrapper) {
+    background: rgba(15, 23, 42, 0.35);
+    box-shadow: none;
+  }
+
+  .perf-kpi-row {
     display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 16px;
+    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+    gap: 14px;
   }
 
-  .chart-card {
+  .perf-kpi {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 14px 16px;
+    border-radius: 14px;
     background: var(--art-main-bg-color, #fff);
-    border-radius: 8px;
-    padding: 16px 20px;
-    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.06);
-
-    .chart-title {
-      font-weight: 600;
-      margin-bottom: 12px;
-    }
-
-    .chart-box {
-      height: 280px;
-    }
+    border: 1px solid rgba(64, 158, 255, 0.12);
+    box-shadow: 0 2px 12px rgba(15, 23, 42, 0.05);
+    backdrop-filter: blur(8px);
+    opacity: 0;
+    transform: translateY(16px);
+    transition:
+      transform 0.2s ease,
+      box-shadow 0.2s ease;
   }
 
-  .detail-table-card {
+  .perf--entered .perf-kpi {
+    animation: perfEnterKpi 0.52s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+  }
+
+  .perf--entered .perf-kpi:nth-child(1) {
+    animation-delay: 0.08s;
+  }
+  .perf--entered .perf-kpi:nth-child(2) {
+    animation-delay: 0.13s;
+  }
+  .perf--entered .perf-kpi:nth-child(3) {
+    animation-delay: 0.18s;
+  }
+  .perf--entered .perf-kpi:nth-child(4) {
+    animation-delay: 0.23s;
+  }
+  .perf--entered .perf-kpi:nth-child(5) {
+    animation-delay: 0.28s;
+  }
+  .perf--entered .perf-kpi:nth-child(6) {
+    animation-delay: 0.33s;
+  }
+  .perf--entered .perf-kpi:nth-child(7) {
+    animation-delay: 0.38s;
+  }
+  .perf--entered .perf-kpi:nth-child(8) {
+    animation-delay: 0.43s;
+  }
+  .perf--entered .perf-kpi:nth-child(9) {
+    animation-delay: 0.48s;
+  }
+  .perf--entered .perf-kpi:nth-child(10) {
+    animation-delay: 0.53s;
+  }
+
+  .perf-kpi:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 22px rgba(15, 23, 42, 0.08);
+  }
+
+  .perf-kpi__icon {
+    width: 44px;
+    height: 44px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .perf-kpi__svg {
+    font-size: 22px;
+    color: #409eff;
+  }
+
+  .perf-kpi__val {
+    font-size: 22px;
+    font-weight: 800;
+    line-height: 1.1;
+    font-variant-numeric: tabular-nums;
+    color: var(--el-text-color-primary);
+    transition: transform 0.35s cubic-bezier(0.22, 1, 0.36, 1);
+  }
+
+  .perf--entered .perf-kpi:hover .perf-kpi__val {
+    transform: scale(1.04);
+  }
+
+  .perf-kpi__lab {
+    font-size: 12px;
+    color: var(--el-text-color-secondary);
+    margin-top: 4px;
+  }
+
+  .perf-table-card {
     flex: 1;
-    min-height: 480px;
-
-    :deep(.el-card__body) {
-      min-height: 420px;
-    }
+    min-height: 420px;
+    border-radius: 14px;
+    border: 1px solid rgba(64, 158, 255, 0.08);
+    overflow-x: auto;
   }
 
-  .table-section-title {
+  /* 表头：完整列名、单行、留白充足 */
+  .perf-table-card :deep(.perf-art-table .el-table__header th.el-table__cell) {
+    background: var(--el-fill-color-light);
+  }
+
+  .perf-table-card :deep(.perf-art-table .el-table__header th.el-table__cell .cell) {
+    white-space: nowrap;
+    line-height: 1.35;
+    padding: 10px 10px;
+    font-size: 13px;
     font-weight: 600;
+    color: var(--el-text-color-primary);
+  }
+
+  .perf-table-card :deep(.perf-art-table .el-table__body td.el-table__cell .cell) {
+    padding: 8px 10px;
+    font-size: 13px;
+  }
+
+  .perf-table-title {
+    font-weight: 700;
     font-size: 15px;
   }
 
-  /* formatter 渲染在 el-table 内部，无本组件 data-v，须用 :deep 命中 */
   :deep(.perf-member-cell) {
     display: flex;
     align-items: center;
@@ -602,8 +792,6 @@
 
   :deep(.perf-member-cell__avatar) {
     flex-shrink: 0;
-    display: flex;
-    align-items: center;
   }
 
   :deep(.perf-member-cell__text) {
@@ -617,22 +805,11 @@
   :deep(.perf-member-cell__name) {
     font-size: 13px;
     font-weight: 500;
-    color: var(--el-text-color-primary);
   }
 
   :deep(.perf-member-cell__email) {
     font-size: 12px;
     color: var(--el-text-color-secondary);
     word-break: break-all;
-  }
-
-  .text-danger {
-    color: #f56c6c;
-    font-weight: 600;
-  }
-
-  .text-success {
-    color: #67c23a;
-    font-weight: 600;
   }
 </style>

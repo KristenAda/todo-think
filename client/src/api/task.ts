@@ -140,7 +140,7 @@ export function fetchReopenTask(taskId: number) {
 
 /** 研发效能统计：按已完成任务聚合主负责人维度，分页由服务端完成 */
 export function fetchPerformanceStats(params: Api.Task.PerformancePageParams) {
-  return request.get<Api.Task.PageResult<Api.Task.PerformanceStat>>({
+  return request.get<Api.Task.PerformanceStatsPageData>({
     url: `${BASE.performance}/stats`,
     params
   });
