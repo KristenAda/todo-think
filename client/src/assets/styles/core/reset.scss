@@ -1,41 +1,66 @@
-@charset "UTF-8";
+@charset 'UTF-8';
 
-/*滚动条*/
-/*滚动条整体部分,必须要设置*/
-::-webkit-scrollbar {
-  width: 8px !important;
-  height: 0 !important;
+/**
+ * 全局 Mac 风格悬浮细滚动条（Firefox scrollbar-color + WebKit 伪元素）
+ * 默认轨道/滑块透明，指针在可滚动区域内悬停时浮现；滑块自身悬停时加深。
+ */
+
+/* ---------- Firefox ---------- */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: transparent transparent;
+  transition: scrollbar-color 0.3s ease;
 }
 
-/*滚动条的轨道*/
-::-webkit-scrollbar-track {
-  background-color: var(--art-gray-200);
+*:hover {
+  scrollbar-color: rgba(144, 147, 153, 0.35) transparent;
 }
 
-/*滚动条的滑块按钮*/
-::-webkit-scrollbar-thumb {
-  border-radius: 5px;
-  background-color: #cccccc !important;
-  transition: all 0.2s;
-  -webkit-transition: all 0.2s;
+html.dark *:hover,
+.dark *:hover {
+  scrollbar-color: rgba(255, 255, 255, 0.22) transparent;
 }
 
-::-webkit-scrollbar-thumb:hover {
-  background-color: #b0abab !important;
+html.dark *,
+.dark * {
+  scrollbar-color: transparent transparent;
 }
 
-/*滚动条的上下两端的按钮*/
-::-webkit-scrollbar-button {
-  height: 0px;
+/* ---------- WebKit（Chrome / Edge / Safari） ---------- */
+*::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+*::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+*::-webkit-scrollbar-thumb {
+  background-color: transparent;
+  border-radius: 4px;
+}
+
+*:hover::-webkit-scrollbar-thumb {
+  background-color: rgba(144, 147, 153, 0.25);
+}
+
+*::-webkit-scrollbar-thumb:hover {
+  background-color: rgba(144, 147, 153, 0.5) !important;
+}
+
+html.dark *:hover::-webkit-scrollbar-thumb,
+.dark *:hover::-webkit-scrollbar-thumb {
+  background-color: rgba(255, 255, 255, 0.18);
+}
+
+html.dark *::-webkit-scrollbar-thumb:hover,
+.dark *::-webkit-scrollbar-thumb:hover {
+  background-color: rgba(255, 255, 255, 0.32) !important;
+}
+
+/* 隐藏 WebKit 滚动条方向按钮占宽 */
+*::-webkit-scrollbar-button {
   width: 0;
-}
-
-.dark {
-  ::-webkit-scrollbar-track {
-    background-color: var(--default-bg-color);
-  }
-
-  ::-webkit-scrollbar-thumb {
-    background-color: var(--art-gray-300) !important;
-  }
+  height: 0;
 }

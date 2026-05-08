@@ -21,6 +21,12 @@ export const UpdateProjectDto = CreateProjectDto.partial().extend({
 });
 export type UpdateProjectDtoType = z.infer<typeof UpdateProjectDto>;
 
+/** 单独设置项目验收计分生效规则版本（不走项目乐观锁） */
+export const SetActiveScoringRuleVersionDto = z.object({
+  activeRuleSetVersionId: z.union([z.number().int().positive(), z.null()]),
+});
+export type SetActiveScoringRuleVersionDtoType = z.infer<typeof SetActiveScoringRuleVersionDto>;
+
 export const ProjectPageDto = z.object({
   page: z.coerce.number().int().positive().default(1),
   pageSize: z.coerce.number().int().positive().max(100).default(10),
@@ -55,6 +61,8 @@ const taskWorkDomainEnum = z.enum([
   "GENERAL",
 ]);
 
+const taskComplexityTierEnum = z.enum(["SIMPLE", "STANDARD", "COMPLEX", "VERY_HARD"]);
+
 export const CreateTaskDto = z.object({
   projectId: z.number().int().positive("项目ID无效"),
   orgId: z.number().int().positive("归属组织ID无效").optional().nullable(), // 👉 未传时由 Controller 自动推导
@@ -70,6 +78,8 @@ export const CreateTaskDto = z.object({
   coAssigneeIds: z.array(z.number().int().positive()).optional().default([]),
   estimatedHours: z.number().positive().optional().nullable(),
   baseScore: z.number().nonnegative().optional().nullable(),
+  /** 难度档位，系统映射为绩效公式中的 complexity 数值 */
+  complexityTier: taskComplexityTierEnum.default("STANDARD"),
   testCases: z.array(TestCaseInputDto).optional().default([]),
   /** 已上传完成的附件 ID（可选，须为当前用户本人上传） */
   attachmentIds: z.array(z.number().int().positive()).max(50).optional(),
@@ -91,6 +101,8 @@ export const UpdateTaskDto = z.object({
   estimatedHours: z.number().positive().optional().nullable(),
   baseScore: z.number().nonnegative().optional().nullable(),
   baseScoreSource: z.enum(["AUTO", "MANUAL"]).optional(),
+  /** 难度档位，系统同步 complexity 系数 */
+  complexityTier: taskComplexityTierEnum.optional(),
   // 👉 补充了 PAUSED 和 CANCELLED 状态
   status: z
     .enum([

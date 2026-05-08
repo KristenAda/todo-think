@@ -13,6 +13,7 @@ import {
   UpdateTaskDto,
   TaskPageDto,
   ProjectTaskRuleDto,
+  SetActiveScoringRuleVersionDto,
   CreateWorkLogDto,
   CreateTaskCommentDto,
   SubmitTestDto,
@@ -118,6 +119,39 @@ class ProjectController {
     const userId = currentUserId(ctx);
     await projectService.taskRulesUpdate(id, userId, parsed.data);
     ctx.body = Result.success(null, "规则更新成功");
+  }
+
+  /** 可选的验收计分规则版本（全局 + 当前项目下规则集已发布版本） */
+  async scoringRuleVersions(ctx: Context) {
+    const id = Number(ctx.params.id);
+    try {
+      const list = await projectService.scoringRuleVersionOptions(id, currentUserId(ctx));
+      ctx.body = Result.success(list);
+    } catch (e: any) {
+      ctx.status = e.status ?? 500;
+      ctx.body = Result.error(e.message ?? "获取失败", e.status ?? 500);
+    }
+  }
+
+  /** 指定本项目验收结算使用的规则版本（为空则按系统自动择优） */
+  async setActiveScoringRuleVersion(ctx: Context) {
+    const id = Number(ctx.params.id);
+    const parsed = SetActiveScoringRuleVersionDto.safeParse(ctx.request.body);
+    if (!parsed.success) {
+      ctx.body = Result.error(parsed.error.issues?.[0]?.message ?? "参数错误");
+      return;
+    }
+    try {
+      const updated = await projectService.setActiveScoringRuleVersion(
+        id,
+        parsed.data.activeRuleSetVersionId,
+        currentUserId(ctx),
+      );
+      ctx.body = Result.success(updated, "已更新生效规则版本");
+    } catch (e: any) {
+      ctx.status = e.status ?? 500;
+      ctx.body = Result.error(e.message ?? "更新失败", e.status ?? 500);
+    }
   }
 
   async delete(ctx: Context) {

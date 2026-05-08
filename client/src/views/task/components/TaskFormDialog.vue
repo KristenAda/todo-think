@@ -3,229 +3,311 @@
     v-model="innerVisible"
     :title="mode === 'edit' ? '编辑任务' : '新建任务'"
     icon="solar:checklist-bold-duotone"
-    width="900px"
+    width="1060px"
     destroy-on-close
   >
-    <el-form ref="formRef" :model="form" :rules="rules" label-width="110px">
-      <el-form-item label="任务名称" prop="title">
-        <el-input
-          v-model="form.title"
-          placeholder="请输入任务名称"
-          maxlength="200"
-          show-word-limit
-        />
-      </el-form-item>
-      <el-form-item label="所属项目" prop="projectId">
-        <el-select v-model="form.projectId" placeholder="请选择项目" style="width: 100%">
-          <el-option v-for="p in projectList" :key="p.id" :label="p.name" :value="p.id" />
-        </el-select>
-      </el-form-item>
-      <el-form-item label="任务描述">
-        <el-input
-          v-model="form.description"
-          type="textarea"
-          :rows="3"
-          placeholder="请输入任务描述"
-        />
-      </el-form-item>
-      <el-row :gutter="16">
-        <el-col :span="12">
-          <el-form-item label="任务领域">
-            <el-select v-model="form.workDomain" placeholder="请选择" style="width: 100%">
-              <el-option
-                v-for="w in WORK_DOMAIN_OPTIONS"
-                :key="w.value"
-                :label="w.label"
-                :value="w.value"
-              />
-            </el-select>
-          </el-form-item>
-        </el-col>
-        <el-col :span="12">
-          <el-form-item label="事项类型">
-            <el-select v-model="form.type" placeholder="请选择" style="width: 100%">
-              <el-option
-                v-for="t in TYPE_OPTIONS"
-                :key="t.value"
-                :label="t.label"
-                :value="t.value"
-              />
-            </el-select>
-          </el-form-item>
-        </el-col>
-      </el-row>
-      <el-row :gutter="16">
-        <el-col :span="12">
-          <el-form-item label="优先级">
-            <el-select v-model="form.priority" placeholder="请选择" style="width: 100%">
-              <el-option
-                v-for="p in PRIORITY_OPTIONS"
-                :key="p.value"
-                :label="p.label"
-                :value="p.value"
-              />
-            </el-select>
-          </el-form-item>
-        </el-col>
-        <el-col :span="12">
-          <el-form-item label="截止日期">
-            <el-date-picker
-              v-model="form.dueDate"
-              type="date"
-              value-format="YYYY-MM-DD"
-              placeholder="选择日期"
-              style="width: 100%"
+    <el-form ref="formRef" :model="form" :rules="rules" label-width="100px" label-position="right">
+      <div class="task-form-layout">
+        <div class="task-form-layout__left">
+          <el-form-item label="任务名称" prop="title">
+            <el-input
+              v-model="form.title"
+              placeholder="请输入任务名称"
+              maxlength="200"
+              show-word-limit
             />
           </el-form-item>
-        </el-col>
-      </el-row>
-      <el-form-item label="负责人">
-        <div class="task-form-member-field task-form-member-field--block">
-          <div class="task-form-member-tags">
-            <template v-if="mainAssigneeUser || coAssigneeUsers.length">
-              <el-tag
-                v-if="mainAssigneeUser"
-                type="primary"
-                closable
-                class="task-form-user-tag"
-                @close="removeMainAssigneeTag"
-              >
-                <span class="task-form-user-tag-inner">
-                  <el-avatar :size="20" :src="mainAssigneeUser.avatar ?? undefined">{{
-                    initials(mainAssigneeUser)
-                  }}</el-avatar>
-                  <span>{{ userDisplayName(mainAssigneeUser) }}</span>
-                </span>
-              </el-tag>
-              <el-tag
-                v-for="u in coAssigneeUsers"
-                :key="u.id"
-                type="success"
-                closable
-                class="task-form-user-tag"
-                @close="removeCoAssigneeTag(u.id)"
-              >
-                <span class="task-form-user-tag-inner">
-                  <el-avatar :size="20" :src="u.avatar ?? undefined">{{ initials(u) }}</el-avatar>
-                  <span>{{ userDisplayName(u) }}</span>
-                </span>
-              </el-tag>
-            </template>
-            <span v-else class="task-form-member-placeholder">未选择</span>
-          </div>
-          <el-button @click="openAssigneePicker">选择人员</el-button>
-        </div>
-      </el-form-item>
-      <el-form-item label="测试验收人">
-        <div class="task-form-member-field task-form-member-field--block">
-          <div class="task-form-member-tags">
-            <el-tag
-              v-if="testerUser"
-              type="warning"
-              closable
-              class="task-form-user-tag"
-              @close="clearTester"
+
+          <el-form-item label="所属项目" prop="projectId">
+            <el-select v-model="form.projectId" placeholder="请选择项目" style="width: 100%">
+              <el-option v-for="p in projectList" :key="p.id" :label="p.name" :value="p.id" />
+            </el-select>
+          </el-form-item>
+
+          <el-form-item label="任务描述">
+            <el-input
+              v-model="form.description"
+              type="textarea"
+              :rows="4"
+              placeholder="请输入任务描述"
+            />
+          </el-form-item>
+
+          <el-row :gutter="24">
+            <el-col :span="12">
+              <el-form-item label="任务领域">
+                <el-select v-model="form.workDomain" placeholder="请选择" style="width: 100%">
+                  <el-option
+                    v-for="w in WORK_DOMAIN_OPTIONS"
+                    :key="w.value"
+                    :label="w.label"
+                    :value="w.value"
+                  />
+                </el-select>
+              </el-form-item>
+            </el-col>
+            <el-col :span="12">
+              <el-form-item label="事项类型">
+                <el-select v-model="form.type" placeholder="请选择" style="width: 100%">
+                  <el-option
+                    v-for="t in TYPE_OPTIONS"
+                    :key="t.value"
+                    :label="t.label"
+                    :value="t.value"
+                  />
+                </el-select>
+              </el-form-item>
+            </el-col>
+          </el-row>
+
+          <el-row :gutter="24">
+            <el-col :span="12">
+              <el-form-item label="优先级">
+                <el-select v-model="form.priority" placeholder="请选择" style="width: 100%">
+                  <el-option
+                    v-for="p in PRIORITY_OPTIONS"
+                    :key="p.value"
+                    :label="p.label"
+                    :value="p.value"
+                  />
+                </el-select>
+              </el-form-item>
+            </el-col>
+            <el-col :span="12">
+              <el-form-item label="截止日期">
+                <el-date-picker
+                  v-model="form.dueDate"
+                  type="date"
+                  value-format="YYYY-MM-DD"
+                  placeholder="选择日期"
+                  style="width: 100%"
+                />
+              </el-form-item>
+            </el-col>
+          </el-row>
+
+          <el-row :gutter="24">
+            <el-col :span="12">
+              <el-form-item label="预估工时(h)">
+                <el-input-number
+                  v-model="form.estimatedHours"
+                  :min="0.5"
+                  :step="0.5"
+                  :precision="1"
+                  style="width: 100%"
+                />
+              </el-form-item>
+            </el-col>
+            <el-col :span="12">
+              <el-form-item label="难度档位">
+                <el-select
+                  v-model="form.complexityTier"
+                  placeholder="选择任务难度"
+                  style="width: 100%"
+                  popper-class="tier-dropdown-popper"
+                >
+                  <el-option
+                    v-for="opt in TASK_COMPLEXITY_TIER_OPTIONS"
+                    :key="opt.value"
+                    :label="`${opt.label}（系数 ${opt.coefficient}）`"
+                    :value="opt.value"
+                  >
+                    <div class="tier-option">
+                      <span class="tier-option__title"
+                        >{{ opt.label }}（系数 {{ opt.coefficient }}）</span
+                      >
+                      <span class="tier-option__desc">{{ opt.description }}</span>
+                    </div>
+                  </el-option>
+                </el-select>
+                <div class="field-hint-inline">
+                  绩效结算按档位映射为公式变量 complexity，无需手写小数。
+                </div>
+              </el-form-item>
+            </el-col>
+          </el-row>
+
+          <el-row :gutter="24">
+            <el-col :span="12">
+              <el-form-item label="基础积分" style="margin-bottom: 8px">
+                <el-input-number
+                  v-model="form.baseScore"
+                  :min="0"
+                  :step="0.5"
+                  :precision="1"
+                  style="width: 100%"
+                  @change="() => (form.baseScoreSource = 'MANUAL')"
+                />
+              </el-form-item>
+            </el-col>
+          </el-row>
+
+          <el-form-item style="margin-bottom: 20px">
+            <el-alert
+              type="info"
+              :closable="false"
+              show-icon
+              style="line-height: 1.5; padding: 6px 12px"
             >
-              <span class="task-form-user-tag-inner">
-                <el-avatar :size="20" :src="testerUser.avatar ?? undefined">{{
-                  initials(testerUser)
-                }}</el-avatar>
-                <span>{{ userDisplayName(testerUser) }}</span>
-              </span>
-            </el-tag>
-            <span v-else class="task-form-member-placeholder">未选择</span>
-          </div>
-          <el-button @click="openTesterPicker">选择人员</el-button>
-        </div>
-      </el-form-item>
-      <el-row :gutter="16">
-        <el-col :span="12">
-          <el-form-item label="预估工时(h)">
-            <el-input-number
-              v-model="form.estimatedHours"
-              :min="0.5"
-              :step="0.5"
-              :precision="1"
-              style="width: 100%"
+              <template #title>
+                基础积分会自动给出建议并填充（不展示建议值）。<br />
+                规则：建议基础积分 = (类型基准 + min(预估工时,12)*0.8) × 优先级系数 ×
+                领域系数；你可在上方直接调整。
+              </template>
+            </el-alert>
+          </el-form-item>
+
+          <el-form-item label="附件">
+            <TaskAttachmentField
+              ref="taskAttachRef"
+              hint="可选，多文件依次上传（分片+断点续传）；新建或编辑保存时一并写入任务附件集"
             />
           </el-form-item>
-        </el-col>
-      </el-row>
-      <el-row :gutter="16">
-        <el-col :span="12">
-          <el-form-item label="基础积分">
-            <el-input-number
-              v-model="form.baseScore"
-              :min="0"
-              :step="0.5"
-              :precision="1"
-              style="width: 100%"
-              @change="() => (form.baseScoreSource = 'MANUAL')"
-            />
+
+          <el-form-item v-if="form.workDomain === 'SOFTWARE_DEVELOPMENT'" label="测试用例">
+            <div class="test-case-table-wrap">
+              <el-table
+                :data="form.testCases"
+                border
+                size="small"
+                class="test-case-table"
+                empty-text="暂无测试用例，点击下方添加"
+                :row-key="testCaseRowKey"
+              >
+                <el-table-column type="index" label="#" width="52" align="center" />
+                <el-table-column label="用例描述 / 操作步骤" min-width="220">
+                  <template #default="{ row }">
+                    <el-input
+                      v-model="row.description"
+                      type="textarea"
+                      :autosize="{ minRows: 2, maxRows: 6 }"
+                      placeholder="描述操作步骤或场景"
+                      resize="none"
+                    />
+                  </template>
+                </el-table-column>
+                <el-table-column label="预期结果" min-width="200">
+                  <template #default="{ row }">
+                    <el-input
+                      v-model="row.expectedResult"
+                      type="textarea"
+                      :autosize="{ minRows: 2, maxRows: 6 }"
+                      placeholder="期望看到的结果"
+                      resize="none"
+                    />
+                  </template>
+                </el-table-column>
+                <el-table-column label="操作" width="72" align="center" fixed="right">
+                  <template #default="{ $index }">
+                    <el-button type="danger" link size="small" @click="removeTestCase($index)">
+                      删除
+                    </el-button>
+                  </template>
+                </el-table-column>
+              </el-table>
+              <el-button class="test-case-table__add" text type="primary" @click="addTestCase">
+                <art-svg-icon icon="mdi:plus-circle-outline" style="margin-right: 4px" />
+                添加测试用例
+              </el-button>
+            </div>
           </el-form-item>
-        </el-col>
-      </el-row>
-      <el-alert
-        type="info"
-        :closable="false"
-        show-icon
-        style="margin: -6px 0 10px"
-        title="基础积分会根据任务信息自动给出建议并填充（不展示建议值）。规则：建议基础积分 = (类型基准 + min(预估工时,12)*0.8) × 优先级系数 × 领域系数；你可在输入框内直接调整。"
-      />
-      <el-form-item label="附件">
-        <TaskAttachmentField
-          ref="taskAttachRef"
-          hint="可选，多文件依次上传（分片+断点续传）；新建或编辑保存时一并写入任务附件集"
-        />
-      </el-form-item>
-      <el-form-item v-if="form.workDomain === 'SOFTWARE_DEVELOPMENT'" label="测试用例">
-        <div class="test-case-table-wrap">
-          <el-table
-            :data="form.testCases"
-            border
-            size="small"
-            class="test-case-table"
-            empty-text="暂无测试用例，点击下方添加"
-            :row-key="testCaseRowKey"
-          >
-            <el-table-column type="index" label="#" width="52" align="center" />
-            <el-table-column label="用例描述 / 操作步骤" min-width="220">
-              <template #default="{ row }">
-                <el-input
-                  v-model="row.description"
-                  type="textarea"
-                  :autosize="{ minRows: 2, maxRows: 6 }"
-                  placeholder="描述操作步骤或场景"
-                  resize="none"
-                />
-              </template>
-            </el-table-column>
-            <el-table-column label="预期结果" min-width="200">
-              <template #default="{ row }">
-                <el-input
-                  v-model="row.expectedResult"
-                  type="textarea"
-                  :autosize="{ minRows: 2, maxRows: 6 }"
-                  placeholder="期望看到的结果"
-                  resize="none"
-                />
-              </template>
-            </el-table-column>
-            <el-table-column label="操作" width="72" align="center" fixed="right">
-              <template #default="{ $index }">
-                <el-button type="danger" link size="small" @click="removeTestCase($index)">
-                  删除
-                </el-button>
-              </template>
-            </el-table-column>
-          </el-table>
-          <el-button class="test-case-table__add" text type="primary" @click="addTestCase">
-            <art-svg-icon icon="mdi:plus-circle-outline" style="margin-right: 4px" />
-            添加测试用例
-          </el-button>
         </div>
-      </el-form-item>
+
+        <div class="task-form-layout__right">
+          <div class="right-panel-title">人员分配</div>
+
+          <el-form-item label="负责人" class="right-panel-item">
+            <div class="task-form-member-field">
+              <div class="task-form-member-tags">
+                <template v-if="mainAssigneeUser || coAssigneeUsers.length">
+                  <el-tag
+                    v-if="mainAssigneeUser"
+                    type="primary"
+                    closable
+                    class="task-form-user-tag task-form-user-tag--main"
+                    title="主要负责人"
+                    @close="removeMainAssigneeTag"
+                  >
+                    <span class="task-form-user-tag-inner">
+                      <UserAvatar
+                        :size="18"
+                        :src="mainAssigneeUser.avatar ?? undefined"
+                        :name="userDisplayName(mainAssigneeUser)"
+                        :gender="mainAssigneeUser.userGender ?? ''"
+                      />
+                      <span>{{ userDisplayName(mainAssigneeUser) }}</span>
+                    </span>
+                  </el-tag>
+                  <el-tag
+                    v-for="u in coAssigneeUsers"
+                    :key="u.id"
+                    type="success"
+                    closable
+                    class="task-form-user-tag task-form-user-tag--co"
+                    title="点击切换为主要负责人"
+                    @close="removeCoAssigneeTag(u.id)"
+                  >
+                    <span
+                      class="task-form-user-tag-inner task-form-user-tag-inner--promote"
+                      @click.stop="promoteToMainAssignee(u.id)"
+                    >
+                      <UserAvatar
+                        :size="18"
+                        :src="u.avatar ?? undefined"
+                        :name="userDisplayName(u)"
+                        :gender="u.userGender ?? ''"
+                      />
+                      <span>{{ userDisplayName(u) }}</span>
+                    </span>
+                  </el-tag>
+                </template>
+                <div v-else class="task-form-member-placeholder">暂未分配主要负责人</div>
+              </div>
+              <el-button class="dashed-action-btn" plain @click="openAssigneePicker">
+                <art-svg-icon
+                  icon="mdi:account-plus-outline"
+                  style="margin-right: 4px; font-size: 16px"
+                />
+                选择人员
+              </el-button>
+            </div>
+          </el-form-item>
+
+          <el-form-item label="测试验收人" class="right-panel-item">
+            <div class="task-form-member-field">
+              <div class="task-form-member-tags">
+                <el-tag
+                  v-if="testerUser"
+                  type="warning"
+                  closable
+                  class="task-form-user-tag"
+                  @close="clearTester"
+                >
+                  <span class="task-form-user-tag-inner">
+                    <UserAvatar
+                      :size="18"
+                      :src="testerUser.avatar ?? undefined"
+                      :name="userDisplayName(testerUser)"
+                      :gender="testerUser.userGender ?? ''"
+                    />
+                    <span>{{ userDisplayName(testerUser) }}</span>
+                  </span>
+                </el-tag>
+                <div v-else class="task-form-member-placeholder">可暂不指定</div>
+              </div>
+              <el-button class="dashed-action-btn" plain @click="openTesterPicker">
+                <art-svg-icon
+                  icon="mdi:clipboard-account-outline"
+                  style="margin-right: 4px; font-size: 16px"
+                />
+                选择验收人
+              </el-button>
+            </div>
+          </el-form-item>
+        </div>
+      </div>
     </el-form>
+
     <template #footer>
       <el-button @click="innerVisible = false">取消</el-button>
       <el-button type="primary" :loading="submitting" @click="handleSubmit">确定</el-button>
@@ -260,9 +342,13 @@
               :model-value="assigneePickerSelectedIds.includes(u.id)"
               @click.stop="onAssigneeCardClick(u.id)"
             />
-            <el-avatar :size="48" :src="u.avatar ?? undefined" class="member-pick-card__avatar">
-              {{ initials(u) }}
-            </el-avatar>
+            <UserAvatar
+              :size="48"
+              :src="u.avatar ?? undefined"
+              :name="userDisplayName(u)"
+              :gender="u.userGender ?? ''"
+              avatar-class="member-pick-card__avatar"
+            />
             <div class="member-pick-card__body">
               <div class="member-pick-card__name">{{ userDisplayName(u) }}</div>
               <div class="member-pick-card__email">{{ displayEmail(u.userEmail) }}</div>
@@ -327,9 +413,9 @@
               <div class="member-pick-card__name">暂不指定</div>
               <div class="member-pick-card__email">稍后在任务中再指定验收人</div>
               <div class="member-pick-card__meta">
-                <span class="member-pick-card__meta-item member-pick-card__meta-item--muted"
-                  >—</span
-                >
+                <span class="member-pick-card__meta-item member-pick-card__meta-item--muted">
+                  可选
+                </span>
               </div>
             </div>
           </div>
@@ -341,9 +427,13 @@
             @click="onTesterCardClick(u.id)"
           >
             <el-radio class="member-pick-card__radio" :label="u.id" @click.stop />
-            <el-avatar :size="48" :src="u.avatar ?? undefined" class="member-pick-card__avatar">
-              {{ initials(u) }}
-            </el-avatar>
+            <UserAvatar
+              :size="48"
+              :src="u.avatar ?? undefined"
+              :name="userDisplayName(u)"
+              :gender="u.userGender ?? ''"
+              avatar-class="member-pick-card__avatar"
+            />
             <div class="member-pick-card__body">
               <div class="member-pick-card__name">{{ userDisplayName(u) }}</div>
               <div class="member-pick-card__email">{{ displayEmail(u.userEmail) }}</div>
@@ -375,18 +465,21 @@
   import type { FormInstance, FormRules } from 'element-plus';
   import { fetchTaskInfo, fetchCreateTask, fetchUpdateTask, fetchOrgMembers } from '@/api/task';
   import TaskAttachmentField from './TaskAttachmentField.vue';
+  import {
+    TaskComplexityTierEnum,
+    TASK_COMPLEXITY_TIER_OPTIONS,
+    inferComplexityTierFromCoefficient
+  } from '@/enums/modules/taskComplexityTierEnum';
 
   const props = defineProps<{
     modelValue: boolean;
     mode: 'create' | 'edit';
     projectList: Api.Task.SimpleProject[];
-    /** 编辑时传入列表行 */
     editRow: Api.Task.Task | null;
   }>();
 
   const emit = defineEmits<{
     'update:modelValue': [v: boolean];
-    /** 与原先 refreshCreate / refreshUpdate 对齐 */
     submitted: [kind: 'create' | 'update'];
   }>();
 
@@ -474,6 +567,7 @@
     suggestedBaseScore: 0 as number,
     baseScore: undefined as number | undefined,
     baseScoreSource: 'AUTO' as 'AUTO' | 'MANUAL',
+    complexityTier: TaskComplexityTierEnum.STANDARD as Api.Task.TaskComplexityTier,
     testCases: [] as {
       id?: number;
       description: string;
@@ -511,7 +605,9 @@
     };
     const hourPart = Math.min(12, Math.max(0, Number(form.estimatedHours ?? 0))) * 0.8;
     const score =
-      (typeBase[form.type] + hourPart) * priorityFactor[form.priority] * domainFactor[form.workDomain];
+      (typeBase[form.type] + hourPart) *
+      priorityFactor[form.priority] *
+      domainFactor[form.workDomain];
     form.suggestedBaseScore = Number(score.toFixed(1));
     if (form.baseScoreSource !== 'MANUAL' || form.baseScore == null) {
       form.baseScore = form.suggestedBaseScore;
@@ -622,6 +718,18 @@
     form.coAssigneeIds = form.coAssigneeIds.filter((i) => i !== id);
   }
 
+  /** 在表单右侧标签区点击协作人胶囊，将其切换为主要负责人 */
+  function promoteToMainAssignee(userId: number) {
+    if (form.mainAssigneeId === userId) return;
+    const oldMain = form.mainAssigneeId;
+    const rest = form.coAssigneeIds.filter((id) => id !== userId);
+    if (oldMain != null && oldMain !== userId) {
+      rest.push(oldMain);
+    }
+    form.mainAssigneeId = userId;
+    form.coAssigneeIds = rest;
+  }
+
   function clearTester() {
     form.testerId = undefined;
   }
@@ -658,6 +766,7 @@
       suggestedBaseScore: 0,
       baseScore: undefined,
       baseScoreSource: 'AUTO',
+      complexityTier: TaskComplexityTierEnum.STANDARD,
       testCases: []
     });
     calcSuggestedBaseScore();
@@ -690,6 +799,7 @@
       suggestedBaseScore: base.suggestedBaseScore ?? 0,
       baseScore: base.baseScore ?? base.suggestedBaseScore ?? undefined,
       baseScoreSource: base.baseScoreSource ?? 'AUTO',
+      complexityTier: base.complexityTier ?? inferComplexityTierFromCoefficient(base.complexity),
       testCases:
         wd === 'SOFTWARE_DEVELOPMENT'
           ? (detail?.testCases ?? []).map((tc) => ({
@@ -778,6 +888,7 @@
           estimatedHours: form.estimatedHours ?? null,
           baseScore: form.baseScore ?? null,
           baseScoreSource: form.baseScoreSource,
+          complexityTier: form.complexityTier,
           attachmentIds,
           testCases: buildTestCasesForApi(form.testCases)
         });
@@ -803,6 +914,7 @@
           testerId: form.testerId ?? undefined,
           estimatedHours: form.estimatedHours ?? undefined,
           baseScore: form.baseScore ?? undefined,
+          complexityTier: form.complexityTier,
           testCases: buildTestCasesForApi(form.testCases).map((tc) => ({
             description: tc.description,
             expectedResult: tc.expectedResult
@@ -831,46 +943,231 @@
   });
 </script>
 
+<style lang="scss">
+  /* 解决下拉选项文字较长时拥挤的问题 */
+  .tier-dropdown-popper {
+    .el-select-dropdown__item {
+      height: auto !important;
+      padding: 8px 12px !important;
+      white-space: normal;
+      line-height: 1.5;
+    }
+  }
+</style>
+
 <style scoped lang="scss">
-  .task-form-member-field {
+  /* ---- 核心布局样式 ---- */
+  .task-form-layout {
     display: flex;
+    gap: 28px;
     align-items: flex-start;
-    gap: 12px;
-    flex-wrap: wrap;
-    width: 100%;
   }
 
-  .task-form-member-field--block {
-    flex-direction: column;
-    align-items: stretch;
-  }
-
-  .task-form-member-tags {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 8px;
-    align-items: center;
+  .task-form-layout__left {
     flex: 1;
     min-width: 0;
-    min-height: 32px;
+  }
+
+  .task-form-layout__right {
+    width: 360px;
+    flex-shrink: 0;
+    /* 优化侧边栏背景色与边框，更有质感 */
+    background: #f8f9fc;
+    border: 1px solid var(--el-border-color-lighter);
+    border-radius: 8px;
+    padding: 20px 16px;
+    box-sizing: border-box;
+    /* 给右侧栏加一点极弱的阴影提升立体感 */
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.02);
+  }
+
+  /* ---- 右侧面板内表单项重写 ---- */
+  .right-panel-title {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--el-text-color-primary);
+    margin-bottom: 20px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+
+    &::before {
+      content: '';
+      display: block;
+      width: 3px;
+      height: 14px;
+      background: var(--el-color-primary);
+      border-radius: 2px;
+    }
+  }
+
+  .right-panel-item {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    margin-bottom: 24px;
+
+    /* 强制重写 Element Plus 标签样式，使其居左并在顶部 */
+    :deep(.el-form-item__label) {
+      width: auto !important;
+      justify-content: flex-start;
+      line-height: 1.4;
+      padding: 0 0 10px 0;
+      color: var(--el-text-color-primary);
+      font-weight: 500;
+    }
+
+    :deep(.el-form-item__content) {
+      margin-left: 0 !important;
+    }
+  }
+
+  /* ---- 选人组件相关 ---- */
+  .task-form-member-field {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    width: 100%;
+    gap: 12px;
+  }
+  .task-form-member-tags {
+    display: flex;
+    flex-wrap: wrap; /* 允许横向折行 */
+    flex-direction: row; /* 取消之前的 column，改为横向排列 */
+    gap: 8px;
+    align-items: center;
+    min-width: 0;
   }
 
   .task-form-member-placeholder {
     font-size: 13px;
-    color: var(--el-text-color-placeholder);
-    line-height: 32px;
+    color: var(--el-text-color-secondary);
+    background: var(--el-fill-color-light);
+    border-radius: 6px;
+    padding: 8px 12px;
+    text-align: center;
+    border: 1px dashed var(--el-border-color-lighter);
   }
 
-  .task-form-user-tag :deep(.el-tag__content) {
+  /* 让 Tag 变得更丰满，适应右侧布局 */
+  .task-form-user-tag {
+    min-height: 32px;
+    padding: 4px 10px 4px 4px; /* 左侧内边距调小以贴合头像，右侧留出空间 */
+    border-radius: 999px; /* 胶囊圆角 */
     display: inline-flex;
     align-items: center;
-  }
+    border: 1px solid transparent;
 
+    :deep(.el-tag__content) {
+      display: inline-flex;
+      align-items: center;
+      /* 重点：去掉了之前的 width: 100%，让它根据内容自适应宽度 */
+    }
+
+    :deep(.el-tag__close) {
+      margin-left: 4px;
+      border-radius: 50%;
+    }
+
+    /* 对应图中蓝色主负责人的样式 */
+    &.el-tag--primary {
+      background-color: #f2f5fa;
+      border-color: #dce5fa;
+      color: #4a75f6;
+
+      :deep(.el-tag__close) {
+        color: #7b9af8;
+        &:hover {
+          background-color: #dce5fa;
+          color: #4a75f6;
+        }
+      }
+    }
+    /* 对应图中白色普通负责人的样式 (这里直接覆盖 success/warning 统一为白底灰边) */
+    &:not(.el-tag--primary) {
+      background-color: #ffffff;
+      border-color: #e4e7ed;
+      color: #606266;
+
+      :deep(.el-tag__close) {
+        color: #a8abb2;
+        &:hover {
+          background-color: #f4f4f5;
+          color: #606266;
+        }
+      }
+    }
+  }
   .task-form-user-tag-inner {
     display: inline-flex;
     align-items: center;
     gap: 6px;
+    font-size: 13px;
+    font-weight: 500;
   }
+
+  /* 协作人胶囊：点击主体切换为主要负责人（关闭按钮不受影响） */
+  .task-form-user-tag-inner--promote {
+    cursor: pointer;
+    border-radius: 999px;
+    padding: 2px 4px 2px 2px;
+    margin: -2px -4px -2px -2px;
+    transition:
+      background-color 0.15s ease,
+      opacity 0.15s ease;
+
+    &:hover {
+      // background-color: var(--el-fill-color-light);
+    }
+
+    &:active {
+      opacity: 0.92;
+    }
+  }
+
+  /* 虚线风格添加按钮 */
+  .dashed-action-btn {
+    width: 100%;
+    border-style: dashed;
+    border-color: var(--el-border-color);
+    color: var(--el-text-color-regular);
+    background: transparent;
+
+    &:hover {
+      border-color: var(--el-color-primary);
+      color: var(--el-color-primary);
+      background: var(--el-color-primary-light-9);
+    }
+  }
+
+  /* ---- 其他通用表单微调 ---- */
+  .field-hint-inline {
+    margin-top: 6px;
+    font-size: 12px;
+    color: var(--el-text-color-secondary);
+    line-height: 1.4;
+  }
+
+  .tier-option {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    line-height: 1.35;
+    padding: 4px 0;
+  }
+
+  .tier-option__title {
+    font-size: 13px;
+    color: var(--el-text-color-primary);
+  }
+
+  .tier-option__desc {
+    font-size: 12px;
+    color: var(--el-text-color-secondary);
+    white-space: normal;
+  }
+
+  /* 测试用例表格样式 */
   .test-case-table-wrap {
     width: 100%;
   }
@@ -894,6 +1191,7 @@
     margin-top: 10px;
   }
 
+  /* ---- 弹窗中的人员选择卡片 (保留原有样式) ---- */
   .task-member-picker {
     margin: -4px 0 0;
   }
@@ -921,14 +1219,6 @@
 
     &--tight {
       max-height: min(56vh, 480px);
-    }
-
-    &::-webkit-scrollbar {
-      width: 6px;
-    }
-    &::-webkit-scrollbar-thumb {
-      background: var(--el-border-color-darker);
-      border-radius: 6px;
     }
   }
 
@@ -993,6 +1283,12 @@
   }
 
   .member-pick-card__avatar {
+    flex-shrink: 0;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+    border: 2px solid var(--el-border-color-extra-light);
+  }
+
+  :deep(.member-pick-card__avatar.color-avatar) {
     flex-shrink: 0;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
     border: 2px solid var(--el-border-color-extra-light);

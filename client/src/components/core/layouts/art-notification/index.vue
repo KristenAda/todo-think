@@ -20,7 +20,7 @@
     </div>
 
     <div class="w-full h-[calc(100%-55px)]">
-      <div class="h-[calc(100%-60px)] overflow-y-scroll scrollbar-thin">
+      <div class="h-[calc(100%-60px)] overflow-y-scroll">
         <ul>
           <li
             v-for="(item, index) in mergedList"
@@ -288,15 +288,4 @@
     max-[640px]:h-[80vh];
   }
 
-  .scrollbar-thin::-webkit-scrollbar {
-    width: 5px !important;
-  }
-
-  .dark .scrollbar-thin::-webkit-scrollbar-track {
-    background-color: var(--default-box-color);
-  }
-
-  .dark .scrollbar-thin::-webkit-scrollbar-thumb {
-    background-color: #222 !important;
-  }
 </style>

@@ -73,11 +73,11 @@
 
 <script setup lang="ts">
   import { ref, onMounted, onBeforeUnmount, nextTick, h } from 'vue';
-  import { ElMessage, ElMessageBox, ElTag, ElAvatar } from 'element-plus';
+  import { ElMessage, ElMessageBox, ElTag } from 'element-plus';
+  import UserAvatar from '@/components/core/base/UserAvatar.vue';
   import { fetchTaskPage, fetchDeleteTask, fetchProjectList } from '@/api/task';
   import { useTable } from '@/hooks/core/useTable';
-  import { ButtonMoreItem } from '@/components/core/forms/art-button-more/index.vue';
-  import ArtButtonMore from '@/components/core/forms/art-button-more/index.vue';
+  import ArtTableRowActions from '@/components/core/forms/art-table-row-actions/index.vue';
   import TaskDetailDrawer from '../detail/TaskDetailDrawer.vue';
   import TaskFormDialog from '../components/TaskFormDialog.vue';
   import mittBus from '@/utils/sys/mittBus';
@@ -163,9 +163,6 @@
     if (p === 'P1') return 'warning';
     if (p === 'P2') return 'primary';
     return 'info';
-  }
-  function initials(u: Api.Task.SimpleUser) {
-    return (u.nickName || u.userName)?.[0]?.toUpperCase() ?? '?';
   }
 
   const taskDialogVisible = ref(false);
@@ -263,7 +260,12 @@
               const u = row.mainAssignee;
               nodes.push(
                 h('div', { class: 'task-mgr-assignee task-mgr-assignee--main' }, [
-                  h(ElAvatar, { size: 22, src: u.avatar ?? undefined }, () => initials(u)),
+                  h(UserAvatar, {
+                    size: 22,
+                    src: u.avatar ?? undefined,
+                    name: u.nickName || u.userName,
+                    gender: u.userGender ?? ''
+                  }),
                   h('span', { class: 'task-mgr-assignee__name' }, u.nickName || u.userName)
                 ])
               );
@@ -276,7 +278,12 @@
                 const u = ca.user;
                 nodes.push(
                   h('div', { class: 'task-mgr-assignee task-mgr-assignee--co' }, [
-                    h(ElAvatar, { size: 22, src: u.avatar ?? undefined }, () => initials(u)),
+                    h(UserAvatar, {
+                      size: 22,
+                      src: u.avatar ?? undefined,
+                      name: u.nickName || u.userName,
+                      gender: u.userGender ?? ''
+                    }),
                     h('span', { class: 'task-mgr-assignee__name' }, u.nickName || u.userName)
                   ])
                 );
@@ -309,24 +316,22 @@
         {
           prop: 'operation',
           label: '操作',
-          width: 100,
+          width: 176,
+          align: 'center',
           fixed: 'right',
           formatter: (row) =>
-            h('div', [
-              h(ArtButtonMore, {
-                list: [
-                  { key: 'detail', label: '详情', icon: 'ri:file-list-3-line' },
-                  { key: 'edit', label: '编辑任务', icon: 'ri:edit-2-line' },
-                  {
-                    key: 'delete',
-                    label: '删除任务',
-                    icon: 'ri:delete-bin-4-line',
-                    color: '#f56c6c'
-                  }
-                ],
-                onClick: (item: ButtonMoreItem) => taskRowAction(item, row)
-              })
-            ])
+            h(ArtTableRowActions, {
+              items: [
+                { key: 'detail', label: '详情', onClick: () => openDetail(row) },
+                { key: 'edit', label: '编辑', onClick: () => openEditDialog(row) },
+                {
+                  key: 'delete',
+                  label: '删除',
+                  danger: true,
+                  onClick: () => confirmDeleteTask(row)
+                }
+              ]
+            })
         }
       ]
     }
@@ -334,20 +339,6 @@
 
   function runSearch() {
     refreshData();
-  }
-
-  function taskRowAction(item: ButtonMoreItem, row: Api.Task.Task) {
-    switch (item.key) {
-      case 'detail':
-        openDetail(row);
-        break;
-      case 'edit':
-        openEditDialog(row);
-        break;
-      case 'delete':
-        confirmDeleteTask(row);
-        break;
-    }
   }
 
   async function confirmDeleteTask(row: Api.Task.Task) {
@@ -455,7 +446,8 @@
       vertical-align: middle;
     }
 
-    .task-mgr-user-cell .el-avatar {
+    .task-mgr-user-cell .el-avatar,
+    .task-mgr-user-cell .user-avatar-wrap {
       flex-shrink: 0;
     }
 
@@ -534,6 +526,11 @@
       border-color: var(--el-color-success-light-7);
       background: var(--el-color-success-light-9);
       color: var(--el-color-success);
+    }
+
+    .task-mgr-assignee .user-avatar-wrap,
+    .task-mgr-assignee .el-avatar {
+      flex-shrink: 0;
     }
 
     .task-mgr-assignee__name {

@@ -61,9 +61,10 @@
       <div class="summary-row">
         <art-svg-icon icon="mdi:sigma" class="summary-icon" />
         <span
-          >当前筛选下积分变动合计：<b :class="ledgerSummary.sumAmount >= 0 ? 'sum-pos' : 'sum-neg'">{{
-            ledgerSummary.sumAmount
-          }}</b>
+          >当前筛选下积分变动合计：<b
+            :class="ledgerSummary.sumAmount >= 0 ? 'sum-pos' : 'sum-neg'"
+            >{{ ledgerSummary.sumAmount }}</b
+          >
           （全部分页数据之和，非仅本页）</span
         >
       </div>
@@ -87,7 +88,7 @@
 
 <script setup lang="ts">
   import { ref, h, onMounted } from 'vue';
-  import { ElButton, ElTag } from 'element-plus';
+  import { ElTag } from 'element-plus';
   import { useTable } from '@/hooks/core/useTable';
   import { fetchPointsLedgerPage, fetchProjectList } from '@/api/task';
   import { formatDateTime } from '@/utils/date';
@@ -97,6 +98,7 @@
     pointsLedgerPointsTypeLabel
   } from '@/enums/modules/pointsLedgerEnum';
   import PointsLedgerDetailDialog from './components/PointsLedgerDetailDialog.vue';
+  import ArtTableRowActions from '@/components/core/forms/art-table-row-actions/index.vue';
 
   defineOptions({ name: 'PointsLedgerLog' });
 
@@ -230,14 +232,13 @@
         {
           prop: 'op',
           label: '操作',
-          width: 100,
+          width: 96,
+          align: 'center',
           fixed: 'right',
           formatter: (row: LedgerRow) =>
-            h(
-              ElButton,
-              { type: 'primary', link: true, onClick: () => openDetail(row) },
-              { default: () => '详情' }
-            )
+            h(ArtTableRowActions, {
+              items: [{ key: 'detail', label: '详情', onClick: () => openDetail(row) }]
+            })
         }
       ]
     }

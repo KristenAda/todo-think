@@ -56,10 +56,9 @@
 </template>
 
 <script setup lang="ts">
-  import { ButtonMoreItem } from '@/components/core/forms/art-button-more/index.vue';
   import { useTable } from '@/hooks/core/useTable';
   import { fetchGetRoleList, fetchDeleteRole } from '@/api/system-manage';
-  import ArtButtonMore from '@/components/core/forms/art-button-more/index.vue';
+  import ArtTableRowActions from '@/components/core/forms/art-table-row-actions/index.vue';
   import RoleSearch from './modules/role-search.vue';
   import RoleEditDialog from './modules/role-edit-dialog.vue';
   import RolePermissionDialog from './modules/role-permission-dialog.vue';
@@ -125,6 +124,15 @@
           showOverflowTooltip: true
         },
         {
+          prop: 'isDefaultRole',
+          label: '角色类型',
+          width: 96,
+          formatter: (row) =>
+            row.isDefaultRole
+              ? h(ElTag, { type: 'info', size: 'small' }, () => '默认角色')
+              : h('span', { class: 'text-muted' }, '—')
+        },
+        {
           prop: 'enabled',
           label: '角色状态',
           width: 100,
@@ -149,32 +157,17 @@
         {
           prop: 'operation',
           label: '操作',
-          width: 80,
+          width: 220,
+          align: 'center',
           fixed: 'right',
           formatter: (row) =>
-            h('div', [
-              h(ArtButtonMore, {
-                list: [
-                  {
-                    key: 'permission',
-                    label: '菜单权限',
-                    icon: 'ri:user-3-line'
-                  },
-                  {
-                    key: 'edit',
-                    label: '编辑角色',
-                    icon: 'ri:edit-2-line'
-                  },
-                  {
-                    key: 'delete',
-                    label: '删除角色',
-                    icon: 'ri:delete-bin-4-line',
-                    color: '#f56c6c'
-                  }
-                ],
-                onClick: (item: ButtonMoreItem) => buttonMoreClick(item, row)
-              })
-            ])
+            h(ArtTableRowActions, {
+              items: [
+                { key: 'permission', label: '菜单权限', onClick: () => showPermissionDialog(row) },
+                { key: 'edit', label: '编辑', onClick: () => showDialog('edit', row) },
+                { key: 'delete', label: '删除', danger: true, onClick: () => deleteRole(row) }
+              ]
+            })
         }
       ]
     }
@@ -200,20 +193,6 @@
 
     Object.assign(searchParams, { ...filtersParams, startTime, endTime });
     getData();
-  };
-
-  const buttonMoreClick = (item: ButtonMoreItem, row: RoleListItem) => {
-    switch (item.key) {
-      case 'permission':
-        showPermissionDialog(row);
-        break;
-      case 'edit':
-        showDialog('edit', row);
-        break;
-      case 'delete':
-        deleteRole(row);
-        break;
-    }
   };
 
   const showPermissionDialog = (row?: RoleListItem) => {

@@ -7,6 +7,26 @@ class RoleService extends BaseService {
     super("role");
   }
 
+  async add(data: any) {
+    if (data.isDefaultRole === true) {
+      await prisma.role.updateMany({
+        where: { isDefaultRole: true, deletedAt: null },
+        data: { isDefaultRole: false },
+      });
+    }
+    return super.add(data);
+  }
+
+  async update(id: number, data: any) {
+    if (data.isDefaultRole === true) {
+      await prisma.role.updateMany({
+        where: { isDefaultRole: true, deletedAt: null, id: { not: id } },
+        data: { isDefaultRole: false },
+      });
+    }
+    return super.update(id, data);
+  }
+
   async pageList(page: number, pageSize: number, params: any) {
     const where: any = {};
     if (params.roleName) where.roleName = { contains: params.roleName };

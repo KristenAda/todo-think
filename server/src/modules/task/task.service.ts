@@ -16,6 +16,11 @@ import {
   PointsLedgerPageDtoType,
   ProjectTaskRuleDtoType,
 } from "./task.dto";
+import {
+  COEFFICIENT_BY_TASK_COMPLEXITY_TIER,
+  LABEL_ZH_BY_TASK_COMPLEXITY_TIER,
+  type TaskComplexityTierValue,
+} from "./taskComplexityTier";
 import logger from "@/core/logger";
 import {
   createFirstSettlementForAcceptedTask,
@@ -524,6 +529,88 @@ class ProjectService {
       select: { id: true, name: true, status: true, managerId: true },
     });
   }
+
+  /**
+   * 该项目可选的验收计分规则版本（启用中的全局规则集 + 本项目规则集下的全部已发布版本）
+   */
+  async scoringRuleVersionOptions(projectId: number, userId: number) {
+    await this.assertUserCanAccessProject(userId, projectId);
+
+    const ruleSets = await prisma.ruleSet.findMany({
+      where: {
+        status: "ACTIVE",
+        OR: [{ scope: "GLOBAL" }, { scope: "PROJECT", projectId }],
+      },
+      select: { id: true, code: true, name: true, scope: true, projectId: true },
+      orderBy: [{ scope: "asc" }, { id: "asc" }],
+    });
+    if (!ruleSets.length) return [];
+
+    const versions = await prisma.ruleSetVersion.findMany({
+      where: { ruleSetId: { in: ruleSets.map((r) => r.id) } },
+      orderBy: [{ publishedAt: "desc" }, { version: "desc" }],
+      select: {
+        id: true,
+        ruleSetId: true,
+        version: true,
+        publishedAt: true,
+        effectiveFrom: true,
+        effectiveTo: true,
+      },
+    });
+
+    const rsMap = new Map(ruleSets.map((r) => [r.id, r]));
+    return versions.map((v) => {
+      const rs = rsMap.get(v.ruleSetId)!;
+      return {
+        id: v.id,
+        ruleSetId: v.ruleSetId,
+        ruleSetCode: rs.code,
+        ruleSetName: rs.name,
+        ruleSetScope: rs.scope,
+        version: v.version,
+        publishedAt: v.publishedAt,
+        effectiveFrom: v.effectiveFrom,
+        effectiveTo: v.effectiveTo,
+        label: `[${rs.scope === "GLOBAL" ? "全局" : "项目"}] ${rs.name} · v${v.version}`,
+      };
+    });
+  }
+
+  async setActiveScoringRuleVersion(
+    projectId: number,
+    activeRuleSetVersionId: number | null,
+    userId: number,
+  ) {
+    await this.assertUserCanAccessProject(userId, projectId);
+
+    if (activeRuleSetVersionId != null) {
+      const v = await prisma.ruleSetVersion.findUnique({
+        where: { id: activeRuleSetVersionId },
+        include: {
+          ruleSet: { select: { scope: true, projectId: true, status: true } },
+        },
+      });
+      if (!v || v.ruleSet.status !== "ACTIVE") {
+        throw { status: 400, message: "规则版本不存在或未启用" };
+      }
+      const rs = v.ruleSet;
+      const ok =
+        rs.scope === "GLOBAL" || (rs.scope === "PROJECT" && rs.projectId === projectId);
+      if (!ok) {
+        throw { status: 400, message: "该规则版本不属于当前项目可用的规则集" };
+      }
+    }
+
+    return prisma.project.update({
+      where: { id: projectId },
+      data: { activeRuleSetVersionId },
+      select: {
+        id: true,
+        activeRuleSetVersionId: true,
+      },
+    });
+  }
 }
 
 export const projectService = new ProjectService();
@@ -723,6 +810,11 @@ class TaskService {
       if (taskData.priority !== undefined) createData.priority = taskData.priority;
       if (taskData.dueDate != null) createData.dueDate = new Date(taskData.dueDate);
       if (taskData.description !== undefined) createData.description = taskData.description;
+      {
+        const tier = (taskData.complexityTier ?? "STANDARD") as TaskComplexityTierValue;
+        createData.complexityTier = tier;
+        createData.complexity = COEFFICIENT_BY_TASK_COMPLEXITY_TIER[tier];
+      }
 
       const task = await tx.task.create({ data: createData });
 
@@ -943,6 +1035,11 @@ class TaskService {
         }),
         ...(taskData.estimatedHours !== undefined && {
           estimatedHours: taskData.estimatedHours,
+        }),
+        ...(taskData.complexityTier !== undefined && {
+          complexityTier: taskData.complexityTier,
+          complexity:
+            COEFFICIENT_BY_TASK_COMPLEXITY_TIER[taskData.complexityTier as TaskComplexityTierValue],
         }),
         suggestedBaseScore: nextSuggestedBaseScore,
         baseScore: nextBaseScore,
@@ -2007,11 +2104,13 @@ const TASK_FACT_FIELD_LABEL_ZH: Record<string, string> = {
   mainAssigneeId: "主负责人",
   testerId: "验收人",
   coAssigneeIds: "协助人",
+  rejectCount: "验收打回次数",
   testCaseBugCount: "用例缺陷数",
   delayHours: "延期小时数",
   aheadDays: "提前完成天数",
   baseScore: "基础积分",
-  complexity: "难度系数",
+  complexityTier: "难度档位",
+  complexity: "难度系数（档位映射值）",
 };
 
 const TASK_WORK_DOMAIN_ZH: Record<string, string> = {
@@ -2096,6 +2195,13 @@ async function buildTaskFactRowsForLedger(taskFact: Record<string, unknown>): Pr
         .filter(Boolean)
         .join("、");
     }
+    if (field === "complexityTier") {
+      const code = String(val);
+      const zh = LABEL_ZH_BY_TASK_COMPLEXITY_TIER[code as TaskComplexityTierValue];
+      const coef = COEFFICIENT_BY_TASK_COMPLEXITY_TIER[code as TaskComplexityTierValue];
+      if (zh && coef != null) return `${zh}（系数 ${coef}）`;
+      return code;
+    }
     if (field === "workDomain") {
       const code = String(val);
       const zh = TASK_WORK_DOMAIN_ZH[code];
@@ -2141,10 +2247,12 @@ async function buildTaskFactRowsForLedger(taskFact: Record<string, unknown>): Pr
     "mainAssigneeId",
     "testerId",
     "coAssigneeIds",
+    "rejectCount",
     "testCaseBugCount",
     "delayHours",
     "aheadDays",
     "baseScore",
+    "complexityTier",
     "complexity",
   ];
   const keys = [

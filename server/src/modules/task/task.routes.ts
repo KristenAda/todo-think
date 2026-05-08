@@ -23,6 +23,14 @@ router.put(
   "/projects/:id/task-rules",
   projectController.taskRulesUpdate.bind(projectController)
 );
+router.get(
+  "/projects/:id/scoring-rule-versions",
+  projectController.scoringRuleVersions.bind(projectController),
+);
+router.put(
+  "/projects/:id/active-scoring-rule-version",
+  projectController.setActiveScoringRuleVersion.bind(projectController),
+);
 router.post("/projects", projectController.create.bind(projectController));
 router.put("/projects/:id", projectController.update.bind(projectController));
 router.delete(

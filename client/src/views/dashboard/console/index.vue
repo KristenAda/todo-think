@@ -3,9 +3,13 @@
     <div class="workbench__welcome">
       <div class="welcome-left">
         <div class="welcome-avatar-wrap">
-          <el-avatar :size="48" :src="userStore.info?.avatar || ''" class="welcome-avatar">
-            <art-svg-icon icon="mdi:account" style="font-size: 24px" />
-          </el-avatar>
+          <UserAvatar
+            :size="48"
+            :src="userStore.info?.avatar"
+            :name="welcomeAvatarName"
+            :gender="userStore.info?.userGender ?? ''"
+            avatar-class="welcome-avatar"
+          />
           <div class="weather-badge">
             <art-svg-icon :icon="greetingIcon" />
           </div>
@@ -26,6 +30,17 @@
       </div>
 
       <div class="welcome-right">
+        <el-button
+          v-if="isDevParticleTestEnabled"
+          class="dev-particle-test-btn"
+          type="primary"
+          size="small"
+          plain
+          :loading="particleTestLoading"
+          @click="triggerDevParticleSettlement"
+        >
+          测试粒子结算
+        </el-button>
         <div class="welcome-date-widget">
           <div class="date-label"> <art-svg-icon icon="mdi:calendar-month-outline" /> 今天是 </div>
           <div class="date-value">{{ todayStr }}</div>
@@ -219,6 +234,7 @@
   import { ref, computed, onMounted, onBeforeUnmount, watch } from 'vue';
   import { useRoute, useRouter } from 'vue-router';
   import { fetchWorkbench, type WorkbenchStats, type WorkbenchTask } from '@/api/dashboard';
+  import { fetchMyTotalPoints } from '@/api/task';
   import { useUserStore } from '@/store/modules/user';
   // 根据你的实际路径引入任务详情组件
   import TaskDetailDrawer from '@/views/task/detail/TaskDetailDrawer.vue';
@@ -227,9 +243,34 @@
 
   defineOptions({ name: 'Console' });
 
+  /** 开发环境：首页一键模拟 WS「积分结算」推送，便于调试粒子动效（上线前可删整块） */
+  const isDevParticleTestEnabled = import.meta.env.DEV;
+  const particleTestLoading = ref(false);
+
+  async function triggerDevParticleSettlement() {
+    particleTestLoading.value = true;
+    try {
+      const res = await fetchMyTotalPoints();
+      const cur = Number(res?.totalPoints ?? 0);
+      const earned = 30 + Math.floor(Math.random() * 71);
+      mittBus.emit('pointsSettlement', {
+        settlementId: `dev-${Date.now()}`,
+        taskId: 0,
+        taskTitle: '（本地测试）模拟验收结算',
+        earnedPoints: earned,
+        totalPoints: cur + earned
+      });
+    } finally {
+      particleTestLoading.value = false;
+    }
+  }
+
   // ===== 用户信息 =====
   const userStore = useUserStore();
   const userName = computed(() => userStore.info?.userName || '同学');
+  const welcomeAvatarName = computed(
+    () => userStore.info?.nickName || userStore.info?.userName || '同学'
+  );
 
   // ===== 动态问候语与天气图标 =====
   const greeting = computed(() => {
@@ -410,11 +451,12 @@
   $color-overdue: #f97316;
   $color-bug: #8b5cf6;
 
-  /* ★ 占满高度、阻止外层滚动 */
+  /* ★ 修改重点：确保容器在任何嵌套环境中都能撑满高度 */
   .workbench {
-    // padding: 16px;
     background: var(--art-main-bg-color);
-    height: 100%;
+    flex: 1; /* 若父级是 flex 容器，允许动态撑满 */
+    height: calc(100vh - 140px);
+    min-height: calc(100vh - 130px); /* 动态计算可视区域高度，预留出 Header 的空间 */
     box-sizing: border-box;
     display: flex;
     flex-direction: column;
@@ -463,6 +505,11 @@
         box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
         background-color: var(--el-color-primary-light-9);
         color: var(--el-color-primary);
+      }
+
+      :deep(.welcome-avatar.color-avatar) {
+        border: 2px solid var(--default-box-color);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
       }
 
       .weather-badge {
@@ -520,6 +567,14 @@
       z-index: 1;
       padding-left: 24px;
       border-left: 1px dashed var(--art-card-border);
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
+      gap: 10px;
+    }
+
+    .dev-particle-test-btn {
+      flex-shrink: 0;
     }
 
     .welcome-date-widget {
@@ -684,7 +739,7 @@
     display: grid;
     grid-template-columns: repeat(4, 1fr);
     gap: 20px;
-    align-items: start;
+    align-items: stretch;
     flex: 1;
     min-height: 0;
     @media (max-width: 1024px) {
@@ -747,17 +802,6 @@
       flex-direction: column;
       gap: 10px;
       overflow-y: auto;
-
-      &::-webkit-scrollbar {
-        width: 6px;
-      }
-      &::-webkit-scrollbar-thumb {
-        background: var(--el-border-color);
-        border-radius: 3px;
-      }
-      &::-webkit-scrollbar-track {
-        background: transparent;
-      }
     }
 
     &__empty {

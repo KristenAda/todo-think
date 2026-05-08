@@ -49,6 +49,10 @@
                 }}</span>
               </div>
               <div class="task-basic-item">
+                <span class="task-basic-item__label">难度档位</span>
+                <span class="task-basic-item__value">{{ taskDifficultyDisplay }}</span>
+              </div>
+              <div class="task-basic-item">
                 <span class="task-basic-item__label">实际工时</span>
                 <span class="task-basic-item__value">{{
                   displayActualHours != null ? displayActualHours + 'h' : '—'
@@ -65,9 +69,12 @@
                   class="task-mgr-assignee"
                   :class="member.className"
                 >
-                  <el-avatar :size="22" :src="member.user.avatar ?? undefined">{{
-                    initials(member.user)
-                  }}</el-avatar>
+                  <UserAvatar
+                    :size="22"
+                    :src="member.user.avatar ?? undefined"
+                    :name="userDisplayName(member.user)"
+                    :gender="member.user.userGender ?? ''"
+                  />
                   <span class="task-mgr-assignee__name">{{ userDisplayName(member.user) }}</span>
                 </div>
               </div>
@@ -77,9 +84,12 @@
               <div class="task-basic-members__label">验收人</div>
               <div v-if="testerTag" class="task-mgr-assignees">
                 <div class="task-mgr-assignee task-mgr-assignee--qa">
-                  <el-avatar :size="22" :src="testerTag.user.avatar ?? undefined">{{
-                    initials(testerTag.user)
-                  }}</el-avatar>
+                  <UserAvatar
+                    :size="22"
+                    :src="testerTag.user.avatar ?? undefined"
+                    :name="userDisplayName(testerTag.user)"
+                    :gender="testerTag.user.userGender ?? ''"
+                  />
                   <span class="task-mgr-assignee__name">{{ userDisplayName(testerTag.user) }}</span>
                 </div>
               </div>
@@ -257,9 +267,14 @@
               <el-empty v-if="!task.workLogs?.length" description="暂无工时记录" :image-size="50" />
               <div v-else class="worklog-list">
                 <div v-for="log in task.workLogs" :key="log.id" class="worklog-item">
-                  <el-avatar :size="28" :src="log.user.avatar ?? undefined" class="log-avatar">{{
-                    initials(log.user)
-                  }}</el-avatar>
+                  <UserAvatar
+                    class="worklog-user-avatar"
+                    :size="28"
+                    :src="log.user.avatar ?? undefined"
+                    :name="userDisplayName(log.user)"
+                    :gender="log.user.userGender ?? ''"
+                    avatar-class="log-avatar"
+                  />
                   <div class="log-content">
                     <div class="log-meta">
                       <span class="log-user">{{ log.user.nickName || log.user.userName }}</span>
@@ -356,9 +371,12 @@
               />
               <div v-else class="comment-list">
                 <div v-for="c in task.comments" :key="c.id" class="comment-item">
-                  <el-avatar :size="30" :src="c.user.avatar ?? undefined">{{
-                    initials(c.user)
-                  }}</el-avatar>
+                  <UserAvatar
+                    :size="30"
+                    :src="c.user.avatar ?? undefined"
+                    :name="userDisplayName(c.user)"
+                    :gender="c.user.userGender ?? ''"
+                  />
                   <div class="comment-item__main">
                     <div class="comment-item__meta">
                       <span class="comment-item__author">{{ userDisplayName(c.user) }}</span>
@@ -636,6 +654,12 @@
   import { useUserStore } from '@/store/modules/user';
   import TaskAttachmentField from '../components/TaskAttachmentField.vue';
   import AttachmentPreviewDialog from '../components/AttachmentPreviewDialog.vue';
+  import {
+    TaskComplexityTierEnum,
+    TASK_COMPLEXITY_COEFFICIENT,
+    complexityTierLabel,
+    inferComplexityTierFromCoefficient
+  } from '@/enums/modules/taskComplexityTierEnum';
 
   const props = defineProps<{ taskId: number }>();
   const emit = defineEmits<{ (e: 'update:modelValue', v: boolean): void; (e: 'refresh'): void }>();
@@ -652,6 +676,19 @@
 
   const task = ref<Api.Task.Task | null>(null);
   const loadingDetail = ref(false);
+
+  const taskDifficultyDisplay = computed(() => {
+    const t = task.value;
+    if (!t) return '—';
+    const tier =
+      t.complexityTier ?? inferComplexityTierFromCoefficient(t.complexity);
+    const label = complexityTierLabel(tier);
+    const coef =
+      t.complexity ??
+      TASK_COMPLEXITY_COEFFICIENT[tier as TaskComplexityTierEnum] ??
+      1;
+    return `${label}（系数 ${coef}）`;
+  });
 
   const dialogTitle = computed(() => {
     if (loadingDetail.value) return '任务详情';
@@ -1567,6 +1604,10 @@
   .worklog-item {
     display: flex;
     gap: 10px;
+    .worklog-user-avatar {
+      flex-shrink: 0;
+      margin-top: 2px;
+    }
     .log-avatar {
       flex-shrink: 0;
       margin-top: 2px;

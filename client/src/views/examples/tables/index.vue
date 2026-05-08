@@ -282,14 +282,16 @@
           <ElRate v-model="row.score" disabled size="small" />
         </template>
 
-        <!-- 操作列 -->
+        <!-- 操作列：列表页统一「纯文字 + 更多」（示例为 4 项 → 外露 2 + 折叠 2） -->
         <template #operation="{ row }">
-          <div class="flex">
-            <ArtButtonTable type="view" :row="row" @click="handleView(row)" />
-            <ArtButtonTable type="add" :row="row" @click="handleAdd()" />
-            <ArtButtonTable type="edit" :row="row" @click="handleEdit(row)" />
-            <ArtButtonTable type="delete" :row="row" @click="handleDelete(row)" />
-          </div>
+          <ArtTableRowActions
+            :items="[
+              { key: 'view', label: '查看', onClick: () => handleView(row) },
+              { key: 'add', label: '新增', onClick: () => handleAdd() },
+              { key: 'edit', label: '编辑', onClick: () => handleEdit(row) },
+              { key: 'delete', label: '删除', danger: true, onClick: () => handleDelete(row) }
+            ]"
+          />
         </template>
 
         <!-- 自定义手机号表头 -->
@@ -440,6 +442,7 @@
   import { fetchGetUserList } from '@/api/system-manage';
   import { ACCOUNT_TABLE_DATA } from '@/mock/temp/formData';
   import { getColumnKey } from '@/hooks/core/useTableColumns';
+  import ArtTableRowActions from '@/components/core/forms/art-table-row-actions/index.vue';
 
   defineOptions({ name: 'AdvancedTableDemo' });
 
@@ -765,7 +768,7 @@
         {
           prop: 'operation',
           label: '操作',
-          width: 190,
+          width: 176,
           useSlot: true,
           fixed: 'right'
         }

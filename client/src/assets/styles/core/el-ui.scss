@@ -427,8 +427,8 @@ html.dark .el-card {
     padding: 5px !important;
 
     .el-select-dropdown__item {
-      height: 34px !important;
-      line-height: 34px !important;
+      height: 34px;
+      line-height: 34px ;
       border-radius: 6px !important;
 
       &.is-selected {

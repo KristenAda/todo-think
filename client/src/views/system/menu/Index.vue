@@ -51,15 +51,10 @@
 </template>
 
 <script setup lang="ts">
-  import ArtButtonTable from '@/components/core/forms/art-button-table/index.vue';
+  import ArtTableRowActions from '@/components/core/forms/art-table-row-actions/index.vue';
   import { useTableColumns } from '@/hooks/core/useTableColumns';
   import MenuDialog from './modules/menu-dialog.vue';
-  import {
-    fetchGetMenuList,
-    fetchDeleteMenu,
-    fetchAddMenu,
-    fetchUpdateMenu
-  } from '@/api/system-manage';
+  import { fetchGetMenuList, fetchDeleteMenu } from '@/api/system-manage';
   import { ElTag, ElMessageBox } from 'element-plus';
   import { formatDateTime } from '@/utils/date';
 
@@ -203,22 +198,16 @@
     {
       prop: 'operation',
       label: '操作',
-      width: 180,
-      align: 'right',
-      formatter: (row: Api.SystemManage.MenuItem) => {
-        const buttonStyle = { style: 'text-align: right' };
-
-        return h('div', buttonStyle, [
-          h(ArtButtonTable, {
-            type: 'edit',
-            onClick: () => handleEditMenu(row)
-          }),
-          h(ArtButtonTable, {
-            type: 'delete',
-            onClick: () => handleDeleteMenu(row)
-          })
-        ]);
-      }
+      width: 132,
+      align: 'center',
+      fixed: 'right',
+      formatter: (row: Api.SystemManage.MenuItem) =>
+        h(ArtTableRowActions, {
+          items: [
+            { key: 'edit', label: '编辑', onClick: () => handleEditMenu(row) },
+            { key: 'delete', label: '删除', danger: true, onClick: () => handleDeleteMenu(row) }
+          ]
+        })
     }
   ]);
 
@@ -350,7 +339,7 @@
   /**
    * 提交表单数据
    */
-  const handleSubmit = (_formData: any): void => {
+  const handleSubmit = (): void => {
     // 菜单对话框内部已调用 API，这里只需刷新列表
     getMenuList();
   };

@@ -216,6 +216,32 @@ export function fetchPublishRuleSetVersion(ruleSetId: number, data: Api.Task.Pub
   });
 }
 
+export function fetchSaveRuleSetDraft(
+  ruleSetId: number,
+  data: { definition?: Record<string, unknown>; variables?: unknown[] }
+) {
+  return request.put<Api.Task.RuleSet>({
+    url: `/rule-sets/${ruleSetId}/draft`,
+    data
+  });
+}
+
+export function fetchScoringRuleVersions(projectId: number) {
+  return request.get<Api.Task.ScoringRuleVersionOption[]>({
+    url: `${BASE.project}/${projectId}/scoring-rule-versions`
+  });
+}
+
+export function fetchSetActiveScoringRuleVersion(
+  projectId: number,
+  data: { activeRuleSetVersionId: number | null }
+) {
+  return request.put<{ id: number; activeRuleSetVersionId: number | null }>({
+    url: `${BASE.project}/${projectId}/active-scoring-rule-version`,
+    data
+  });
+}
+
 export function fetchSimulateRuleSet(data: Api.Task.SimulateRuleSetParams) {
   return request.post<Api.Task.RuleSimulationResult>({
     url: '/rule-sets/simulate',

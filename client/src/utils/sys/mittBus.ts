@@ -58,6 +58,14 @@ type Events = {
 
   // 打开任务详情抽屉 - 传入任务 id
   openTaskDetail: number;
+  /** 任务积分结算完成（WS 驱动顶栏数字 + 全屏粒子动效） */
+  pointsSettlement: {
+    settlementId: string;
+    taskId: number;
+    taskTitle: string | null;
+    earnedPoints: number;
+    totalPoints: number;
+  };
 };
 
 // 创建类型安全的事件总线实例

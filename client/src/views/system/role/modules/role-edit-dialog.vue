@@ -23,6 +23,14 @@
       <ElFormItem label="启用">
         <ElSwitch v-model="form.enabled" />
       </ElFormItem>
+      <ElFormItem label="是否默认角色">
+        <div>
+          <ElSwitch v-model="form.isDefaultRole" />
+          <div class="role-default-hint">
+            开启后所有登录用户自动拥有该角色配置的菜单（无需把用户绑定到此角色）；同时仅能有一个角色开启此项。
+          </div>
+        </div>
+      </ElFormItem>
     </ElForm>
     <template #footer>
       <ElButton @click="handleClose">取消</ElButton>
@@ -82,7 +90,8 @@
     roleCode: '',
     description: '',
     createTime: '',
-    enabled: true
+    enabled: true,
+    isDefaultRole: false
   });
 
   watch(
@@ -110,7 +119,8 @@
         roleCode: '',
         description: '',
         createTime: '',
-        enabled: true
+        enabled: true,
+        isDefaultRole: false
       });
     }
   };
@@ -132,11 +142,13 @@
         roleName: form.roleName,
         roleCode: form.roleCode,
         description: form.description,
-        enabled: form.enabled
+        enabled: form.enabled,
+        isDefaultRole: form.isDefaultRole
       };
 
       if (props.dialogType === 'add') {
-        await fetchAddRole(submitData);
+        const { id: _id, ...createPayload } = submitData;
+        await fetchAddRole(createPayload);
         ElMessage.success('新增成功');
       } else {
         await fetchUpdateRole(submitData);
@@ -153,3 +165,12 @@
     }
   };
 </script>
+
+<style scoped lang="scss">
+  .role-default-hint {
+    margin-top: 6px;
+    font-size: 12px;
+    line-height: 1.45;
+    color: var(--el-text-color-secondary);
+  }
+</style>

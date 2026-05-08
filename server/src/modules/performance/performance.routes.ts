@@ -7,6 +7,7 @@ const router = new Router();
 router.get("/rule-sets", performanceRuleController.ruleSetList.bind(performanceRuleController));
 router.post("/rule-sets", performanceRuleController.ruleSetCreate.bind(performanceRuleController));
 router.put("/rule-sets/:id", performanceRuleController.ruleSetUpdate.bind(performanceRuleController));
+router.put("/rule-sets/:id/draft", performanceRuleController.ruleSetDraftSave.bind(performanceRuleController));
 router.delete("/rule-sets/:id", performanceRuleController.ruleSetDelete.bind(performanceRuleController));
 router.get(
   "/rule-sets/:id/versions",

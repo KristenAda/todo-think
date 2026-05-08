@@ -9,13 +9,14 @@
   >
     <div v-if="user" class="profile-card">
       <div class="profile-header">
-        <el-avatar :size="72" :src="user.avatar || ''" class="profile-avatar" fit="cover">
-          <ColorAvatar
-            :name="user.nickName || user.userName || '?'"
-            :gender="user.userGender || ''"
-            :size="72"
-          />
-        </el-avatar>
+        <UserAvatar
+          :size="72"
+          :src="user.avatar"
+          :name="user.nickName || user.userName || '?'"
+          :gender="user.userGender || ''"
+          fit="cover"
+          avatar-class="profile-avatar"
+        />
         <div class="profile-name">{{ user.nickName || user.userName }}</div>
         <div class="profile-role">@{{ user.userName }}</div>
       </div>
@@ -77,6 +78,12 @@
         display: inline-flex;
         align-items: center;
         justify-content: center;
+        background: var(--el-fill-color-light);
+      }
+
+      :deep(.profile-avatar.color-avatar) {
+        border: 2px solid var(--art-card-border);
+        margin-bottom: 12px;
         background: var(--el-fill-color-light);
       }
       .profile-name {

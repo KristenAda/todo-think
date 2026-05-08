@@ -22,13 +22,14 @@
               :model-value="selectedIds.includes(user.id)"
               @click.stop="toggleUser(user.id)"
             />
-            <el-avatar :size="36" :src="user.avatar || ''" class="item-avatar" fit="cover">
-              <ColorAvatar
-                :name="user.nickName || user.userName || '?'"
-                :gender="user.userGender || ''"
-                :size="36"
-              />
-            </el-avatar>
+            <UserAvatar
+              :size="36"
+              :src="user.avatar"
+              :name="user.nickName || user.userName || '?'"
+              :gender="user.userGender || ''"
+              fit="cover"
+              avatar-class="item-avatar"
+            />
             <div class="item-info">
               <div class="item-name">{{ user.nickName || user.userName }}</div>
               <div class="item-sub">账号: {{ user.userName }}</div>

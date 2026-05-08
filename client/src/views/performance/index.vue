@@ -86,7 +86,7 @@
 
 <script setup lang="ts">
   import { ref, computed, onMounted, h, resolveComponent } from 'vue';
-  import { ElProgress, ElImage, ElButton } from 'element-plus';
+  import { ElProgress, ElImage } from 'element-plus';
   import { fetchPerformanceStats, fetchProjectList } from '@/api/task';
   import { useTable } from '@/hooks/core/useTable';
   import { defaultResponseAdapter } from '@/utils/table/tableUtils';
@@ -94,6 +94,7 @@
   import PerformanceDashboardCharts from './components/PerformanceDashboardCharts.vue';
   import EmployeeStatsDetailDialog from './components/EmployeeStatsDetailDialog.vue';
   import RankIcon from '@/components/core/base/rank-icon/index.vue';
+  import ArtTableRowActions from '@/components/core/forms/art-table-row-actions/index.vue';
   import type { RankIconTier } from '@/components/core/base/rank-icon/types';
 
   defineOptions({ name: 'Performance' });
@@ -236,7 +237,11 @@
                 fit: 'cover'
               })
             : h('div', { class: 'size-9 rounded-full overflow-hidden flex-shrink-0' }, [
-                h(ColorAvatar, { name: displayName || '?', gender: '', size: 36 })
+                h(ColorAvatar, {
+                  name: displayName || '?',
+                  gender: row.user.userGender ?? '',
+                  size: 36
+                })
               ]);
           return h('div', { class: 'perf-member-cell' }, [
             h('div', { class: 'perf-member-cell__avatar' }, [avatarNode]),
@@ -394,15 +399,9 @@
         align: 'center',
         fixed: 'right',
         formatter: (row: PerformanceStat) =>
-          h(
-            ElButton,
-            {
-              type: 'primary',
-              link: true,
-              onClick: () => openDetail(row)
-            },
-            () => '详情'
-          )
+          h(ArtTableRowActions, {
+            items: [{ key: 'detail', label: '详情', onClick: () => openDetail(row) }]
+          })
       }
     ];
 

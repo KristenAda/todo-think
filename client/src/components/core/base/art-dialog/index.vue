@@ -415,17 +415,6 @@
     padding: 24px;
     overflow-y: auto;
     color: var(--el-text-color-regular);
-
-    &::-webkit-scrollbar {
-      width: 5px;
-    }
-    &::-webkit-scrollbar-thumb {
-      background: color-mix(in srgb, var(--main-color, #4080ff) 28%, transparent);
-      border-radius: 4px;
-    }
-    &::-webkit-scrollbar-track {
-      background: transparent;
-    }
   }
 
   /* ====== 底部 ====== */

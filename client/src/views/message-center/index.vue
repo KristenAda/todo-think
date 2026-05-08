@@ -35,6 +35,7 @@
   import { storeToRefs } from 'pinia';
   import { pushWorkbenchOpenTask } from '@/utils/navigation';
   import { formatDateTime } from '@/utils/date';
+  import ArtTableRowActions from '@/components/core/forms/art-table-row-actions/index.vue';
 
   defineOptions({ name: 'MessageCenter' });
 
@@ -114,15 +115,15 @@
           {
             prop: '__actions__',
             label: '操作',
-            width: 180,
+            width: 188,
+            align: 'center',
             render: ({ row }: any) => {
               const taskId = Number(row?.extra?.taskId);
 
-              const markReadBtn = h(
-                ElButton,
+              const items = [
                 {
-                  type: 'primary',
-                  link: true,
+                  key: 'markRead',
+                  label: '标记已读',
                   disabled: Boolean(row?.isRead),
                   onClick: async () => {
                     if (!row?.id) return;
@@ -133,40 +134,28 @@
                       // 失败提示由 request 统一处理，这里避免重复弹窗
                     }
                   }
-                },
-                () => '标记已读'
-              );
+                }
+              ];
 
-              const viewTaskBtn =
-                taskId && !Number.isNaN(taskId)
-                  ? h(
-                      ElButton,
-                      {
-                        type: 'primary',
-                        link: true,
-                        onClick: async () => {
-                          // 若未读则先标记已读
-                          if (!row?.isRead && row?.id) {
-                            try {
-                              await messageStore.markRead(row.id);
-                              row.isRead = true;
-                            } catch {
-                              // 忽略
-                            }
-                          }
+              if (taskId && !Number.isNaN(taskId)) {
+                items.push({
+                  key: 'viewTask',
+                  label: '查看任务',
+                  onClick: async () => {
+                    if (!row?.isRead && row?.id) {
+                      try {
+                        await messageStore.markRead(row.id);
+                        row.isRead = true;
+                      } catch {
+                        // 忽略
+                      }
+                    }
+                    await pushWorkbenchOpenTask(taskId);
+                  }
+                });
+              }
 
-                          await pushWorkbenchOpenTask(taskId);
-                        }
-                      },
-                      () => '查看任务'
-                    )
-                  : null;
-
-              return h(
-                'div',
-                { style: { display: 'flex', gap: '8px' } },
-                viewTaskBtn ? [markReadBtn, viewTaskBtn] : [markReadBtn]
-              );
+              return h(ArtTableRowActions, { items });
             }
           }
         ]

@@ -24,6 +24,17 @@ export const RuleSetPublishDto = z.object({
 });
 export type RuleSetPublishDtoType = z.infer<typeof RuleSetPublishDto>;
 
+/** 规则集草稿：至少保存公式定义或变量其一 */
+export const RuleSetDraftDto = z
+  .object({
+    definition: z.any().optional(),
+    variables: z.array(z.any()).optional(),
+  })
+  .refine((d) => d.definition !== undefined || d.variables !== undefined, {
+    message: "definition 与 variables 至少提供其一",
+  });
+export type RuleSetDraftDtoType = z.infer<typeof RuleSetDraftDto>;
+
 export const RuleSetSimulateDto = z.object({
   ruleSetVersionId: z.number().int().positive().optional(),
   definition: z.any().optional(),

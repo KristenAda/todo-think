@@ -6,6 +6,12 @@ model RuleSet {
   projectId Int? // scope=PROJECT 时使用
   status    String   @default("ACTIVE") @db.VarChar(20)
 
+  /// 未发布的公式草稿（JSON DSL，与 RuleSetVersion.definition 同形）
+  draftDefinition Json?
+  /// 未发布的变量草稿（与 RuleVariable 结构一致的 JSON 数组）
+  draftVariables  Json?
+  draftUpdatedAt  DateTime?
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -31,6 +37,7 @@ model RuleSetVersion {
   executions RuleExecution[]
   ledgerEntries PointsLedgerEntry[]
   perfSettlements PerfSettlement[]
+  projectsUsingAsActiveScoringRule Project[] @relation("ProjectActiveScoringRule")
 
   @@unique([ruleSetId, version])
   @@index([ruleSetId, publishedAt])

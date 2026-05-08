@@ -10,6 +10,8 @@ export const CreateRoleDto = z.object({
   enabled: z.boolean().default(true),
   sort: z.number().default(0),
   dataScope: z.number().default(1),
+  /** 全员自动叠加该角色菜单；全局仅允许一个为 true */
+  isDefaultRole: z.boolean().optional(),
   remark: z.string().optional()
 })
 
@@ -26,6 +28,7 @@ export const UpdateRoleDto = z.object({
   enabled: z.boolean().optional(),
   sort: z.number().optional(),
   dataScope: z.number().optional(),
+  isDefaultRole: z.boolean().optional(),
   remark: z.string().optional()
 })
 

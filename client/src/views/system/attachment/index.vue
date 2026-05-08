@@ -48,8 +48,7 @@
 </template>
 
 <script setup lang="ts">
-  import { ButtonMoreItem } from '@/components/core/forms/art-button-more/index.vue';
-  import ArtButtonMore from '@/components/core/forms/art-button-more/index.vue';
+  import ArtTableRowActions from '@/components/core/forms/art-table-row-actions/index.vue';
   import { useTable } from '@/hooks/core/useTable';
   import {
     fetchAttachmentPage,
@@ -120,33 +119,21 @@
           label: '上传时间',
           width: 185,
           sortable: true,
-          formatter: (row: AttachmentItem) =>
-            row.createTime ? formatDateTime(row.createTime) : ''
+          formatter: (row: AttachmentItem) => (row.createTime ? formatDateTime(row.createTime) : '')
         },
         {
           prop: 'operation',
           label: '操作',
-          width: 90,
+          width: 132,
+          align: 'center',
           fixed: 'right',
           formatter: (row: AttachmentItem) =>
-            h('div', [
-              h(ArtButtonMore, {
-                list: [
-                  {
-                    key: 'download',
-                    label: '下载',
-                    icon: 'ri:download-line'
-                  },
-                  {
-                    key: 'delete',
-                    label: '删除',
-                    icon: 'ri:delete-bin-4-line',
-                    color: '#f56c6c'
-                  }
-                ],
-                onClick: (item: ButtonMoreItem) => buttonMoreClick(item, row)
-              })
-            ])
+            h(ArtTableRowActions, {
+              items: [
+                { key: 'download', label: '下载', onClick: () => handleDownload(row) },
+                { key: 'delete', label: '删除', danger: true, onClick: () => deleteAttachment(row) }
+              ]
+            })
         }
       ]
     }
@@ -172,17 +159,6 @@
       if (errorMessage.value) ElMessage.error(errorMessage.value);
     }
   }
-
-  const buttonMoreClick = (item: ButtonMoreItem, row: AttachmentItem) => {
-    switch (item.key) {
-      case 'download':
-        handleDownload(row);
-        break;
-      case 'delete':
-        deleteAttachment(row);
-        break;
-    }
-  };
 
   async function handleDownload(row: AttachmentItem) {
     try {

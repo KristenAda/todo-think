@@ -28,9 +28,12 @@
           <div class="proj-member-tags">
             <el-tag v-if="projectManagerUser" type="primary" class="proj-user-tag">
               <span class="proj-user-tag__inner">
-                <el-avatar :size="20" :src="projectManagerUser.avatar ?? undefined">{{
-                  initials(projectManagerUser)
-                }}</el-avatar>
+                <UserAvatar
+                  :size="20"
+                  :src="projectManagerUser.avatar ?? undefined"
+                  :name="userDisplayName(projectManagerUser)"
+                  :gender="projectManagerUser.userGender ?? ''"
+                />
                 <span>{{ userDisplayName(projectManagerUser) }}</span>
               </span>
             </el-tag>
@@ -108,9 +111,13 @@
             :class="{ 'member-pick-card--active': managerPickerTempId === u.id }"
           >
             <el-radio class="member-pick-card__radio" :label="u.id" @click.stop />
-            <el-avatar :size="48" :src="u.avatar ?? undefined" class="member-pick-card__avatar">
-              {{ initials(u) }}
-            </el-avatar>
+            <UserAvatar
+              :size="48"
+              :src="u.avatar ?? undefined"
+              :name="userDisplayName(u)"
+              :gender="u.userGender ?? ''"
+              avatar-class="member-pick-card__avatar"
+            />
             <div class="member-pick-card__body">
               <div class="member-pick-card__name">{{ userDisplayName(u) }}</div>
               <div class="member-pick-card__email">{{ displayEmail(u.userEmail) }}</div>
@@ -457,6 +464,12 @@
   }
 
   .member-pick-card__avatar {
+    flex-shrink: 0;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+    border: 2px solid var(--el-border-color-extra-light);
+  }
+
+  :deep(.member-pick-card__avatar.color-avatar) {
     flex-shrink: 0;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
     border: 2px solid var(--el-border-color-extra-light);

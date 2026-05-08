@@ -1,0 +1,2 @@
+-- AlterTable
+ALTER TABLE `task` ADD COLUMN `complexity` DOUBLE NOT NULL DEFAULT 1;

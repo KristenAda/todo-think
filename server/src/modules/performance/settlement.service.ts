@@ -1,7 +1,9 @@
+import { coefficientFromTaskComplexityTier } from "../task/taskComplexityTier";
 import prisma from "../../core/prisma";
 import logger from "../../core/logger";
 import { createHash } from "crypto";
 import type { Prisma } from "@prisma/client";
+import { pushJsonToUser } from "@/core/wsHub";
 
 type TaskFact = {
   task: {
@@ -16,10 +18,14 @@ type TaskFact = {
     mainAssigneeId: number | null;
     testerId: number | null;
     coAssigneeIds: number[];
+    /** 任务时间线 QA_REJECTED 次数；规则变量 rejectCount 同源 */
+    rejectCount: number;
     testCaseBugCount: number;
     delayHours: number;
     aheadDays: number;
     baseScore: number;
+    /** 与 Prisma TaskComplexityTier 一致 */
+    complexityTier: string;
     complexity: number;
   };
 };
@@ -40,7 +46,8 @@ type Condition =
 type RuleAction =
   | {
       type: "emitPosting";
-      subject: { ref: string }; // e.g. task.mainAssigneeId
+      /** 单人入账（主责任人等） */
+      subject?: { ref?: string; refMany?: string };
       pointsType: string;
       amount: Expr;
       reasonCode?: string;
@@ -163,10 +170,29 @@ export function simulateRuleSetDefinition(def: RuleSetDefinition, inputSnapshot:
     for (const act of normalizeThenList(r)) {
       const a = act as any;
       if (isEmitPostingAction(act)) {
-        const subjectId = Number(getPath(ctx, a.subject.ref) ?? 0);
-        if (!subjectId) continue;
         const amount = Math.round(evalExpr(a.amount, ctx));
         if (!amount) continue;
+
+        const refMany = a.subject?.refMany ? String(a.subject.refMany).trim() : "";
+        if (refMany) {
+          const rawIds = getPath(ctx, refMany);
+          const subjectIds = normalizePostingSubjectIds(rawIds);
+          for (const subjectId of subjectIds) {
+            postings.push({
+              subjectType: "USER",
+              subjectId,
+              pointsType: a.pointsType,
+              amount,
+              reasonCode: a.reasonCode ?? r.id,
+              ruleId: r.id,
+            });
+          }
+          continue;
+        }
+
+        const refOne = a.subject?.ref ? String(a.subject.ref).trim() : "";
+        const subjectId = refOne ? Number(getPath(ctx, refOne) ?? 0) : 0;
+        if (!subjectId) continue;
         postings.push({
           subjectType: "USER",
           subjectId,
@@ -414,6 +440,17 @@ function getPath(obj: any, path: string) {
   return cur ?? null;
 }
 
+/** refMany：coAssigneeIds 等路径解析为去重后的正整数用户 ID */
+function normalizePostingSubjectIds(raw: unknown): number[] {
+  if (!Array.isArray(raw)) return [];
+  const ids = new Set<number>();
+  for (const x of raw) {
+    const n = Number(x);
+    if (Number.isFinite(n) && n > 0) ids.add(Math.trunc(n));
+  }
+  return [...ids];
+}
+
 function evalExpr(expr: Expr, ctx: any): number {
   if (typeof expr === "number") return expr;
   if ("path" in expr) return Number(getPath(ctx, expr.path) ?? 0);
@@ -574,6 +611,30 @@ async function getEffectiveRuleSetVersionId(projectId: number, occurredAt: Date)
     ],
   };
 
+  const projectRow = await prisma.project.findUnique({
+    where: { id: projectId },
+    select: { activeRuleSetVersionId: true },
+  });
+
+  if (projectRow?.activeRuleSetVersionId) {
+    const pinned = await prisma.ruleSetVersion.findFirst({
+      where: {
+        id: projectRow.activeRuleSetVersionId,
+        ...effectiveWindow,
+      },
+      include: {
+        ruleSet: { select: { status: true, scope: true, projectId: true } },
+      },
+    });
+    if (pinned && pinned.ruleSet.status === "ACTIVE") {
+      const rs = pinned.ruleSet;
+      const applies =
+        rs.scope === "GLOBAL" ||
+        (rs.scope === "PROJECT" && rs.projectId === projectId);
+      if (applies) return pinned.id;
+    }
+  }
+
   // 1) 先取项目规则（同项目下如有多个规则集，取最新版本）
   const projectRuleSets = await prisma.ruleSet.findMany({
     where: { scope: "PROJECT", projectId, status: "ACTIVE" },
@@ -612,7 +673,7 @@ async function getEffectiveRuleSetVersionId(projectId: number, occurredAt: Date)
   return builtinGlobalVersion.id;
 }
 
-function buildTaskFact(task: any): TaskFact {
+async function buildTaskFact(task: any): Promise<TaskFact> {
   const dueDate = task.dueDate ? new Date(task.dueDate) : null;
   const acceptedAt = task.acceptedAt ? new Date(task.acceptedAt) : new Date(task.updatedAt);
   const delayHours =
@@ -622,6 +683,10 @@ function buildTaskFact(task: any): TaskFact {
 
   const bugCount = (task.testCases ?? []).reduce((sum: number, tc: any) => sum + (tc.bugCount ?? 0), 0);
   const coAssigneeIds = (task.coAssignees ?? []).map((r: any) => r.userId);
+
+  const rejectCount = await prisma.taskTimeline.count({
+    where: { taskId: task.id, eventType: "QA_REJECTED" },
+  });
 
   return {
     task: {
@@ -636,6 +701,7 @@ function buildTaskFact(task: any): TaskFact {
       mainAssigneeId: task.mainAssigneeId ?? null,
       testerId: task.testerId ?? null,
       coAssigneeIds,
+      rejectCount,
       testCaseBugCount: bugCount,
       delayHours,
       aheadDays,
@@ -644,7 +710,11 @@ function buildTaskFact(task: any): TaskFact {
         (task as any).suggestedBaseScore ??
         task.estimatedHours ??
         0,
-      complexity: 1,
+      complexityTier: String((task as any).complexityTier ?? "STANDARD"),
+      complexity: coefficientFromTaskComplexityTier(
+        (task as any).complexityTier as string | undefined,
+        (task as any).complexity,
+      ),
     },
   } as any;
 }
@@ -668,7 +738,7 @@ export async function createFirstSettlementForAcceptedTask(taskId: number) {
   const occurredAt = new Date(task.acceptedAt);
   const ruleSetVersionId = await getEffectiveRuleSetVersionId(task.projectId, occurredAt);
 
-  const inputSnapshot = buildTaskFact(task);
+  const inputSnapshot = await buildTaskFact(task);
   const settlementKey = `task:${taskId}:first:${occurredAt.toISOString()}`;
 
   await prisma.perfSettlement.create({
@@ -745,6 +815,60 @@ export async function createAdjustmentSettlementForTask(
   });
 }
 
+async function getUserTotalPointsSnapshot(userId: number): Promise<number> {
+  const account = await prisma.pointsAccount.findUnique({
+    where: { ownerType_ownerId: { ownerType: "USER", ownerId: userId } },
+    select: { id: true },
+  });
+  if (!account) return 0;
+  const agg = await prisma.pointsLedgerEntry.aggregate({
+    where: { accountId: account.id },
+    _sum: { amount: true },
+  });
+  return Number(agg._sum.amount ?? 0);
+}
+
+/** 结算入账完成后，向受影响用户推送 WS（驱动前端粒子结算动效 + 顶栏积分刷新） */
+async function notifyPointsSettlementWebSocket(settlementId: bigint, taskId: number) {
+  try {
+    const entries = await prisma.pointsLedgerEntry.findMany({
+      where: { bizId: settlementId.toString() },
+      include: { account: { select: { ownerType: true, ownerId: true } } },
+    });
+
+    const deltaByUser = new Map<number, number>();
+    for (const e of entries) {
+      if (e.account.ownerType !== "USER") continue;
+      const uid = e.account.ownerId;
+      deltaByUser.set(uid, (deltaByUser.get(uid) ?? 0) + e.amount);
+    }
+
+    if (deltaByUser.size === 0) return;
+
+    const task = await prisma.task.findUnique({
+      where: { id: taskId },
+      select: { id: true, title: true },
+    });
+
+    for (const [userId, earnedPoints] of deltaByUser) {
+      if (!earnedPoints) continue;
+      const totalPoints = await getUserTotalPointsSnapshot(userId);
+      pushJsonToUser(userId, {
+        event: "points_settlement",
+        data: {
+          settlementId: settlementId.toString(),
+          taskId,
+          taskTitle: task?.title ?? null,
+          earnedPoints,
+          totalPoints,
+        },
+      });
+    }
+  } catch (e: any) {
+    logger.error(`[perf] notifyPointsSettlementWebSocket failed: ${e?.message ?? e}`);
+  }
+}
+
 export async function settleOnePending(settlementId: bigint) {
   // 抢占：PENDING -> RUNNING
   const claimed = await prisma.perfSettlement.updateMany({
@@ -768,6 +892,7 @@ export async function settleOnePending(settlementId: bigint) {
       where: { id: settlementId },
       data: { status: "SUCCEEDED", settledAt: new Date() },
     });
+    await notifyPointsSettlementWebSocket(settlementId, s.taskId);
   } catch (e: any) {
     logger.error(`[perf] settle failed id=${settlementId.toString()}: ${e?.message ?? e}`);
     await prisma.perfSettlement.update({

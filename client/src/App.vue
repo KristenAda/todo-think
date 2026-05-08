@@ -2,6 +2,7 @@
   <ElConfigProvider size="default" :locale="locales[language]" :z-index="10000">
     <RouterView></RouterView>
     <ArtDialogTrayContainer />
+    <PointsSettlementParticleOverlay />
   </ElConfigProvider>
 </template>
 
@@ -17,6 +18,7 @@
   import { toggleTransition } from './utils/ui/animation';
   import { checkStorageCompatibility } from './utils/storage';
   import { initializeTheme } from './hooks/core/useTheme';
+  import PointsSettlementParticleOverlay from '@/components/core/effects/PointsSettlementParticleOverlay.vue';
 
   const userStore = useUserStore();
   const messageStore = useMessageStore();

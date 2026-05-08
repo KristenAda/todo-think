@@ -12,18 +12,25 @@
     popper-style="padding: 5px 16px;"
   >
     <template #reference>
-      <img
-        class="size-8.5 mr-1 c-p rounded-full max-sm:w-6.5 max-sm:h-6.5 max-sm:mr-[8px]"
-        :src="userInfo.avatar || '@imgs/user/avatar.webp'"
-        alt="avatar"
+      <UserAvatar
+        :size="34"
+        :src="userInfo.avatar"
+        :name="userInfo.nickName || userInfo.userName || '用户'"
+        :gender="userInfo.userGender ?? ''"
+        class="size-8.5 mr-1 c-p max-sm:w-6.5 max-sm:h-6.5 max-sm:mr-[8px]"
+        avatar-class="rounded-full"
       />
     </template>
     <template #default>
       <div class="pt-3">
         <div class="flex-c pb-1 px-0">
-          <img
-            class="w-10 h-10 mr-3 ml-0 overflow-hidden rounded-full float-left"
-            :src="userInfo.avatar || '@imgs/user/avatar.webp'"
+          <UserAvatar
+            class="float-left mr-3 ml-0"
+            :size="40"
+            :src="userInfo.avatar"
+            :name="userInfo.nickName || userInfo.userName || '用户'"
+            :gender="userInfo.userGender ?? ''"
+            avatar-class="overflow-hidden rounded-full"
           />
           <div class="w-[calc(100%-60px)] h-full">
             <span class="block text-sm font-medium text-g-800 truncate">{{

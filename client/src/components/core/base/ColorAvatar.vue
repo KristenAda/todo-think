@@ -21,21 +21,13 @@
     size: 32
   })
 
-  // 背景色方案，根据 name 哈希稳定选取
-  const COLORS = [
-    '#6366f1', '#ec4899', '#10b981', '#f59e0b',
-    '#ef4444', '#3b82f6', '#a855f7', '#14b8a6',
-    '#f97316', '#22c55e'
-  ]
+  /** 无照片时：男/女各固定一色，避免按姓名随机 */
+  const MALE_BG = '#3b82f6'
+  const FEMALE_BG = '#ec4899'
 
-  const bgColor = computed(() => {
-    const str = props.name || ''
-    let hash = 0
-    for (let i = 0; i < str.length; i++) {
-      hash = str.charCodeAt(i) + ((hash << 5) - hash)
-    }
-    return COLORS[Math.abs(hash) % COLORS.length]
-  })
+  const bgColor = computed(() =>
+    props.gender === '女' ? FEMALE_BG : MALE_BG
+  )
 
   const isFemale = computed(() => props.gender === '女')
   const genderIcon = computed(() => isFemale.value ? femaleIcon : maleIcon)

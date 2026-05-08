@@ -38,7 +38,7 @@
 </template>
 
 <script setup lang="ts">
-  import ArtButtonTable from '@/components/core/forms/art-button-table/index.vue';
+  import ArtTableRowActions from '@/components/core/forms/art-table-row-actions/index.vue';
   import { useTable } from '@/hooks/core/useTable';
   import { fetchGetUserList, fetchDeleteUser } from '@/api/system-manage';
   import UserSearch from './modules/user-search.vue';
@@ -110,33 +110,51 @@
         size: 20
       },
       columnsFactory: () => [
-        { type: 'selection' }, // 勾选列
-        { type: 'index', width: 60, label: '序号' }, // 序号
+        { type: 'selection', width: 48 },
+        { type: 'index', width: 60, label: '序号' },
         {
           prop: 'userInfo',
-          label: '用户名',
-          width: 280,
+          label: '用户',
+          minWidth: 200,
           formatter: (row) => {
             const ColorAvatar = resolveComponent('ColorAvatar');
-            return h('div', { class: 'user flex-c' }, [
-              row.avatar
-                ? h(ElImage, {
-                    class: 'size-9.5 rounded-full',
-                    src: row.avatar,
-                    previewSrcList: [row.avatar],
-                    previewTeleported: true,
-                    fit: 'cover'
-                  })
-                : h('div', { class: 'size-9.5 rounded-full overflow-hidden flex-shrink-0' }, [
-                    h(ColorAvatar, {
-                      name: row.nickName || row.userName || '?',
-                      gender: row.userGender || '',
-                      size: 38
+            const nick = row.nickName?.trim();
+            const displayName = nick || row.userName;
+            const showAccountTag = !!nick;
+            const email = row.userEmail?.trim();
+
+            return h('div', { class: 'user-cell' }, [
+              h(
+                'div',
+                { class: 'user-cell__avatar' },
+                row.avatar
+                  ? h(ElImage, {
+                      class: 'user-cell__avatar-img size-9.5 rounded-full',
+                      src: row.avatar,
+                      previewSrcList: [row.avatar],
+                      previewTeleported: true,
+                      fit: 'cover'
                     })
-                  ]),
-              h('div', { class: 'ml-2' }, [
-                h('p', { class: 'user-name' }, row.userName),
-                h('p', { class: 'email' }, row.userEmail)
+                  : h(
+                      'div',
+                      {
+                        class: 'user-cell__avatar-fallback size-9.5 rounded-full overflow-hidden'
+                      },
+                      [
+                        h(ColorAvatar, {
+                          name: nick || row.userName || '?',
+                          gender: row.userGender || '',
+                          size: 38
+                        })
+                      ]
+                    )
+              ),
+              h('div', { class: 'user-cell__main' }, [
+                h('div', { class: 'user-cell__title-row' }, [
+                  h('span', { class: 'user-cell__name' }, displayName),
+                  showAccountTag ? h('span', { class: 'user-cell__tag' }, row.userName) : null
+                ]),
+                ...(email ? [h('div', { class: 'user-cell__email' }, email)] : [])
               ])
             ]);
           }
@@ -144,13 +162,17 @@
         {
           prop: 'userGender',
           label: '性别',
+          width: 84,
+          align: 'center',
           sortable: true,
           formatter: (row) => row.userGender
         },
-        { prop: 'userPhone', label: '手机号' },
+        { prop: 'userPhone', label: '手机号', width: 130, showOverflowTooltip: true },
         {
           prop: 'status',
           label: '状态',
+          width: 92,
+          align: 'center',
           formatter: (row) => {
             const statusConfig = getUserStatusConfig(row.status);
             return h(ElTag, { type: statusConfig.type }, () => statusConfig.text);
@@ -159,26 +181,23 @@
         {
           prop: 'createTime',
           label: '创建日期',
-          minWidth: 175,
+          width: 172,
           sortable: true,
           formatter: (row: UserListItem) => (row.createTime ? formatDateTime(row.createTime) : '')
         },
         {
           prop: 'operation',
           label: '操作',
-          width: 120,
+          width: 132,
+          align: 'center',
           fixed: 'right',
           formatter: (row) =>
-            h('div', [
-              h(ArtButtonTable, {
-                type: 'edit',
-                onClick: () => showDialog('edit', row)
-              }),
-              h(ArtButtonTable, {
-                type: 'delete',
-                onClick: () => deleteUser(row)
-              })
-            ])
+            h(ArtTableRowActions, {
+              items: [
+                { key: 'edit', label: '编辑', onClick: () => showDialog('edit', row) },
+                { key: 'delete', label: '删除', danger: true, onClick: () => deleteUser(row) }
+              ]
+            })
         }
       ]
     }
@@ -251,3 +270,93 @@
     selectedRows.value = selection;
   };
 </script>
+
+<style lang="scss">
+  /* 用户列不用 scoped：formatter 里 h() 在表格内部渲染，样式挂在 .user-page 下 */
+  .user-page {
+    .user-cell {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      min-width: 0;
+    }
+
+    .user-cell__avatar {
+      flex-shrink: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .user-cell__avatar-img {
+      display: block;
+      flex-shrink: 0;
+    }
+
+    .user-cell__avatar-fallback {
+      display: flex;
+      flex-shrink: 0;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .user-cell__main {
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      gap: 4px;
+      min-width: 0;
+      flex: 1 1 0;
+      line-height: 1.2;
+    }
+
+    .user-cell__title-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      min-width: 0;
+      max-width: 100%;
+    }
+
+    .user-cell__name {
+      flex: 0 1 auto;
+      min-width: 0;
+      font-size: 14px;
+      font-weight: 500;
+      line-height: 1.2;
+      color: var(--el-text-color-primary);
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .user-cell__tag {
+      flex-shrink: 0;
+      box-sizing: border-box;
+      padding: 2px 8px;
+      font-family:
+        ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New',
+        monospace;
+      font-size: 12px;
+      font-weight: 400;
+      line-height: 1.2;
+      color: var(--el-text-color-regular);
+      background: var(--el-fill-color-light);
+      border-radius: 4px;
+      white-space: nowrap;
+    }
+
+    .user-cell__email {
+      margin: 0;
+      padding: 0;
+      font-size: 12px;
+      font-weight: 400;
+      line-height: 1.2;
+      color: var(--el-text-color-secondary);
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      min-width: 0;
+    }
+  }
+</style>

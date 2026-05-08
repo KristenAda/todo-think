@@ -107,13 +107,13 @@
             >
               <el-table-column label="头像" width="80" align="center">
                 <template #default="{ row }">
-                  <el-avatar :size="32" :src="row.avatar || ''" fit="cover">
-                    <ColorAvatar
-                      :name="row.nickName || row.userName || '?'"
-                      :gender="row.userGender || ''"
-                      :size="32"
-                    />
-                  </el-avatar>
+                  <UserAvatar
+                    :size="32"
+                    :src="row.avatar"
+                    :name="row.nickName || row.userName || '?'"
+                    :gender="row.userGender || ''"
+                    fit="cover"
+                  />
                 </template>
               </el-table-column>
               <el-table-column prop="userName" label="用户名" min-width="120" />
@@ -168,13 +168,13 @@
             <el-table :data="members" v-loading="membersLoading" height="100%" style="width: 100%">
               <el-table-column label="头像" width="80" align="center">
                 <template #default="{ row }">
-                  <el-avatar :size="32" :src="row.avatar || ''" fit="cover">
-                    <ColorAvatar
-                      :name="row.nickName || row.userName || '?'"
-                      :gender="row.userGender || ''"
-                      :size="32"
-                    />
-                  </el-avatar>
+                  <UserAvatar
+                    :size="32"
+                    :src="row.avatar"
+                    :name="row.nickName || row.userName || '?'"
+                    :gender="row.userGender || ''"
+                    fit="cover"
+                  />
                 </template>
               </el-table-column>
               <el-table-column prop="userName" label="用户名" min-width="120" />

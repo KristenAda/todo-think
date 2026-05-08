@@ -8,9 +8,13 @@
       </div>
       <div class="uc-profile">
         <div class="uc-avatar-wrap">
-          <el-avatar :size="80" :src="profile.avatar || ''" class="uc-avatar">
-            <art-svg-icon icon="mdi:account" style="font-size: 40px" />
-          </el-avatar>
+          <UserAvatar
+            :size="80"
+            :src="profile.avatar"
+            :name="profile.nickName || profile.userName || '用户'"
+            :gender="profile.userGender ?? ''"
+            avatar-class="uc-avatar"
+          />
           <el-upload
             class="uc-avatar-upload"
             :show-file-list="false"
@@ -472,6 +476,11 @@
     color: var(--el-color-primary);
   }
 
+  :deep(.uc-avatar.color-avatar) {
+    border: 3px solid var(--default-box-color);
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.12);
+  }
+
   .uc-avatar-upload {
     position: absolute;
     bottom: 0;
@@ -592,7 +601,7 @@
     align-items: center;
     min-height: 32px;
     padding: 6px 10px;
-    border: 1px solid var(--el-border-color);
+    // border: 1px solid var(--el-border-color);
     border-radius: var(--el-border-radius-base);
     background: var(--el-fill-color-blank);
     cursor: text;

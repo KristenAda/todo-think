@@ -15,6 +15,8 @@ import {
   fetchUnreadMessageCount
 } from '@/api/message';
 import { formatDateTime } from '@/utils/date';
+import { SocketEventEnum } from '@/enums/modules/socketEventEnum';
+import { mittBus } from '@/utils/sys';
 
 export interface RealtimeMessagePayload {
   event: string;
@@ -99,8 +101,12 @@ export const useMessageStore = defineStore('messageStore', () => {
   function handleSocketMessage(event: MessageEvent) {
     try {
       const payload = JSON.parse(event.data) as RealtimeMessagePayload;
-      if (payload?.event === 'message') {
+      if (payload?.event === SocketEventEnum.MESSAGE) {
         ingestRealtimeMessage(payload.data);
+        return;
+      }
+      if (payload?.event === SocketEventEnum.POINTS_SETTLEMENT && payload.data) {
+        mittBus.emit('pointsSettlement', payload.data);
       }
     } catch {
       // 非 JSON（例如服务端 pong）或其它消息，忽略即可

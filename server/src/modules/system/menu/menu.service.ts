@@ -42,6 +42,17 @@ class MenuService extends BaseService {
 
     const isAdmin = user.roles.some((r: any) => r.roleCode === "admin");
 
+    const defaultRoles = await prisma.role.findMany({
+      where: { isDefaultRole: true, enabled: true, deletedAt: null },
+      select: { id: true },
+    });
+    const mergedRoleIds = [
+      ...new Set<number>([
+        ...user.roles.map((r: any) => r.id as number),
+        ...defaultRoles.map((r) => r.id),
+      ]),
+    ];
+
     let list: any[];
     if (isAdmin) {
       // 超级管理员：全部导航菜单（排除按钮 type=3）
@@ -49,13 +60,12 @@ class MenuService extends BaseService {
         where: { type: { in: [1, 2] } },
         orderBy: { sort: "asc" },
       });
-    } else if (user.roles.length > 0) {
-      const roleIds = user.roles.map((r: any) => r.id);
-      // 普通用户：通过角色关联过滤
+    } else if (mergedRoleIds.length > 0) {
+      // 普通用户：已分配角色 +「默认角色」合并后的菜单
       list = await this.model.findMany({
         where: {
           type: { in: [1, 2] },
-          roleMenus: { some: { id: { in: roleIds } } },
+          roleMenus: { some: { id: { in: mergedRoleIds } } },
         },
         orderBy: { sort: "asc" },
       });

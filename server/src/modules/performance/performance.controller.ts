@@ -1,4 +1,5 @@
 import { Context } from "koa";
+import { Prisma } from "@prisma/client";
 import prisma from "@/core/prisma";
 import { Result } from "@/core/result";
 import {
@@ -7,6 +8,7 @@ import {
   RuleSetCreateDto,
   RuleSetUpdateDto,
   RuleSetPublishDto,
+  RuleSetDraftDto,
   RuleSetSimulateDto,
 } from "./performance.dto";
 import { simulateRuleSetDefinition } from "./settlement.service";
@@ -188,7 +190,36 @@ class PerformanceRuleController {
         effectiveTo: parsed.data.effectiveTo ? new Date(parsed.data.effectiveTo) : null,
       },
     });
+    await prisma.ruleSet.update({
+      where: { id: ruleSetId },
+      data: {
+        draftDefinition: Prisma.JsonNull,
+        draftVariables: Prisma.JsonNull,
+        draftUpdatedAt: null,
+      },
+    });
     ctx.body = Result.success(created, "发布成功");
+  }
+
+  async ruleSetDraftSave(ctx: Context) {
+    const ruleSetId = Number(ctx.params.id);
+    if (!ruleSetId) {
+      ctx.body = Result.error("规则集ID错误");
+      return;
+    }
+    const parsed = RuleSetDraftDto.safeParse(ctx.request.body);
+    if (!parsed.success) {
+      ctx.body = Result.error(parsed.error.issues?.[0]?.message ?? "参数错误");
+      return;
+    }
+    const data: Record<string, unknown> = { draftUpdatedAt: new Date() };
+    if (parsed.data.definition !== undefined) data.draftDefinition = parsed.data.definition;
+    if (parsed.data.variables !== undefined) data.draftVariables = parsed.data.variables;
+    const updated = await prisma.ruleSet.update({
+      where: { id: ruleSetId },
+      data: data as any,
+    });
+    ctx.body = Result.success(updated, "草稿已保存");
   }
 
   async ruleSetSimulate(ctx: Context) {
@@ -250,7 +281,7 @@ class PerformanceRuleController {
       const defaults = [
         { code: "baseScore", label: "基础积分", valueType: "Number", sourcePath: "task.baseScore", defaultValue: 20, sort: 1 },
         { code: "complexity", label: "难度系数", valueType: "Float", sourcePath: "task.complexity", defaultValue: 1, sort: 2 },
-        { code: "rejectCount", label: "验收驳回次数", valueType: "Integer", sourcePath: "task.testCaseBugCount", defaultValue: 0, sort: 3 },
+        { code: "rejectCount", label: "验收驳回次数", valueType: "Integer", sourcePath: "task.rejectCount", defaultValue: 0, sort: 3 },
         { code: "aheadDays", label: "提前完成天数", valueType: "Integer", sourcePath: "task.aheadDays", defaultValue: 0, sort: 4 },
       ] as const;
       await prisma.$transaction(

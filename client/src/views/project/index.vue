@@ -1,5 +1,5 @@
 <template>
-  <div class="project-page">
+  <div class="project-page art-full-height">
     <div class="project-page__toolbar">
       <div class="toolbar__filters">
         <el-input
@@ -260,15 +260,14 @@
   $card-shadow-hover: 0 8px 28px rgba(0, 0, 0, 0.14);
   $transition: 0.3s ease;
   /* 主容器：固定高度，flex列布局 */
+  /* 高度由全局 .art-full-height（--art-full-height）提供；勿写 height:100%，否则会覆盖 art-full-height */
   .project-page {
     padding: 20px;
-    height: 100%; /* 关键：固定满高 */
     box-sizing: border-box;
     background: var(--art-main-bg-color);
-    display: flex;
-    flex-direction: column;
     gap: 12px;
-    overflow: hidden; /* 防止页面整体滚动 */
+    overflow: hidden;
+    min-height: 0;
   }
 
   /* 顶部工具栏：禁止压缩 */
@@ -323,18 +322,6 @@
     min-height: 0; /* 兼容部分浏览器flex嵌套滚动失效的问题 */
     padding: 2px; /* 给卡片悬浮阴影留点空间，防裁剪 */
     margin: -2px; /* 抵消 padding 带来的偏差 */
-
-    /* 美化滚动条 */
-    &::-webkit-scrollbar {
-      width: 6px;
-    }
-    &::-webkit-scrollbar-thumb {
-      background: var(--el-border-color);
-      border-radius: 4px;
-    }
-    &::-webkit-scrollbar-track {
-      background: transparent;
-    }
   }
 
   .project-grid {

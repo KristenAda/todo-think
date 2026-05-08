@@ -27,6 +27,14 @@ enum TaskPriority {
   P3 // 低
 }
 
+/// 任务难度档位（映射绩效公式 complexity 系数；创建/编辑选用档位，系统写入 complexity 冗余字段）
+enum TaskComplexityTier {
+  SIMPLE // 简单 → 0.8
+  STANDARD // 常规 → 1.0
+  COMPLEX // 复杂 → 1.2
+  VERY_HARD // 极难 → 1.5
+}
+
 /// 任务状态
 enum TaskStatus {
   PENDING // 待分配/待开发
@@ -67,6 +75,10 @@ model Project {
   manager User   @relation("ProjectManager", fields: [managerId], references: [id])
   taskRule ProjectTaskRule?
   tasks   Task[]
+
+  /// 用户指定的验收计分生效规则版本（结算优先使用；为空则按规则集自动择优）
+  activeRuleSetVersionId Int?
+  activeRuleSetVersion   RuleSetVersion? @relation("ProjectActiveScoringRule", fields: [activeRuleSetVersionId], references: [id], onDelete: SetNull)
 
   @@index([orgId, id])
   @@map("project")
@@ -120,6 +132,10 @@ model Task {
   suggestedBaseScore Float? // 系统建议基础积分（由任务信息估算）
   baseScore Float? // 最终基础积分（用于结算）
   baseScoreSource String @default("AUTO") @db.VarChar(20) // AUTO / MANUAL
+  /** 难度档位；绩效结算按档位映射系数，见 TaskComplexityTier */
+  complexityTier TaskComplexityTier @default(STANDARD)
+  /// 与 complexityTier 对应的系数冗余（规则变量 task.complexity），由应用层同步
+  complexity       Float  @default(1)
   qaRejectReason String? @db.Text // 最近一次验收打回原因（任务级）
 
   createdAt DateTime @default(now())

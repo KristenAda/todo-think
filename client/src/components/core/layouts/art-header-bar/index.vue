@@ -148,11 +148,15 @@
         <!-- 头像 + 积分一体化区域 -->
         <div class="user-points-group max-md:!hidden">
           <!-- 积分区域 (移至左侧，符合常规信息流向) -->
-          <div class="points-chip" title="我的积分">
+          <div class="points-chip" data-points-chip-target title="我的积分">
             <div class="points-chip__icon-wrapper">
               <ArtSvgIcon icon="ri:coin-fill" class="points-chip__icon" />
             </div>
-            <span class="points-chip__value">{{ myTotalPoints }}</span>
+            <span
+              class="points-chip__value"
+              :class="{ 'points-chip__value--pulse': pointsPulse }"
+              >{{ displayPoints }}</span
+            >
           </div>
 
           <!-- 分割线 -->
@@ -231,7 +235,11 @@
 
   const showNotice = ref(false);
   const notice = ref(null);
+  /** 权威积分（结算完成后与后端一致） */
   const myTotalPoints = ref<number>(0);
+  /** 顶栏展示用：滚动动画中间值 */
+  const displayPoints = ref<number>(0);
+  const pointsPulse = ref(false);
 
   // 菜单类型判断
   const isLeftMenu = computed(() => menuType.value === MenuTypeEnum.LEFT);
@@ -241,14 +249,47 @@
 
   const { isFullscreen, toggle: toggleFullscreen } = useFullscreen();
 
+  function animatePointsCounter(from: number, to: number, durationMs: number) {
+    const start = performance.now();
+    const easeOut = (t: number) => 1 - (1 - t) ** 3;
+    const step = (now: number) => {
+      const u = Math.min(1, (now - start) / durationMs);
+      displayPoints.value = Math.round(from + (to - from) * easeOut(u));
+      if (u < 1) {
+        requestAnimationFrame(step);
+      } else {
+        displayPoints.value = to;
+        myTotalPoints.value = to;
+      }
+    };
+    requestAnimationFrame(step);
+  }
+
+  function onPointsSettlementWs(payload: {
+    settlementId: string;
+    taskId: number;
+    taskTitle: string | null;
+    earnedPoints: number;
+    totalPoints: number;
+  }) {
+    const from = displayPoints.value;
+    pointsPulse.value = true;
+    animatePointsCounter(from, payload.totalPoints, 2100);
+    window.setTimeout(() => {
+      pointsPulse.value = false;
+    }, 900);
+  }
+
   onMounted(() => {
     initLanguage();
     loadMyTotalPoints();
     document.addEventListener('click', bodyCloseNotice);
+    mittBus.on('pointsSettlement', onPointsSettlementWs);
   });
 
   onUnmounted(() => {
     document.removeEventListener('click', bodyCloseNotice);
+    mittBus.off('pointsSettlement', onPointsSettlementWs);
   });
 
   const toggleFullScreen = (): void => {
@@ -313,9 +354,12 @@
   async function loadMyTotalPoints() {
     try {
       const res = await fetchMyTotalPoints();
-      myTotalPoints.value = Number(res?.totalPoints ?? 0);
+      const n = Number(res?.totalPoints ?? 0);
+      myTotalPoints.value = n;
+      displayPoints.value = n;
     } catch {
       myTotalPoints.value = 0;
+      displayPoints.value = 0;
     }
   }
 </script>
@@ -472,6 +516,18 @@
     color: var(--el-text-color-primary);
     line-height: 1;
     margin-top: 1px;
+    transition:
+      color 0.35s ease,
+      text-shadow 0.35s ease,
+      transform 0.35s ease;
+  }
+
+  .points-chip__value--pulse {
+    color: var(--el-color-primary);
+    text-shadow:
+      0 0 12px rgba(34, 211, 238, 0.55),
+      0 0 22px rgba(168, 85, 247, 0.35);
+    transform: scale(1.06);
   }
 
   /* --- 内部分割线 --- */

@@ -59,16 +59,25 @@ class AuthService extends BaseService {
     const roles = user.roles.map((r) => r.roleCode);
     const isAdmin = roles.includes("admin");
 
+    const defaultRoles = await prisma.role.findMany({
+      where: { isDefaultRole: true, enabled: true, deletedAt: null },
+      select: { id: true },
+    });
+    const mergedRoleIds = [
+      ...new Set<number>([
+        ...user.roles.map((r) => r.id),
+        ...defaultRoles.map((r) => r.id),
+      ]),
+    ];
+
     let permissions: string[] = [];
 
     if (isAdmin) {
       permissions = ["*:*:*"];
-    } else if (user.roles.length > 0) {
-      const roleIds = user.roles.map((r) => r.id);
-
+    } else if (mergedRoleIds.length > 0) {
       const menus = await prisma.menu.findMany({
         where: {
-          roleMenus: { some: { id: { in: roleIds } } },
+          roleMenus: { some: { id: { in: mergedRoleIds } } },
           type: { in: [2, 3] },
         },
         select: { authList: true },
@@ -93,6 +102,8 @@ class AuthService extends BaseService {
     return {
       userId: user.id,
       userName: user.userName,
+      nickName: user.nickName,
+      userGender: user.userGender,
       email: user.userEmail,
       avatar: user.avatar,
       roles,

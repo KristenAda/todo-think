@@ -19,11 +19,12 @@ INSERT INTO `Department` VALUES (7, 3, '0,1,3', '产品设计', 1, '吴九', '01
 INSERT INTO `Department` VALUES (8, 4, '0,1,4', '市场推广', 1, '郑十', '010-66666666', 'market@company.com', 1, '2026-04-09 17:29:22.000', '2026-04-09 17:29:22.000', NULL);
 
 -- ---------- Role ----------
-INSERT INTO `Role` VALUES (1, '超级管理员', 'admin', '系统超级管理员，拥有所有权限', 1, 1, 1, '超级管理员', '2026-04-09 17:29:22.000', '2026-04-09 17:29:22.000', NULL);
-INSERT INTO `Role` VALUES (2, '普通管理员', 'manager', '拥有本部门及以下数据权限', 1, 2, 3, '普通管理员', '2026-04-09 17:29:22.000', '2026-04-09 17:29:22.000', NULL);
-INSERT INTO `Role` VALUES (3, '部门主管', 'supervisor', '拥有本部门及以下数据权限', 1, 3, 3, '部门主管', '2026-04-09 17:29:22.000', '2026-04-09 17:29:22.000', NULL);
-INSERT INTO `Role` VALUES (4, '普通员工', 'user', '仅拥有本人数据权限', 1, 4, 5, '普通员工', '2026-04-09 17:29:22.000', '2026-04-09 17:29:22.000', NULL);
-INSERT INTO `Role` VALUES (5, '访客', 'guest', '仅拥有查看权限', 1, 5, 5, '访客', '2026-04-09 17:29:22.000', '2026-04-09 17:29:22.000', NULL);
+INSERT INTO `Role` VALUES (1, '超级管理员', 'admin', '系统超级管理员，拥有所有权限', 1, 1, 1, 0, '超级管理员', '2026-04-09 17:29:22.000', '2026-04-09 17:29:22.000', NULL);
+INSERT INTO `Role` VALUES (2, '普通管理员', 'manager', '拥有本部门及以下数据权限', 1, 2, 3, 0, '普通管理员', '2026-04-09 17:29:22.000', '2026-04-09 17:29:22.000', NULL);
+INSERT INTO `Role` VALUES (3, '部门主管', 'supervisor', '拥有本部门及以下数据权限', 1, 3, 3, 0, '部门主管', '2026-04-09 17:29:22.000', '2026-04-09 17:29:22.000', NULL);
+INSERT INTO `Role` VALUES (4, '普通员工', 'user', '仅拥有本人数据权限', 1, 4, 5, 0, '普通员工', '2026-04-09 17:29:22.000', '2026-04-09 17:29:22.000', NULL);
+INSERT INTO `Role` VALUES (5, '访客', 'guest', '仅拥有查看权限', 1, 5, 5, 0, '访客', '2026-04-09 17:29:22.000', '2026-04-09 17:29:22.000', NULL);
+INSERT INTO `Role` VALUES (6, '默认角色', 'everyone', '登录用户自动叠加的基础菜单（如个人中心，无需绑定用户）', 1, 99, 5, 1, '种子：系统默认角色', '2026-04-09 17:29:22.000', '2026-04-09 17:29:22.000', NULL);
 
 -- ---------- Menu ----------
 INSERT INTO `Menu` VALUES (1, NULL, 'System', '系统管理', '/system', '/index/index', 'ri:settings-3-line', 1, 1, 1, 1, 0, 0, 0, '', 0, '', 0, '', 0, '[]', NULL, '2026-04-09 17:29:22.000', '2026-04-10 06:14:00.638');
@@ -182,6 +183,8 @@ INSERT INTO `_MenuToRole` VALUES (14, 4);
 INSERT INTO `_MenuToRole` VALUES (20, 4);
 INSERT INTO `_MenuToRole` VALUES (21, 4);
 INSERT INTO `_MenuToRole` VALUES (203, 4);
+INSERT INTO `_MenuToRole` VALUES (1, 6);
+INSERT INTO `_MenuToRole` VALUES (14, 6);
 
 -- ---------- _RoleToUser ----------
 INSERT INTO `_RoleToUser` VALUES (1, 1);
