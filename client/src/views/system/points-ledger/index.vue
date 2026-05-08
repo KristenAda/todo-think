@@ -93,7 +93,8 @@
   import { formatDateTime } from '@/utils/date';
   import {
     POINTS_LEDGER_BIZ_TYPE_OPTIONS,
-    pointsLedgerBizTypeLabel
+    pointsLedgerBizTypeLabel,
+    pointsLedgerPointsTypeLabel
   } from '@/enums/modules/pointsLedgerEnum';
   import PointsLedgerDetailDialog from './components/PointsLedgerDetailDialog.vue';
 
@@ -200,7 +201,12 @@
           formatter: (row: LedgerRow) =>
             h(ElTag, { size: 'small', type: 'info' }, () => pointsLedgerBizTypeLabel(row.bizType))
         },
-        { prop: 'pointsType', label: '积分科目', width: 100 },
+        {
+          prop: 'pointsType',
+          label: '积分科目',
+          width: 110,
+          formatter: (row: LedgerRow) => pointsLedgerPointsTypeLabel(row.pointsType)
+        },
         {
           prop: 'amount',
           label: '变动',

@@ -18,7 +18,10 @@
     "files.exclude": {
       "client": true,
       "server": true
-    }
+    },
+    // 多根工作区：npm.exclude 须写在这里才会对 Client / Server / Root 均生效（各子目录 .vscode 只作用于该文件夹）
+    // 注意：`**/xxx/**` 匹配不到「恰好等于 xxx 的那一层目录」（VS Code 用 minimatch 比对 package.json 所在目录的完整路径）。末尾不要用 /**，否则 …\\dist\\release 这种路径会排除失败。
+    "npm.exclude": ["**/dist/**", "**/release"]
   },
   "tasks": {
     "version": "2.0.0",

@@ -15,14 +15,14 @@
 -- 约定 ID 段：140~149（避免与现有种子数据冲突）
 -- ------------------------------------------------------------
 
--- 0) 积分记录（前端路由 /system/points-ledger；与规则管理同级，便于联查）
+-- 0) 业务管理下：规则管理（前端路由 /business/performance-rules）
 INSERT INTO `Menu` (
   `id`, `parentId`, `name`, `title`, `path`, `component`, `icon`,
   `type`, `sort`, `isEnable`, `keepAlive`, `isIframe`, `isHide`, `authList`,
   `createTime`, `updateTime`
 ) VALUES (
-  141, 1, 'PointsLedgerLog', '积分记录', 'points-ledger', '/system/points-ledger/index', 'mdi:history',
-  2, 21, 1, 1, 0, 0, '[{"title":"查看积分流水","authMark":"points-ledger:view"}]',
+  140, 2, 'PerformanceRules', '规则管理', 'performance-rules', 'performance/rules/index', 'mdi:calculator-variant-outline',
+  2, 3, 1, 1, 0, 0, '[{"title":"查看规则","authMark":"rule:view"},{"title":"创建规则","authMark":"rule:create"},{"title":"发布规则","authMark":"rule:publish"},{"title":"模拟运行","authMark":"rule:simulate"},{"title":"触发补差","authMark":"rule:adjustment"}]',
   NOW(), NOW()
 )
 ON DUPLICATE KEY UPDATE
@@ -40,22 +40,24 @@ ON DUPLICATE KEY UPDATE
   `authList` = VALUES(`authList`),
   `updateTime` = NOW();
 
--- 1) 系统管理下：规则管理（前端路由 /system/performance-rules）
+-- 1) 业务管理下：积分记录（前端路由 /business/points-ledger；与规则管理同级，便于联查）
 INSERT INTO `Menu` (
   `id`, `parentId`, `name`, `title`, `path`, `component`, `icon`,
   `type`, `sort`, `isEnable`, `keepAlive`, `isIframe`, `isHide`, `authList`,
   `createTime`, `updateTime`
 ) VALUES (
-  140, 1, 'PerformanceRules', '规则管理', 'performance-rules', 'performance/rules/index', 'mdi:calculator-variant-outline',
-  2, 20, 1, 1, 0, 0, '[{"title":"查看规则","authMark":"rule:view"},{"title":"创建规则","authMark":"rule:create"},{"title":"发布规则","authMark":"rule:publish"},{"title":"模拟运行","authMark":"rule:simulate"},{"title":"触发补差","authMark":"rule:adjustment"}]',
+  141, 2, 'PointsLedgerLog', '积分记录', 'points-ledger', 'system/points-ledger/index', 'mdi:history',
+  2, 4, 1, 1, 0, 0, '[{"title":"查看积分流水","authMark":"points-ledger:view"}]',
   NOW(), NOW()
 )
 ON DUPLICATE KEY UPDATE
+  `parentId` = VALUES(`parentId`),
   `title` = VALUES(`title`),
   `path` = VALUES(`path`),
   `component` = VALUES(`component`),
   `icon` = VALUES(`icon`),
   `type` = VALUES(`type`),
+  `sort` = VALUES(`sort`),
   `isEnable` = VALUES(`isEnable`),
   `keepAlive` = VALUES(`keepAlive`),
   `isIframe` = VALUES(`isIframe`),

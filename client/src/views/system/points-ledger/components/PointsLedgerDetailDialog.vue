@@ -7,10 +7,9 @@
   >
     <div v-if="loading" class="pld-loading"><el-skeleton :rows="10" animated /></div>
     <div v-else-if="detail" class="pld-body">
-      <!-- 关键信息：分值与口径 -->
       <header class="pld-hero">
         <div class="pld-hero__score">
-          <span class="pld-hero__score-label">变动分值</span>
+          <span class="pld-hero__score-label">本次变动</span>
           <span
             class="pld-hero__score-value"
             :class="detail.entry.amount >= 0 ? 'is-plus' : 'is-minus'"
@@ -26,23 +25,23 @@
           <el-tag size="small" effect="plain" class="pld-chip">{{
             pointsLedgerPointsTypeLabel(detail.entry.pointsType)
           }}</el-tag>
-          <span class="pld-hero__muted">业务时间 {{ fmtDateTime(detail.entry.occurredAt) }}</span>
+          <span class="pld-hero__muted">发生时间 {{ fmtDateTime(detail.entry.occurredAt) }}</span>
         </div>
       </header>
 
       <section class="pld-panel">
-        <h3 class="pld-panel__title">主体与任务</h3>
+        <h3 class="pld-panel__title">基础信息</h3>
         <div class="pld-kv">
           <div class="pld-kv__item">
             <div class="pld-kv__label">入账时间</div>
             <div class="pld-kv__value">{{ fmtDateTime(detail.entry.createdAt) }}</div>
           </div>
           <div v-if="!detail.settlement" class="pld-kv__item">
-            <div class="pld-kv__label">业务单号</div>
+            <div class="pld-kv__label">系统流水号</div>
             <div class="pld-kv__value pld-kv__value--mono">{{ detail.entry.bizId }}</div>
           </div>
           <div class="pld-kv__item">
-            <div class="pld-kv__label">归属用户</div>
+            <div class="pld-kv__label">相关成员</div>
             <div class="pld-kv__value">{{
               detail.ownerUser ? detail.ownerUser.nickName || detail.ownerUser.userName : '—'
             }}</div>
@@ -59,52 +58,71 @@
       </section>
 
       <section v-if="detail.ruleSetVersion" class="pld-panel">
-        <h3 class="pld-panel__title">规则版本</h3>
-        <p class="pld-panel__lead">本笔积分所依据的规则集及发布版本，可与「规则管理」对照。</p>
+        <h3 class="pld-panel__title">计分规则版本</h3>
+        <p class="pld-panel__lead"
+          >本次得分基于以下规则版本计算生成，您可前往「规则管理」查看详细定义。</p
+        >
         <div class="pld-kv">
           <div class="pld-kv__item pld-kv__item--full">
-            <div class="pld-kv__label">规则集</div>
+            <div class="pld-kv__label">规则集名称</div>
             <div class="pld-kv__value">{{ detail.ruleSetVersion.ruleSet?.name ?? '—' }}</div>
           </div>
           <div class="pld-kv__item">
-            <div class="pld-kv__label">发布版本</div>
+            <div class="pld-kv__label">规则版本</div>
             <div class="pld-kv__value">
-              <el-tag type="success" size="small" effect="light">v{{ detail.ruleSetVersion.version }}</el-tag>
+              <el-tag type="success" size="small" effect="light"
+                >v{{ detail.ruleSetVersion.version }}</el-tag
+              >
             </div>
           </div>
         </div>
       </section>
 
       <section v-if="detail.settlement" class="pld-panel">
-        <h3 class="pld-panel__title">关联结算</h3>
-        <p class="pld-panel__lead">与本笔积分对应的绩效结算单及处理状态。</p>
+        <h3 class="pld-panel__title">核算信息</h3>
+        <p class="pld-panel__lead">本次积分变动对应的后台核算批次及处理状态。</p>
         <div class="pld-kv">
           <div class="pld-kv__item">
-            <div class="pld-kv__label">结算类型</div>
-            <div class="pld-kv__value">{{ settlementTypeLabelZh(String((detail.settlement as any).settlementType ?? '')) }}</div>
+            <div class="pld-kv__label">核算类型</div>
+            <div class="pld-kv__value">{{
+              settlementTypeLabelZh(String((detail.settlement as any).settlementType ?? ''))
+            }}</div>
           </div>
           <div class="pld-kv__item">
             <div class="pld-kv__label">处理状态</div>
             <div class="pld-kv__value">
-              <el-tag :type="settlementStatusTagType((detail.settlement as any).status)" size="small" effect="light">
+              <el-tag
+                :type="settlementStatusTagType((detail.settlement as any).status)"
+                size="small"
+                effect="light"
+              >
                 {{ settlementStatusLabelZh((detail.settlement as any).status) }}
               </el-tag>
             </div>
           </div>
           <div class="pld-kv__item pld-kv__item--full">
-            <div class="pld-kv__label">业务发生时间</div>
-            <div class="pld-kv__value">{{ fmtDateTime((detail.settlement as any).occurredAt) }}</div>
+            <div class="pld-kv__label">核算触发时间</div>
+            <div class="pld-kv__value">{{
+              fmtDateTime((detail.settlement as any).occurredAt)
+            }}</div>
           </div>
-          <div v-if="settlementKeyOneLiner((detail.settlement as any).settlementKey)" class="pld-kv__item pld-kv__item--full">
-            <div class="pld-kv__label">摘要</div>
-            <div class="pld-kv__value pld-muted">{{ settlementKeyOneLiner((detail.settlement as any).settlementKey) }}</div>
+          <div
+            v-if="settlementKeyOneLiner((detail.settlement as any).settlementKey)"
+            class="pld-kv__item pld-kv__item--full"
+          >
+            <div class="pld-kv__label">核算说明</div>
+            <div class="pld-kv__value pld-muted">{{
+              settlementKeyOneLiner((detail.settlement as any).settlementKey)
+            }}</div>
           </div>
         </div>
       </section>
 
       <section v-if="taskFactRowsForUser.length" class="pld-panel">
-        <h3 class="pld-panel__title">任务事实（计分依据）</h3>
-        <p class="pld-panel__lead">结算时写入的任务属性快照，与计分公式中的变量对应。</p>
+        <h3 class="pld-panel__title">任务快照数据（计分依据）</h3>
+        <p class="pld-panel__lead"
+          >记录了计算得分那一刻的任务真实状态，这些数据直接决定了最终得分。</p
+        >
         <ul class="pld-fact-list">
           <li v-for="row in taskFactRowsForUser" :key="row.field" class="pld-fact-row">
             <div class="pld-fact-row__label">{{ row.label }}</div>
@@ -114,32 +132,40 @@
       </section>
 
       <section v-if="detail.evaluation" class="pld-panel pld-panel--flush">
-        <h3 class="pld-panel__title">计分复核</h3>
-        <p class="pld-panel__lead">按当前规则与快照数据重算，供核对本次入账依据。</p>
+        <h3 class="pld-panel__title">得分计算过程</h3>
+        <p class="pld-panel__lead">系统自动提取任务快照并套用公式的过程还原，方便您核对明细。</p>
         <el-alert
           v-if="!detail.evaluation.formulaExpression"
           type="info"
           :closable="false"
           show-icon
           class="formula-missing-alert"
-          title="未解析到可展示的公式（如固定分值规则，或对应历史版本定义）。下表仍列出变量与重算结果供参考。"
+          title="当前积分为固定分值或由历史规则生成，无动态公式展示。下方列出了计算时的环境数据供参考。"
         />
         <div v-if="detail.evaluation.formulaExpression" class="formula-stack">
           <div class="formula-block formula-block--source">
-            <div class="formula-label">公式表达式</div>
+            <div class="formula-label">应用公式</div>
             <pre class="formula-code">{{ detail.evaluation.formulaExpression }}</pre>
           </div>
-          <div v-if="detail.evaluation.formulaExpression" class="formula-block formula-block--filled">
-            <div class="formula-label">代入数值后</div>
+          <div
+            v-if="detail.evaluation.formulaExpression"
+            class="formula-block formula-block--filled"
+          >
+            <div class="formula-label">代入快照数据</div>
             <pre class="formula-code formula-code--filled">{{
               detail.evaluation.formulaWithValues || detail.evaluation.formulaExpression
             }}</pre>
             <div
-              v-if="detail.evaluation.formulaEvalRaw !== null && detail.evaluation.formulaEvalRaw !== undefined"
+              v-if="
+                detail.evaluation.formulaEvalRaw !== null &&
+                detail.evaluation.formulaEvalRaw !== undefined
+              "
               class="formula-result-row"
             >
               <span class="formula-eq">=</span>
-              <span class="formula-num">{{ formatFormulaNum(detail.evaluation.formulaEvalRaw) }}</span>
+              <span class="formula-num">{{
+                formatFormulaNum(detail.evaluation.formulaEvalRaw)
+              }}</span>
               <span
                 v-if="
                   detail.evaluation.formulaEvalRounded !== null &&
@@ -147,36 +173,35 @@
                 "
                 class="formula-round"
               >
-                取整后入账（四舍五入）：<strong>{{ detail.evaluation.formulaEvalRounded }}</strong>
+                四舍五入实际入账：<strong>{{ detail.evaluation.formulaEvalRounded }}</strong>
               </span>
             </div>
           </div>
-          <div class="formula-hint">变量取值与上文任务事实一致；取整规则与入账一致（四舍五入）。</div>
+          <div class="formula-hint">注：代入的变量值与上文「任务快照数据」完全一致。</div>
         </div>
-        <h4 class="pld-subtitle">变量取值</h4>
+        <h4 class="pld-subtitle">公式变量明细</h4>
         <ArtTable :data="detail.evaluation.variableRows" :columns="variableColumns" />
-        <h4 class="pld-subtitle">规则条件命中</h4>
+        <h4 class="pld-subtitle">触发的规则条件</h4>
         <ArtTable :data="detail.evaluation.triggeredRules" :columns="ruleColumns" />
-        <h4 class="pld-subtitle">模拟分录</h4>
+        <h4 class="pld-subtitle">得分拆解模拟</h4>
         <ArtTable :data="detail.evaluation.simulatedPostings" :columns="postingColumns" />
       </section>
 
-      <section
-        v-else-if="detail.settlement || detail.ruleSetVersion"
-        class="pld-panel"
-      >
-        <h3 class="pld-panel__title">计分复核</h3>
+      <section v-else-if="detail.settlement || detail.ruleSetVersion" class="pld-panel">
+        <h3 class="pld-panel__title">得分计算过程</h3>
         <el-alert
           type="warning"
           :closable="false"
           show-icon
-          title="无法加载计分复核数据，请刷新后重试或联系管理员。"
+          title="无法加载计算过程数据，可能因数据归档或网络问题，请刷新重试。"
         />
       </section>
 
       <section v-if="detail.recordedPostings?.length" class="pld-panel pld-panel--flush">
-        <h3 class="pld-panel__title">已入账分录</h3>
-        <p class="pld-panel__lead">「本笔流水」列标识与当前记录对应的分录行。</p>
+        <h3 class="pld-panel__title">相关账单流水</h3>
+        <p class="pld-panel__lead"
+          >展示与本次任务核算相关的所有流水，「当前项」即为本次变动的积分。</p
+        >
         <ArtTable :data="detail.recordedPostings" :columns="recordedColumns" />
       </section>
     </div>
@@ -192,7 +217,10 @@
   import { h } from 'vue';
   import { fetchPointsLedgerDetail } from '@/api/task';
   import { formatDateTime } from '@/utils/date';
-  import { pointsLedgerBizTypeLabel, pointsLedgerPointsTypeLabel } from '@/enums/modules/pointsLedgerEnum';
+  import {
+    pointsLedgerBizTypeLabel,
+    pointsLedgerPointsTypeLabel
+  } from '@/enums/modules/pointsLedgerEnum';
 
   /** 与全站一致：YYYY-MM-DD HH:mm:ss，空或非法为 — */
   function fmtDateTime(input: string | number | Date | null | undefined) {
@@ -234,12 +262,12 @@
     return String(Number(n.toFixed(4)));
   }
 
-  /** 结算单 settlementType 中文说明 */
+  /** 结算单 settlementType 中文说明 UX优化版 */
   function settlementTypeLabelZh(t: string) {
     const map: Record<string, string> = {
-      first: '首次结算',
-      adjustment: '补差结算',
-      reversal: '冲正结算'
+      first: '首次计算',
+      adjustment: '变更补差',
+      reversal: '撤销回滚'
     };
     const k = (t || '').trim();
     return map[k] || k || '—';
@@ -259,20 +287,21 @@
     return map[s] || String(status ?? '—');
   }
 
-  /** 防重键摘要（不含内部原始键） */
+  /** 防重键摘要（不含内部原始键） UX优化版 */
   function settlementKeyOneLiner(key: unknown): string {
     const raw = String(key ?? '').trim();
     if (!raw) return '';
     const first = /^task:(\d+):first:(.+)$/.exec(raw);
-    if (first)
-      return `首次结算，验收时间 ${fmtDateTime(first[2])}；用于防止同一任务在同一验收时刻重复计分。`;
+    if (first) return `首次核算，验收时间 ${fmtDateTime(first[2])}；自动拦截重复计分。`;
     if (/^task:\d+:adjustment:/.test(raw)) {
       const m = /^task:(\d+):adjustment:(.+):(\d+)$/.exec(raw);
-      if (m) return `补差结算，业务时间 ${fmtDateTime(m[2])}；按最新规则与任务数据重算差额。`;
+      if (m)
+        return `信息变更补差，触发时间 ${fmtDateTime(m[2])}；因任务信息发生变动，系统自动按照最新规则补齐差额。`;
     }
     if (/^task:\d+:reversal:/.test(raw)) {
       const m = /^task:(\d+):reversal:(.+):(\d+)$/.exec(raw);
-      if (m) return `冲正结算，业务时间 ${fmtDateTime(m[2])}。`;
+      if (m)
+        return `数据撤销回滚，触发时间 ${fmtDateTime(m[2])}；因任务状态重置或作废，系统自动扣回已发放的积分。`;
     }
     return '';
   }
@@ -312,30 +341,30 @@
   const variableColumns = [
     {
       prop: 'name',
-      label: '名称',
+      label: '变量名称',
       minWidth: 140,
       formatter: (row: { name?: string }) => (row.name && String(row.name).trim() ? row.name : '—')
     },
-    { prop: 'code', label: '变量编码', minWidth: 120 },
-    { prop: 'value', label: '取值', width: 100, align: 'center' as const }
+    { prop: 'code', label: '变量标识码', minWidth: 120 },
+    { prop: 'value', label: '实际代入值', width: 100, align: 'center' as const }
   ];
 
   const ruleColumns = [
     {
       prop: 'name',
-      label: '规则',
+      label: '检查规则',
       minWidth: 160,
       formatter: (row: { name?: string }) =>
         row.name && String(row.name).trim() ? String(row.name).trim() : '—'
     },
     {
       prop: 'matched',
-      label: '条件匹配',
+      label: '命中状态',
       width: 100,
       align: 'center' as const,
       formatter: (row: { matched: boolean }) =>
         h(ElTag, { type: row.matched ? 'success' : 'info', size: 'small' }, () =>
-          row.matched ? '匹配' : '不匹配'
+          row.matched ? '已命中' : '未命中'
         )
     }
   ];
@@ -344,25 +373,25 @@
     { prop: 'subjectId', label: '用户编号', width: 96, align: 'center' as const },
     {
       prop: 'pointsType',
-      label: '计分项',
-      width: 100,
+      label: '涉及积分项',
+      minWidth: 100,
       formatter: (row: { pointsType?: string }) => pointsLedgerPointsTypeLabel(row.pointsType)
     },
-    { prop: 'amount', label: '分值', width: 80, align: 'center' as const }
+    { prop: 'amount', label: '变动分值', width: 120, align: 'center' as const }
   ];
 
   const recordedColumns = [
     { prop: 'subjectId', label: '用户编号', width: 96, align: 'center' as const },
     {
       prop: 'pointsType',
-      label: '计分项',
+      label: '涉及积分项',
       width: 100,
       formatter: (row: { pointsType?: string }) => pointsLedgerPointsTypeLabel(row.pointsType)
     },
-    { prop: 'amount', label: '分值', width: 80, align: 'center' as const },
+    { prop: 'amount', label: '变动分值', width: 120, align: 'center' as const },
     {
       prop: '_mark',
-      label: '本笔流水',
+      label: '流水标记',
       minWidth: 88,
       align: 'center' as const,
       formatter: (row: Record<string, unknown>) => {
@@ -373,7 +402,7 @@
           m.pointsType === row.pointsType &&
           Number(m.amount) === Number(row.amount);
         return hit
-          ? h(ElTag, { type: 'warning', size: 'small' }, () => '当前行')
+          ? h(ElTag, { type: 'warning', size: 'small' }, () => '当前项')
           : h('span', { class: 'text-muted' }, '—');
       }
     }
@@ -645,7 +674,11 @@
     border: 1px solid var(--el-border-color-lighter);
   }
   .formula-block--source {
-    background: linear-gradient(135deg, var(--el-fill-color-light) 0%, var(--el-fill-color-blank) 100%);
+    background: linear-gradient(
+      135deg,
+      var(--el-fill-color-light) 0%,
+      var(--el-fill-color-blank) 100%
+    );
   }
   .formula-block--filled {
     background: linear-gradient(

@@ -3,7 +3,7 @@
  *
  * - 排除：_prisma_migrations、message、upload_session（运行时/噪声或体积）
  * - user 行：去掉 data:image... base64，改为 NULL，避免种子文件过大
- * - 菜单：修正一级「系统管理」type=1、工作台 path=/dashboard、积分记录 component 与迁移表名一致（Menu/User/...）
+ * - 菜单：修正一级「系统管理」type=1、工作台 path=/dashboard、积分记录 component 与迁移表名一致（Menu/User/...）；规则/积分菜单 parent=业务管理 id=2（见 dump）
  *
  * 用法：在 server 目录执行
  *   node scripts/build-seed-from-dump.cjs

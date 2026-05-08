@@ -110,6 +110,8 @@
 
   interface MenuFormData {
     id: number;
+    /** 上级菜单 id，顶级为 null */
+    parentId: number | null;
     name: string;
     path: string;
     label: string;
@@ -141,6 +143,8 @@
     editData?: AppRouteRecord | any;
     type?: 'menu' | 'button';
     lockType?: boolean;
+    /** 完整菜单树，用于选择上级菜单（禁用当前节点及其子树，避免循环引用） */
+    menuTreeForParent?: Api.SystemManage.MenuItem[];
   }
 
   interface Emits {
@@ -151,7 +155,8 @@
   const props = withDefaults(defineProps<Props>(), {
     visible: false,
     type: 'menu',
-    lockType: false
+    lockType: false,
+    menuTreeForParent: () => []
   });
 
   const emit = defineEmits<Emits>();
@@ -163,6 +168,7 @@
   const form = reactive<MenuFormData & { menuType: 'menu' | 'button' }>({
     menuType: 'menu',
     id: 0,
+    parentId: null,
     name: '',
     path: '',
     label: '',
@@ -210,6 +216,53 @@
     form.authList.splice(index, 1);
   };
 
+  function findMenuNode(
+    nodes: Api.SystemManage.MenuItem[],
+    id: number
+  ): Api.SystemManage.MenuItem | null {
+    for (const n of nodes) {
+      if (n.id === id) return n;
+      if (n.children?.length) {
+        const f = findMenuNode(n.children, id);
+        if (f) return f;
+      }
+    }
+    return null;
+  }
+
+  function collectSubtreeIds(nodes: Api.SystemManage.MenuItem[], rootId: number): Set<number> {
+    const root = findMenuNode(nodes, rootId);
+    if (!root) return new Set<number>();
+    const ids = new Set<number>();
+    const walk = (n: Api.SystemManage.MenuItem) => {
+      ids.add(n.id);
+      n.children?.forEach(walk);
+    };
+    walk(root);
+    return ids;
+  }
+
+  function mapMenusToTreeSelect(
+    nodes: Api.SystemManage.MenuItem[],
+    disabledIds: Set<number>
+  ): { value: number; label: string; disabled?: boolean; children?: any[] }[] {
+    return nodes.map((n) => ({
+      value: n.id,
+      label: formatMenuTitle((n.meta?.title as string) || '') || n.name || String(n.id),
+      disabled: disabledIds.has(n.id),
+      children: n.children?.length ? mapMenusToTreeSelect(n.children, disabledIds) : undefined
+    }));
+  }
+
+  const disabledParentIds = computed(() => {
+    if (!isEdit.value || !props.editData?.id) return new Set<number>();
+    return collectSubtreeIds(props.menuTreeForParent, props.editData.id as number);
+  });
+
+  const parentTreeData = computed(() =>
+    mapMenusToTreeSelect(props.menuTreeForParent, disabledParentIds.value)
+  );
+
   const rules = reactive<FormRules>({
     name: [
       { required: true, message: '请输入菜单名称', trigger: 'blur' },
@@ -228,6 +281,24 @@
     if (form.menuType === 'menu') {
       return [
         ...baseItems,
+        {
+          label: createLabelTooltip(
+            '上级菜单',
+            '变更上级后，菜单在树中的层级会改变；不可选择当前菜单及其子菜单，以免形成循环引用'
+          ),
+          key: 'parentId',
+          type: 'treeselect',
+          span: 24,
+          props: {
+            data: parentTreeData.value,
+            props: { value: 'value', label: 'label', children: 'children' },
+            placeholder: '不选择则为顶级菜单',
+            clearable: true,
+            filterable: true,
+            checkStrictly: true,
+            style: { width: '100%' }
+          }
+        },
         { label: '菜单名称', key: 'name', type: 'input', props: { placeholder: '菜单名称' } },
         {
           label: createLabelTooltip(
@@ -304,6 +375,24 @@
       return [
         ...baseItems,
         {
+          label: createLabelTooltip(
+            '上级菜单',
+            '按钮挂载在哪个菜单下；不可选择当前节点及其子节点，以免循环引用'
+          ),
+          key: 'parentId',
+          type: 'treeselect',
+          span: 24,
+          props: {
+            data: parentTreeData.value,
+            props: { value: 'value', label: 'label', children: 'children' },
+            placeholder: '请选择挂载的菜单',
+            clearable: true,
+            filterable: true,
+            checkStrictly: true,
+            style: { width: '100%' }
+          }
+        },
+        {
           label: '权限名称',
           key: 'authName',
           type: 'input',
@@ -339,6 +428,7 @@
   const resetForm = (): void => {
     formRef.value?.reset();
     form.menuType = 'menu';
+    form.parentId = null;
     form.authList = [];
     newAuthItem.title = '';
     newAuthItem.authMark = '';
@@ -352,6 +442,7 @@
     if (form.menuType === 'menu') {
       const row = props.editData;
       form.id = row.id || 0;
+      form.parentId = row.parentId ?? null;
       form.name = formatMenuTitle(row.meta?.title || '');
       form.path = row.path || '';
       form.label = row.name || '';
@@ -374,6 +465,7 @@
       form.authList = row.meta?.authList ? [...row.meta.authList] : [];
     } else {
       const row = props.editData;
+      form.parentId = row.parentId ?? null;
       form.authName = row.title || '';
       form.authLabel = row.authMark || '';
       form.authIcon = row.icon || '';
@@ -393,6 +485,7 @@
       if (form.menuType === 'menu') {
         submitData = {
           id: isEdit.value ? form.id : undefined,
+          parentId: form.parentId,
           name: form.label,
           title: form.name,
           path: form.path,
@@ -417,6 +510,7 @@
       } else {
         submitData = {
           id: isEdit.value ? form.id : undefined,
+          parentId: form.parentId,
           name: form.authLabel,
           title: form.authName,
           type: 3,
@@ -462,6 +556,9 @@
         nextTick(() => {
           if (props.editData) {
             loadFormData();
+          } else {
+            isEdit.value = false;
+            form.parentId = null;
           }
         });
       }

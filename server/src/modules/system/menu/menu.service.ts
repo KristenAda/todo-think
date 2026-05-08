@@ -108,6 +108,7 @@ class MenuService extends BaseService {
 
       const result: any = {
         id: menu.id,
+        parentId: menu.parentId ?? null,
         name: menu.name,
         path: menu.path,
         component: menu.component,
@@ -136,6 +137,42 @@ class MenuService extends BaseService {
       }
     }
     return tree;
+  }
+
+  /** 更新菜单：校验上级变更不会产生循环引用（不能把菜单挪到自己的子树下） */
+  async update(id: number, data: Record<string, unknown>) {
+    if ("parentId" in data && data.parentId !== undefined) {
+      const pid = data.parentId as number | null;
+      if (pid !== null) {
+        if (pid === id) {
+          const e = new Error("上级菜单不能为当前菜单本身") as Error & { status: number };
+          e.status = 400;
+          throw e;
+        }
+        const invalid = await this.isUnderSubtree(id, pid);
+        if (invalid) {
+          const e = new Error("不能将菜单移动到其子菜单之下") as Error & { status: number };
+          e.status = 400;
+          throw e;
+        }
+      }
+    }
+    return super.update(id, data);
+  }
+
+  /** 从 nodeId 沿 parent 链向上走，若遇到 ancestorId 则说明 nodeId 在 ancestorId 的子树中 */
+  private async isUnderSubtree(ancestorId: number, nodeId: number): Promise<boolean> {
+    let cur: number | null = nodeId;
+    let guard = 0;
+    while (cur != null && guard++ < 10000) {
+      if (cur === ancestorId) return true;
+      const menuRow = (await this.model.findUnique({
+        where: { id: cur },
+        select: { parentId: true },
+      })) as { parentId: number | null } | null;
+      cur = menuRow?.parentId ?? null;
+    }
+    return false;
   }
 }
 

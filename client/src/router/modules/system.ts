@@ -84,25 +84,11 @@ export const systemRoutes: AppRouteRecord = {
     },
     {
       path: 'performance-rules',
-      name: 'PerformanceRules',
-      component: '/performance/rules/index',
-      meta: {
-        title: '规则管理',
-        icon: 'mdi:calculator-variant-outline',
-        keepAlive: true,
-        roles: ['admin', 'R_SUPER', 'R_ADMIN']
-      }
+      redirect: '/business/performance-rules'
     },
     {
       path: 'points-ledger',
-      name: 'PointsLedgerLog',
-      component: '/system/points-ledger/index',
-      meta: {
-        title: '积分记录',
-        icon: 'mdi:history',
-        keepAlive: true,
-        roles: ['admin', 'R_SUPER', 'R_ADMIN']
-      }
+      redirect: '/business/points-ledger'
     },
     {
       path: 'nested',

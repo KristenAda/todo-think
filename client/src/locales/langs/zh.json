@@ -287,6 +287,11 @@
         "pageVisibility": "超级管理员可见"
       }
     },
+    "business": {
+      "title": "业务管理",
+      "performanceRules": "规则管理",
+      "pointsLedger": "积分记录"
+    },
     "system": {
       "title": "系统管理",
       "user": "用户管理",

@@ -45,8 +45,14 @@ class MenuController {
       data.authList = JSON.stringify(data.authList);
     }
 
-    const res = await menuService.update(id, data);
-    ctx.body = Result.success(res);
+    try {
+      const res = await menuService.update(id, data);
+      ctx.body = Result.success(res);
+    } catch (e: any) {
+      const msg = e?.message ?? "更新失败";
+      const code = e?.status === 400 ? 400 : 500;
+      ctx.body = Result.error(msg, code);
+    }
   }
 
   // POST /menu/delete

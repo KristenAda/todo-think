@@ -43,6 +43,7 @@
         :type="dialogType"
         :editData="editData"
         :lockType="lockMenuType"
+        :menu-tree-for-parent="tableData"
         @submit="handleSubmit"
       />
     </ElCard>

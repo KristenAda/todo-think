@@ -287,6 +287,11 @@
         "pageVisibility": "Super Admin Visibility"
       }
     },
+    "business": {
+      "title": "Business",
+      "performanceRules": "Rules",
+      "pointsLedger": "Points Ledger"
+    },
     "system": {
       "title": "System Settings",
       "user": "User Manage",

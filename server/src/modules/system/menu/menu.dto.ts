@@ -14,7 +14,7 @@ export type AuthItemDtoType = z.infer<typeof AuthItemDto>
  * 菜单创建 DTO
  */
 export const CreateMenuDto = z.object({
-  parentId: z.number().optional(),
+  parentId: z.number().nullable().optional(),
   name: z.string().min(1, '菜单名称标识不能为空').max(50),
   title: z.string().min(1, '菜单显示名称不能为空').max(100),
   path: z.string().optional(),
@@ -44,7 +44,7 @@ export type CreateMenuDtoType = z.infer<typeof CreateMenuDto>
  */
 export const UpdateMenuDto = z.object({
   id: z.number(),
-  parentId: z.number().optional(),
+  parentId: z.number().nullable().optional(),
   name: z.string().min(1).max(50).optional(),
   title: z.string().min(1).max(100).optional(),
   path: z.string().optional(),
