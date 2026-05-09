@@ -15,6 +15,8 @@ export interface ProjectItem {
   name: string;
   description: string | null;
   managerId: number;
+  /** 乐观锁版本，更新项目时必填 */
+  version: number;
   status: ProjectStatus;
   startDate: string | null;
   endDate: string | null;
@@ -64,7 +66,10 @@ export function fetchProjectCreate(data: CreateProjectParams) {
   return request.post<ProjectItem>({ url: '/projects', data });
 }
 
-export function fetchProjectUpdate(id: number, data: Partial<CreateProjectParams>) {
+/** 更新项目：后端 DTO 要求携带 version（乐观锁） */
+export type UpdateProjectParams = Partial<CreateProjectParams> & { version: number };
+
+export function fetchProjectUpdate(id: number, data: UpdateProjectParams) {
   return request.put<ProjectItem>({ url: `/projects/${id}`, data });
 }
 

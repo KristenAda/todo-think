@@ -157,6 +157,7 @@
     type ProjectItem,
     type ProjectStatus
   } from '@/api/project';
+  import { PROJECT_STATUS_UI } from '@/enums/modules/projectEnum';
 
   const props = defineProps<{
     modelValue: boolean;
@@ -175,12 +176,7 @@
     set: (v: boolean) => emit('update:modelValue', v)
   });
 
-  const STATUS_OPTIONS = [
-    { value: 'PLANNING', label: '计划中' },
-    { value: 'ACTIVE', label: '进行中' },
-    { value: 'COMPLETED', label: '已完成' },
-    { value: 'SUSPENDED', label: '已搁置' }
-  ] as const;
+  const STATUS_OPTIONS = PROJECT_STATUS_UI;
 
   const submitting = ref(false);
   const formRef = ref<FormInstance>();
@@ -224,9 +220,6 @@
 
   function userDisplayName(u: { userName: string; nickName: string | null }) {
     return u.nickName || u.userName;
-  }
-  function initials(u: { userName: string; nickName: string | null }) {
-    return (u.nickName || u.userName)?.[0]?.toUpperCase() ?? '?';
   }
   function displayEmail(v: string | null | undefined) {
     if (v == null || String(v).trim() === '') return '未填写邮箱';
@@ -346,7 +339,10 @@
         endDate: toApiIsoDate(form.dateRange?.[1])
       };
       if (props.mode === 'edit' && props.initialProject) {
-        await fetchProjectUpdate(props.initialProject.id, payload);
+        await fetchProjectUpdate(props.initialProject.id, {
+          ...payload,
+          version: props.initialProject.version
+        });
         await updateProjectTaskRules(props.initialProject.id, { ...taskRulesForm });
         ElMessage.success('更新成功');
       } else {
