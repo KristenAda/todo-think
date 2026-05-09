@@ -82,6 +82,10 @@ router.get(
   performanceController.reconcileTask.bind(performanceController)
 );
 router.get(
+  "/performance/points-ledger/mine",
+  performanceController.pointsLedgerPageMine.bind(performanceController),
+);
+router.get(
   "/performance/points-ledger",
   performanceController.pointsLedgerPage.bind(performanceController),
 );

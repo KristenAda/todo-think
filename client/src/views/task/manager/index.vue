@@ -28,7 +28,7 @@
         >
           <el-option v-for="s in STATUS_OPTIONS" :key="s.value" :label="s.label" :value="s.value" />
         </el-select>
-        <el-button type="primary" @click="runSearch">搜索</el-button>
+        <el-button type="default" @click="runSearch">搜索</el-button>
         <el-button @click="resetSearchParams">重置</el-button>
       </div>
       <div class="bar-right" />

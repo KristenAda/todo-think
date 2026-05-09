@@ -206,6 +206,13 @@ export const PerformancePageDto = z.object({
   startAt: z.string().datetime({ offset: true }).optional(),
   /** 账期结束（按验收/关闭业务发生时间过滤） */
   endAt: z.string().datetime({ offset: true }).optional(),
+  /** 仅返回当前登录用户在列表中的那一行（综合分仍按全队样本归一化后计算） */
+  pickSelf: z.preprocess(
+    (v) => v === true || v === "true" || v === "1" || v === 1,
+    z.boolean(),
+  )
+    .optional()
+    .default(false),
 });
 export type PerformancePageDtoType = z.infer<typeof PerformancePageDto>;
 
@@ -220,6 +227,10 @@ export const PointsLedgerPageDto = z.object({
   endAt: z.string().datetime({ offset: true }).optional(),
 });
 export type PointsLedgerPageDtoType = z.infer<typeof PointsLedgerPageDto>;
+
+/** 仅本人流水分页（独立路由，不接收用户编号，防止篡改查询参数） */
+export const PointsLedgerMinePageDto = PointsLedgerPageDto.omit({ userOwnerId: true });
+export type PointsLedgerMinePageDtoType = z.infer<typeof PointsLedgerMinePageDto>;
 
 // ==================== ProjectTaskRule ====================
 

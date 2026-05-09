@@ -3,7 +3,13 @@
     <div class="rule-top">
       <div class="title-box">
         <div class="title">计算规则</div>
-        <div class="sub">Rule Code: {{ currentRuleSet?.code || '-' }}</div>
+        <div v-if="currentRuleSet" class="sub">
+          <span class="sub-label">规则编码</span>
+          <el-tooltip content="用于识别规则集；公式中引用的是下方「变量编码」" placement="bottom">
+            <code class="sub-code">{{ currentRuleSet.code }}</code>
+          </el-tooltip>
+        </div>
+        <div v-else class="sub sub-muted">请先选择或新建规则集</div>
       </div>
       <div class="ops">
         <el-select
@@ -19,12 +25,44 @@
             :value="r.id"
           />
         </el-select>
-        <el-button type="primary" plain @click="openCreateRuleSet">新建规则集</el-button>
-        <el-button @click="openEditRuleSet">编辑规则集</el-button>
-        <el-button type="danger" plain @click="deleteCurrentRuleSet">删除规则集</el-button>
-        <el-button @click="openVersions">查看历史版本</el-button>
         <el-button type="warning" plain @click="saveDraft">保存草稿</el-button>
         <el-button type="primary" @click="saveAsNewVersion">保存为新版本</el-button>
+        <el-dropdown trigger="click" @command="onRuleSetDropdownCommand">
+          <el-button>
+            规则集管理
+            <el-icon class="el-icon--right"><ArrowDown /></el-icon>
+          </el-button>
+          <template #dropdown>
+            <el-dropdown-menu>
+              <el-dropdown-item command="create">新建规则集</el-dropdown-item>
+              <el-dropdown-item command="edit">编辑规则集</el-dropdown-item>
+              <el-dropdown-item command="versions">查看历史版本</el-dropdown-item>
+              <el-dropdown-item command="delete" divided>删除规则集</el-dropdown-item>
+            </el-dropdown-menu>
+          </template>
+        </el-dropdown>
+      </div>
+    </div>
+
+    <div class="workflow-tip-panel" role="note">
+      <div class="workflow-tip-panel__accent" aria-hidden="true"></div>
+      <div class="workflow-tip-panel__inner">
+        <div class="workflow-tip-panel__head">
+          <div class="workflow-tip-panel__icon-wrap">
+            <el-icon class="workflow-tip-panel__icon"><InfoFilled /></el-icon>
+          </div>
+          <div class="workflow-tip-panel__text">
+            <div class="workflow-tip-panel__title">保存与生效</div>
+            <p class="workflow-tip-panel__body">
+              <span class="workflow-tip-panel__tag">保存草稿</span>
+              仅保存当前编辑，不改变已发布版本；验收结算仍以已发布版本为准（除非项目另行指定）。
+              <span class="workflow-tip-panel__tag">保存为新版本</span>
+              会生成新的正式版本供后续结算引用。若规则集已绑定项目，可在下方选择
+              <span class="workflow-tip-panel__tag workflow-tip-panel__tag--soft">验收计分生效版本</span>
+              ；留空时由系统在已发布版本中自动采用发布时间最新的一版。
+            </p>
+          </div>
+        </div>
       </div>
     </div>
 
@@ -53,11 +91,14 @@
           />
         </el-select>
       </div>
+      <p class="rule-project-active__hint">
+        指定后，该项目验收计分将优先采用所选<strong>已发布</strong>版本；清空则由系统在已发布版本中自动取发布时间最新的一版。
+      </p>
     </div>
 
     <div class="rule-main">
       <el-card shadow="never" class="left-card">
-        <template #header><span>系统注入变量</span></template>
+        <template #header><span>系统变量参考</span></template>
         <div class="var-list">
           <div v-for="v in systemVars" :key="v.code" class="var-item">
             <div class="var-head">
@@ -65,8 +106,9 @@
               <el-tag size="small">{{ v.valueType }}</el-tag>
             </div>
             <div class="var-item__line">
-              <span class="var-item__line-label">公式编码</span>
-              <code class="var-item__code">{{ v.code }}</code>
+              <el-tooltip content="在公式中作为变量名引用" placement="top">
+                <code class="var-item__code">{{ v.code }}</code>
+              </el-tooltip>
             </div>
             <div v-if="v.sourcePath" class="var-item__hint">{{
               formatVariableSourceHint(v.sourcePath)
@@ -122,7 +164,7 @@
             </div>
           </div>
           <div class="formula-tip"
-            >支持四则运算、括号、三元表达式；变量名须与左侧变量编码一致。</div
+            >支持四则运算、括号、三元表达式；变量名须与「系统变量参考」中的编码一致。</div
           >
         </el-card>
 
@@ -130,12 +172,12 @@
           <template #header>
             <div class="sandbox-head">
               <div class="sandbox-title-wrap">
-                <span class="sandbox-title">沙盒模拟测算</span>
+                <span class="sandbox-title">高级：沙盒试算</span>
                 <span class="sandbox-subtitle"
                   >修改下方变量值，验证各科公式与边界情况是否符合预期</span
                 >
               </div>
-              <el-button type="primary" @click="runTest">运行测算</el-button>
+              <el-button type="default" @click="runTest">运行测算</el-button>
             </div>
           </template>
 
@@ -145,7 +187,9 @@
                 <div class="sandbox-param-item">
                   <div class="param-label">
                     <span>任务所属领域</span>
-                    <code class="param-code">workDomain</code>
+                    <el-tooltip content="公式内变量名：workDomain" placement="top">
+                      <el-icon class="param-info-icon"><QuestionFilled /></el-icon>
+                    </el-tooltip>
                   </div>
                   <el-select
                     v-model="sandboxWorkDomain"
@@ -164,7 +208,9 @@
                 <div v-for="v in systemVars" :key="v.code" class="sandbox-param-item">
                   <div class="param-label">
                     <span>{{ v.label }}</span>
-                    <code class="param-code">{{ v.code }}</code>
+                    <el-tooltip :content="`公式内变量名：${v.code}`" placement="top">
+                      <el-icon class="param-info-icon"><QuestionFilled /></el-icon>
+                    </el-tooltip>
                   </div>
                   <el-input-number
                     v-model="sandbox[v.code]"
@@ -239,6 +285,7 @@
 
 <script setup lang="ts">
   import { computed, h, onMounted, reactive, ref } from 'vue';
+  import { ArrowDown, InfoFilled, QuestionFilled } from '@element-plus/icons-vue';
   import {
     ElInput,
     ElInputNumber,
@@ -609,6 +656,13 @@
     projectOptions.value = await fetchProjectList();
   }
 
+  function onRuleSetDropdownCommand(cmd: string) {
+    if (cmd === 'create') openCreateRuleSet();
+    else if (cmd === 'edit') openEditRuleSet();
+    else if (cmd === 'versions') openVersions();
+    else if (cmd === 'delete') deleteCurrentRuleSet();
+  }
+
   async function openCreateRuleSet() {
     ruleSetDialogMode.value = 'create';
     ruleSetForm.code = '';
@@ -926,7 +980,129 @@
     font-size: 12px;
     color: var(--el-text-color-secondary);
     margin-top: 4px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
   }
+  .sub-label {
+    color: var(--el-text-color-secondary);
+  }
+  .sub-code {
+    font-family: 'Cascadia Code', Consolas, Monaco, monospace;
+    font-size: 12px;
+    color: var(--el-color-primary);
+    background: var(--el-color-primary-light-9);
+    padding: 2px 8px;
+    border-radius: 4px;
+    cursor: help;
+  }
+  .sub-muted {
+    font-style: italic;
+  }
+
+  .workflow-tip-panel {
+    position: relative;
+    flex-shrink: 0;
+    width: 100%;
+    box-sizing: border-box;
+    border-radius: 12px;
+    overflow: hidden;
+    /* 避免依赖 color-mix（旧内核整条 background 可能被丢弃）；与 flex 全高父级并存时禁止被压扁 */
+    background: linear-gradient(
+      125deg,
+      var(--el-color-primary-light-9) 0%,
+      var(--art-main-bg-color, #fff) 42%,
+      var(--el-fill-color-extra-light) 100%
+    );
+    border: 1px solid var(--el-border-color-lighter);
+    box-shadow:
+      0 1px 2px rgb(0 0 0 / 4%),
+      0 8px 28px rgb(0 0 0 / 5%);
+  }
+
+  .workflow-tip-panel__accent {
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 4px;
+    background: linear-gradient(
+      180deg,
+      var(--el-color-primary) 0%,
+      var(--el-color-primary-light-5) 100%
+    );
+    border-radius: 12px 0 0 12px;
+  }
+
+  .workflow-tip-panel__inner {
+    padding: 16px 18px 16px 22px;
+  }
+
+  .workflow-tip-panel__head {
+    display: flex;
+    gap: 14px;
+    align-items: flex-start;
+  }
+
+  .workflow-tip-panel__icon-wrap {
+    flex-shrink: 0;
+    width: 38px;
+    height: 38px;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--el-color-primary-light-8);
+    color: var(--el-color-primary);
+    box-shadow: inset 0 1px 0 rgb(255 255 255 / 35%);
+  }
+
+  .workflow-tip-panel__icon {
+    font-size: 20px;
+  }
+
+  .workflow-tip-panel__text {
+    min-width: 0;
+    flex: 1;
+  }
+
+  .workflow-tip-panel__title {
+    font-size: 15px;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    color: var(--el-text-color-primary);
+    margin-bottom: 8px;
+  }
+
+  .workflow-tip-panel__body {
+    margin: 0;
+    font-size: 13px;
+    line-height: 1.75;
+    color: var(--el-text-color-regular);
+  }
+
+  .workflow-tip-panel__tag {
+    display: inline-block;
+    margin: 0 2px;
+    padding: 0 7px;
+    font-size: 12px;
+    font-weight: 600;
+    line-height: 1.5;
+    color: var(--el-color-primary);
+    background: var(--el-color-primary-light-9);
+    border-radius: 6px;
+    border: 1px solid var(--el-color-primary-light-5);
+    vertical-align: baseline;
+  }
+
+  .workflow-tip-panel__tag--soft {
+    font-weight: 500;
+    color: var(--el-text-color-primary);
+    background: var(--el-fill-color-light);
+    border-color: var(--el-border-color-lighter);
+  }
+
   .ops {
     display: flex;
     align-items: center;
@@ -1095,7 +1271,7 @@
     width: 100%;
   }
 
-  /* ================= 新沙盒样式 ================= */
+  /* ================= 沙盒 ================= */
   .sandbox-card {
     margin-top: 12px;
     border-radius: 8px;
@@ -1104,11 +1280,14 @@
     display: flex;
     justify-content: space-between;
     align-items: center;
+    gap: 12px;
   }
   .sandbox-title-wrap {
     display: flex;
     align-items: baseline;
     gap: 12px;
+    flex-wrap: wrap;
+    min-width: 0;
   }
   .sandbox-title {
     font-size: 16px;
@@ -1155,6 +1334,13 @@
     background: var(--el-color-primary-light-9);
     padding: 2px 4px;
     border-radius: 4px;
+  }
+  .param-info-icon {
+    font-size: 14px;
+    color: var(--el-text-color-secondary);
+    cursor: help;
+    vertical-align: middle;
+    flex-shrink: 0;
   }
 
   .sandbox-result-section {

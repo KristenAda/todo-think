@@ -37,6 +37,10 @@ export interface RouteMeta extends Record<string | number | symbol, unknown> {
   showTextBadge?: string;
   /** 是否在菜单中隐藏 */
   isHide?: boolean;
+  /**
+   * 为 true 时：即使 isHide，仍加入路由守卫可用的路径白名单（用于个人中心等跳转的辅助路由）
+   */
+  allowAccessWhenHidden?: boolean;
   /** 是否在标签页中隐藏 */
   isHideTab?: boolean;
   /** 外部链接 */

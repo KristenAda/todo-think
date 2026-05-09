@@ -14,6 +14,7 @@ import {
   QaAuditDtoType,
   PerformancePageDtoType,
   PointsLedgerPageDtoType,
+  PointsLedgerMinePageDtoType,
   ProjectTaskRuleDtoType,
 } from "./task.dto";
 import {
@@ -2409,7 +2410,7 @@ class PerformanceService {
       return { list: [], total: 0, summary: emptySummary() };
     }
 
-    const { page, pageSize, projectId, startAt, endAt } = dto;
+    const { page, pageSize, projectId, startAt, endAt, pickSelf } = dto;
 
     const allowedProjects = await prisma.project.findMany({
       where: { orgId: { in: orgIds }, deletedAt: null },
@@ -3002,6 +3003,11 @@ class PerformanceService {
       r.compositeTier = perfTierFromScore(r.compositeScore);
     }
 
+    let displayRows = rows;
+    if (pickSelf) {
+      displayRows = rows.filter((r) => r.user.id === userId);
+    }
+
     const totalWorkLogHours = Array.from(workLogByUser.values()).reduce((a, b) => a + b, 0);
     const summary = {
       tasksByType,
@@ -3019,9 +3025,9 @@ class PerformanceService {
       },
     };
 
-    const total = rows.length;
+    const total = displayRows.length;
     const skip = (page - 1) * pageSize;
-    const list = rows.slice(skip, skip + pageSize);
+    const list = displayRows.slice(skip, skip + pageSize);
     return { list, total, summary };
   }
 
@@ -3055,7 +3061,21 @@ class PerformanceService {
     };
   }
 
-  async ledgerPage(dto: PointsLedgerPageDtoType, userId: number) {
+  /** 仅本人流水（独立 API，不依赖可篡改的查询参数） */
+  async ledgerPageMine(dto: PointsLedgerMinePageDtoType, userId: number) {
+    return this.ledgerPage(
+      { ...dto, userOwnerId: undefined },
+      userId,
+      { selfOnly: true },
+    );
+  }
+
+  async ledgerPage(
+    dto: PointsLedgerPageDtoType,
+    userId: number,
+    options?: { selfOnly?: boolean },
+  ) {
+    const selfOnly = options?.selfOnly === true;
     const orgIds = await projectService.getOrgIdsForUser(userId);
     if (!orgIds.length) {
       return { list: [], total: 0, summary: { sumAmount: 0 } };
@@ -3088,7 +3108,9 @@ class PerformanceService {
       where.bizType = { in: ["task_settlement", "adjustment", "reversal", "manual"] };
     }
     if (dto.taskId) where.taskId = dto.taskId;
-    if (dto.userOwnerId) {
+    if (selfOnly) {
+      where.account = { ownerType: "USER", ownerId: userId };
+    } else if (dto.userOwnerId) {
       where.account = { ownerType: "USER", ownerId: dto.userOwnerId };
     }
     if (dto.startAt || dto.endAt) {

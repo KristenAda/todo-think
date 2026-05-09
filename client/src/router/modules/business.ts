@@ -1,5 +1,20 @@
 import { AppRouteRecord } from '@/types/router';
 
+/** 本人积分流水（个人中心等）；导出供后端菜单模式下注入 */
+export const pointsLedgerMineMenuRoute: AppRouteRecord = {
+  path: 'points-ledger/mine',
+  name: 'PointsLedgerMine',
+  component: '/system/points-ledger/index',
+  meta: {
+    title: 'menus.business.pointsLedgerMine',
+    icon: 'mdi:history',
+    keepAlive: true,
+    isHide: true,
+    allowAccessWhenHidden: true,
+    roles: ['admin', 'R_SUPER', 'R_ADMIN']
+  }
+};
+
 export const businessRoutes: AppRouteRecord = {
   path: '/business',
   name: 'Business',
@@ -21,6 +36,7 @@ export const businessRoutes: AppRouteRecord = {
         roles: ['admin', 'R_SUPER', 'R_ADMIN']
       }
     },
+    pointsLedgerMineMenuRoute,
     {
       path: 'points-ledger',
       name: 'PointsLedgerLog',

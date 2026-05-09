@@ -99,6 +99,14 @@ export const systemRoutes: AppRouteRecord = {
       }
     },
     {
+      path: 'points-ledger/mine',
+      redirect: '/business/points-ledger/mine',
+      meta: {
+        title: 'menus.business.pointsLedgerMine',
+        isHide: true
+      }
+    },
+    {
       path: 'nested',
       name: 'Nested',
       component: '',

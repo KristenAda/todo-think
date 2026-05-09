@@ -20,6 +20,7 @@ import {
   QaAuditDto,
   PerformancePageDto,
   PointsLedgerPageDto,
+  PointsLedgerMinePageDto,
 } from "./task.dto";
 
 /** 从 JWT 中取当前用户 ID */
@@ -434,6 +435,31 @@ class PerformanceController {
       return;
     }
     const { list, total, summary } = await performanceService.ledgerPage(
+      parsed.data,
+      currentUserId(ctx),
+    );
+    const { page, pageSize } = parsed.data;
+    ctx.body = {
+      code: 200,
+      message: "success",
+      data: {
+        list,
+        total,
+        page,
+        pageSize,
+        totalPage: Math.ceil(total / pageSize),
+        summary,
+      },
+    };
+  }
+
+  async pointsLedgerPageMine(ctx: Context) {
+    const parsed = PointsLedgerMinePageDto.safeParse(ctx.query);
+    if (!parsed.success) {
+      ctx.body = Result.error(parsed.error.issues?.[0]?.message ?? "参数错误");
+      return;
+    }
+    const { list, total, summary } = await performanceService.ledgerPageMine(
       parsed.data,
       currentUserId(ctx),
     );

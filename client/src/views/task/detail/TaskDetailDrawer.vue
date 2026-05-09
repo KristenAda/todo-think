@@ -357,7 +357,7 @@
                   hint="评论可选附件，先上传后随评论提交"
                 />
                 <div class="comment-editor__actions">
-                  <el-button type="primary" :loading="actionLoading" @click="handleAddComment">
+                  <el-button type="default" :loading="actionLoading" @click="handleAddComment">
                     发表评论
                   </el-button>
                 </div>
@@ -556,7 +556,7 @@
     </el-form>
     <template #footer>
       <el-button @click="workLogDialogVisible = false">取消</el-button>
-      <el-button type="primary" :loading="actionLoading" @click="handleAddWorkLog">提交</el-button>
+      <el-button type="default" :loading="actionLoading" @click="handleAddWorkLog">提交</el-button>
     </template>
   </ArtDialog>
 

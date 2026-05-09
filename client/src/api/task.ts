@@ -153,10 +153,18 @@ export function fetchMyTotalPoints() {
   });
 }
 
-/** 积分流水：分页列表（含当前筛选条件下的积分合计） */
+/** 积分流水：分页列表（含当前筛选条件下的积分合计；管辖范围内可查成员） */
 export function fetchPointsLedgerPage(params: Api.Task.PointsLedgerPageParams) {
   return request.get<Api.Task.PointsLedgerPageData>({
     url: `${BASE.performance}/points-ledger`,
+    params
+  });
+}
+
+/** 积分流水：仅当前登录用户本人（独立路径，不依赖地址栏参数） */
+export function fetchPointsLedgerMinePage(params: Api.Task.PointsLedgerMinePageParams) {
+  return request.get<Api.Task.PointsLedgerPageData>({
+    url: `${BASE.performance}/points-ledger/mine`,
     params
   });
 }

@@ -9,7 +9,7 @@
       <div class="uc-profile">
         <div class="uc-avatar-wrap">
           <UserAvatar
-            :size="80"
+            :size="72"
             :src="profile.avatar"
             :name="profile.nickName || profile.userName || '用户'"
             :gender="profile.userGender ?? ''"
@@ -61,10 +61,23 @@
         <!-- <div class="uc-profile__remark" v-if="profile.remark">
           <art-svg-icon icon="mdi:format-quote-open" class="quote-icon" />{{ profile.remark }}
         </div> -->
-        <div class="uc-profile__tags" v-if="profile.tags && profile.tags.length">
-          <div class="tags-title"
-            ><art-svg-icon icon="mdi:tag-multiple" class="tag-icon" />个人标签</div
-          >
+        <div class="uc-profile__tags">
+          <div class="tags-title-row">
+            <div class="tags-title"
+              ><art-svg-icon icon="mdi:tag-multiple" class="tag-icon" />个人标签</div
+            >
+            <button
+              type="button"
+              class="uc-tags-add-trigger"
+              :disabled="
+                savingAsideTags || (!asideTagEditing && profile.tags.length >= 10)
+              "
+              @click="onAsideTagAddTrigger"
+            >
+              <art-svg-icon :icon="asideTagEditing ? 'mdi:chevron-up' : 'mdi:plus'" />
+              <span>{{ asideTagEditing ? '收起' : '添加' }}</span>
+            </button>
+          </div>
           <div class="tags-list">
             <el-tag
               v-for="tag in profile.tags"
@@ -72,18 +85,71 @@
               size="small"
               effect="plain"
               round
+              closable
               class="profile-tag"
+              :disable-transitions="true"
+              @close="removeAsideTag(tag)"
               >{{ tag }}</el-tag
             >
           </div>
+          <div v-show="asideTagEditing" class="tags-editor" @click.stop>
+            <el-input
+              ref="asideTagInputRef"
+              v-model="asideTagInput"
+              size="small"
+              class="tag-input"
+              :disabled="savingAsideTags || profile.tags.length >= 10"
+              placeholder="标签名"
+              maxlength="12"
+              @keyup.enter.prevent="commitAsideTagInput"
+            />
+            <el-button
+              class="tag-add-btn"
+              size="small"
+              type="primary"
+              plain
+              :disabled="savingAsideTags || profile.tags.length >= 10"
+              @click.stop="commitAsideTagInput"
+            >
+              添加
+            </el-button>
+            <el-button
+              class="tag-cancel-btn"
+              link
+              type="primary"
+              size="small"
+              :disabled="savingAsideTags"
+              @click.stop="closeAsideTagEditor"
+            >
+              取消
+            </el-button>
+          </div>
+        </div>
+
+        <div class="uc-profile__tail">
+          <div class="uc-stat-chip">
+            <div class="uc-stat-chip__icon-wrap">
+              <art-svg-icon icon="ri:coin-fill" class="uc-stat-chip__icon" />
+            </div>
+            <div class="uc-stat-chip__text">
+              <span class="uc-stat-chip__label">累计积分</span>
+              <span class="uc-stat-chip__value">{{ displayPoints }}</span>
+            </div>
+          </div>
+          <router-link class="uc-quick-entry" to="/business/points-ledger/mine">
+            <art-svg-icon icon="mdi:clipboard-text-clock-outline" class="uc-quick-entry__icon" />
+            <span>积分流水</span>
+            <art-svg-icon icon="mdi:chevron-right" class="uc-quick-entry__arrow" />
+          </router-link>
         </div>
       </div>
     </aside>
 
     <!-- 右侧内容 -->
     <main class="uc-main">
+      <div class="uc-primary-row">
       <!-- 基本信息 -->
-      <div class="uc-card">
+      <div class="uc-card uc-card--basic">
         <div class="uc-card__header">
           <div class="uc-card__title">
             <art-svg-icon icon="mdi:account-edit" class="title-icon" /><span>基本信息</span>
@@ -105,7 +171,7 @@
           label-position="top"
           class="uc-form"
         >
-          <div class="uc-form__grid">
+          <div class="uc-form__grid uc-form__grid--stack">
             <el-form-item label="昵称" prop="nickName">
               <el-input
                 v-model="infoForm.nickName"
@@ -141,36 +207,12 @@
               />
             </el-form-item>
           </div>
-          <el-form-item label="个人标签" prop="tags">
-            <div class="tags-editor">
-              <el-tag
-                v-for="(tag, idx) in infoForm.tags"
-                :key="idx"
-                :closable="isEditInfo"
-                :disable-transitions="false"
-                size="small"
-                round
-                @close="removeTag(idx)"
-                >{{ tag }}</el-tag
-              >
-              <template v-if="isEditInfo">
-                <el-input
-                  v-if="tagInputVisible"
-                  ref="tagInputRef"
-                  v-model="tagInputValue"
-                  size="small"
-                  class="tag-input"
-                  maxlength="12"
-                  @keyup.enter="confirmTag"
-                  @blur="confirmTag"
-                />
-                <el-button v-else size="small" class="tag-add-btn" @click="showTagInput">
-                  <art-svg-icon icon="mdi:plus" /> 新增标签
-                </el-button>
-              </template>
-            </div>
-          </el-form-item>
         </el-form>
+      </div>
+
+      <div class="uc-radar-wrap">
+        <UserPerfRadarPanel />
+      </div>
       </div>
 
       <!-- 修改密码 -->
@@ -236,8 +278,10 @@
   import { ElMessage } from 'element-plus';
   import type { FormInstance, FormRules, UploadRawFile } from 'element-plus';
   import { fetchGetProfile, fetchUpdateProfile, fetchChangePassword } from '@/api/system-manage';
+  import { fetchMyTotalPoints } from '@/api/task';
   import { useUserStore } from '@/store/modules/user';
   import { formatDateTime } from '@/utils/date';
+  import UserPerfRadarPanel from '@/components/business/user-performance/UserPerfRadarPanel.vue';
 
   defineOptions({ name: 'UserCenter' });
 
@@ -258,16 +302,28 @@
     roles: []
   });
 
+  /** 与顶栏一致的累计积分展示 */
+  const displayPoints = ref(0);
+
   async function loadProfile() {
     const data = await fetchGetProfile();
     if (data) {
       Object.assign(profile, data);
+      if (!Array.isArray(profile.tags)) profile.tags = [];
       // 同步填充表单，使非编辑状态下也能显示数据
       infoForm.nickName = data.nickName || '';
       infoForm.userGender = data.userGender || '';
       infoForm.userPhone = data.userPhone || '';
       infoForm.userEmail = data.userEmail || '';
-      infoForm.tags = Array.isArray(data.tags) ? [...data.tags] : [];
+    }
+  }
+
+  async function loadMyPoints() {
+    try {
+      const res = await fetchMyTotalPoints();
+      displayPoints.value = Number(res?.totalPoints ?? 0);
+    } catch {
+      displayPoints.value = 0;
     }
   }
 
@@ -293,31 +349,70 @@
     nickName: '',
     userGender: '',
     userPhone: '',
-    userEmail: '',
-    tags: [] as string[]
+    userEmail: ''
   });
 
-  // ===== 标签操作 =====
-  const tagInputVisible = ref(false);
-  const tagInputValue = ref('');
-  const tagInputRef = ref<any>();
+  const savingAsideTags = ref(false);
+  const asideTagEditing = ref(false);
+  const asideTagInput = ref('');
+  const asideTagInputRef = ref<{ focus?: () => void } | null>(null);
 
-  function showTagInput() {
-    tagInputVisible.value = true;
-    nextTick(() => tagInputRef.value?.focus());
+  function closeAsideTagEditor() {
+    asideTagEditing.value = false;
+    asideTagInput.value = '';
   }
 
-  function confirmTag() {
-    const val = tagInputValue.value.trim();
-    if (val && !infoForm.tags.includes(val) && infoForm.tags.length < 10) {
-      infoForm.tags.push(val);
+  function onAsideTagAddTrigger() {
+    if (asideTagEditing.value) {
+      closeAsideTagEditor();
+      return;
     }
-    tagInputVisible.value = false;
-    tagInputValue.value = '';
+    if (profile.tags.length >= 10) {
+      ElMessage.warning('最多添加 10 个标签');
+      return;
+    }
+    asideTagEditing.value = true;
+    nextTick(() => asideTagInputRef.value?.focus?.());
   }
 
-  function removeTag(idx: number) {
-    if (isEditInfo.value) infoForm.tags.splice(idx, 1);
+  async function persistProfileTags() {
+    savingAsideTags.value = true;
+    try {
+      const res = await fetchUpdateProfile({ tags: [...profile.tags] });
+      if (res) Object.assign(profile, res);
+    } finally {
+      savingAsideTags.value = false;
+    }
+  }
+
+  async function commitAsideTagInput() {
+    if (savingAsideTags.value) return;
+    const val = asideTagInput.value.trim();
+    if (!val) {
+      ElMessage.warning('标签名称不能为空');
+      return;
+    }
+    if (val.length > 12) {
+      ElMessage.warning('标签不超过 12 个字');
+      return;
+    }
+    if (profile.tags.length >= 10) {
+      ElMessage.warning('最多添加 10 个标签');
+      return;
+    }
+    if (profile.tags.includes(val)) {
+      ElMessage.warning('已有同名标签');
+      return;
+    }
+    profile.tags.push(val);
+    asideTagInput.value = '';
+    await persistProfileTags();
+    closeAsideTagEditor();
+  }
+
+  async function removeAsideTag(tag: string) {
+    profile.tags = profile.tags.filter((t) => t !== tag);
+    await persistProfileTags();
   }
 
   const infoRules: FormRules = {
@@ -330,17 +425,14 @@
     infoForm.userGender = profile.userGender || '';
     infoForm.userPhone = profile.userPhone || '';
     infoForm.userEmail = profile.userEmail || '';
-    infoForm.tags = Array.isArray(profile.tags) ? [...profile.tags] : [];
     isEditInfo.value = true;
   }
 
   function cancelEditInfo() {
-    // 从 profile 恢复表单数据，避免 resetFields 清空标签
     infoForm.nickName = profile.nickName || '';
     infoForm.userGender = profile.userGender || '';
     infoForm.userPhone = profile.userPhone || '';
     infoForm.userEmail = profile.userEmail || '';
-    infoForm.tags = Array.isArray(profile.tags) ? [...profile.tags] : [];
     isEditInfo.value = false;
     infoFormRef.value?.clearValidate();
   }
@@ -354,7 +446,7 @@
         userGender: infoForm.userGender || undefined,
         userPhone: infoForm.userPhone || undefined,
         userEmail: infoForm.userEmail || undefined,
-        tags: infoForm.tags
+        tags: [...profile.tags]
       });
       if (res) {
         Object.assign(profile, res);
@@ -411,26 +503,37 @@
     }
   }
 
-  onMounted(() => loadProfile());
+  onMounted(() => {
+    void loadProfile();
+    void loadMyPoints();
+  });
 </script>
 
 <style scoped lang="scss">
+  /* 个人中心：大块间距与卡片内边距统一使用同一刻度（略紧凑，减少整页滚动） */
+  $uc-gap: 12px;
+
   .uc-wrapper {
     display: flex;
-    gap: 20px;
-    padding: 20px;
-    min-height: 100%;
+    gap: $uc-gap;
+    padding: $uc-gap;
+    flex: 1;
+    min-height: 0;
     box-sizing: border-box;
     background: var(--art-main-bg-color);
-    align-items: flex-start;
+    align-items: stretch;
     @media (max-width: 900px) {
       flex-direction: column;
     }
   }
 
   .uc-aside {
-    width: 340px;
+    width: 300px;
     flex-shrink: 0;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    align-self: stretch;
     background: var(--default-box-color);
     border-radius: 16px;
     overflow: hidden;
@@ -443,8 +546,9 @@
 
   .uc-cover {
     position: relative;
-    height: 110px;
+    height: 72px;
     overflow: hidden;
+    flex-shrink: 0;
     &__bg {
       width: 100%;
       height: 100%;
@@ -453,20 +557,26 @@
     &__overlay {
       position: absolute;
       inset: 0;
-      background: linear-gradient(to bottom, transparent 40%, var(--default-box-color));
+      background: linear-gradient(to bottom, transparent 28%, var(--default-box-color));
     }
   }
 
   .uc-profile {
-    padding: 0 20px 24px;
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    padding: 0 16px 14px;
     text-align: center;
+    display: flex;
+    flex-direction: column;
   }
 
   .uc-avatar-wrap {
     position: relative;
     display: inline-block;
-    margin-top: -40px;
-    margin-bottom: 10px;
+    /* 与封面脱开，避免被背景图裁切遮挡（封面与资料区分属两块区域） */
+    margin-top: 8px;
+    margin-bottom: 8px;
   }
 
   .uc-avatar {
@@ -515,7 +625,7 @@
   .uc-profile__username {
     font-size: 12px;
     color: var(--el-text-color-placeholder);
-    margin: 0 0 10px;
+    margin: 0 0 8px;
   }
 
   .uc-profile__roles {
@@ -523,15 +633,15 @@
     flex-wrap: wrap;
     justify-content: center;
     gap: 6px;
-    margin-bottom: 16px;
+    margin-bottom: 10px;
   }
 
   .uc-profile__meta {
     display: flex;
     flex-direction: column;
-    gap: 8px;
+    gap: 6px;
     text-align: left;
-    margin-bottom: 14px;
+    margin-bottom: 10px;
   }
 
   .meta-row {
@@ -564,22 +674,159 @@
     }
   }
 
-  .uc-profile__tags {
-    margin-top: 0;
-    padding-top: 14px;
+  .uc-profile__tail {
+    margin-top: auto;
+    padding-top: 12px;
     border-top: 1px dashed var(--art-card-border);
     text-align: left;
+    flex-shrink: 0;
+  }
+
+  .uc-stat-chip {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 6px 0 10px;
+    margin-bottom: 4px;
+    border-radius: 0;
+    background: transparent;
+    border: none;
+  }
+
+  .uc-stat-chip__icon-wrap {
+    width: 34px;
+    height: 34px;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    /* 与侧栏底色融合，仅用浅琥珀点缀，避免整块灰底 */
+    background: color-mix(in srgb, var(--el-color-warning) 14%, transparent);
+    border: 1px solid color-mix(in srgb, var(--el-color-warning) 22%, transparent);
+  }
+
+  .uc-stat-chip__icon {
+    font-size: 19px;
+    color: var(--el-color-warning);
+  }
+
+  .uc-stat-chip__text {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    min-width: 0;
+  }
+
+  .uc-stat-chip__label {
+    font-size: 12px;
+    color: var(--el-text-color-secondary);
+    line-height: 1.2;
+  }
+
+  .uc-stat-chip__value {
+    font-size: 18px;
+    font-weight: 800;
+    font-variant-numeric: tabular-nums;
+    color: var(--el-text-color-primary);
+    line-height: 1;
+  }
+
+  .uc-quick-entry {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 10px;
+    border-radius: 10px;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--el-text-color-regular);
+    text-decoration: none;
+    border: 1px solid var(--el-border-color-lighter);
+    background: var(--default-box-color);
+    transition:
+      background 0.2s ease,
+      border-color 0.2s ease,
+      color 0.2s ease;
+
+    &:hover {
+      background: var(--el-fill-color-light);
+      border-color: var(--el-color-primary-light-5);
+      color: var(--el-color-primary);
+    }
+  }
+
+  .uc-quick-entry__icon {
+    font-size: 18px;
+    color: var(--el-color-primary);
+    flex-shrink: 0;
+  }
+
+  .uc-quick-entry span {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .uc-quick-entry__arrow {
+    font-size: 18px;
+    opacity: 0.45;
+    flex-shrink: 0;
+  }
+
+  .uc-profile__tags {
+    margin-top: 0;
+    padding-top: 10px;
+    border-top: 1px dashed var(--art-card-border);
+    text-align: left;
+
+    .tags-title-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      margin-bottom: 8px;
+    }
 
     .tags-title {
       display: flex;
       align-items: center;
       gap: 5px;
+      margin-bottom: 0;
+      flex: 1;
+      min-width: 0;
       font-size: 12px;
       color: var(--el-text-color-secondary);
-      margin-bottom: 8px;
       .tag-icon {
         font-size: 14px;
         color: var(--el-color-primary);
+      }
+    }
+
+    .uc-tags-add-trigger {
+      display: inline-flex;
+      align-items: center;
+      gap: 3px;
+      flex-shrink: 0;
+      padding: 0;
+      margin: 0;
+      border: none;
+      background: none;
+      font-size: 12px;
+      color: var(--el-color-primary);
+      cursor: pointer;
+      line-height: 1.3;
+
+      .art-svg-icon {
+        font-size: 14px;
+      }
+
+      &:disabled {
+        opacity: 0.45;
+        cursor: not-allowed;
+      }
+
+      &:not(:disabled):hover {
+        text-decoration: underline;
       }
     }
 
@@ -589,41 +836,102 @@
       gap: 6px;
     }
 
+    /* 仅展开时出现：与原先基本信息 tags-editor 一致 */
+    .tags-editor {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      align-items: center;
+      margin-top: 8px;
+      min-height: 32px;
+      padding: 6px 10px;
+      border-radius: var(--el-border-radius-base);
+      background: var(--el-fill-color-blank);
+
+      .tag-input {
+        flex: 1;
+        min-width: 0;
+      }
+
+      .tag-add-btn {
+        height: 24px;
+        padding: 0 8px;
+        font-size: 12px;
+        border-style: dashed;
+      }
+
+      .tag-cancel-btn {
+        padding: 0 4px;
+        font-size: 12px;
+      }
+    }
+
     .profile-tag {
       border-radius: 20px;
-    }
-  }
-
-  .tags-editor {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 8px;
-    align-items: center;
-    min-height: 32px;
-    padding: 6px 10px;
-    // border: 1px solid var(--el-border-color);
-    border-radius: var(--el-border-radius-base);
-    background: var(--el-fill-color-blank);
-    cursor: text;
-
-    .tag-input {
-      width: 100px;
-    }
-
-    .tag-add-btn {
-      height: 24px;
-      padding: 0 8px;
-      font-size: 12px;
-      border-style: dashed;
     }
   }
 
   .uc-main {
     flex: 1;
     min-width: 0;
+    min-height: 0;
     display: flex;
     flex-direction: column;
-    gap: 16px;
+    gap: $uc-gap;
+  }
+
+  .uc-primary-row {
+    display: flex;
+    align-items: stretch;
+    gap: $uc-gap;
+    flex-wrap: nowrap;
+    min-height: 0;
+
+    @media (max-width: 900px) {
+      flex-wrap: wrap;
+    }
+  }
+
+  /* 基本信息 : 人员画像 ≈ 2 : 3（基本信息单列较窄，画像略宽） */
+  .uc-card--basic {
+    flex: 2 1 0;
+    min-width: 0;
+    align-self: stretch;
+    display: flex;
+    flex-direction: column;
+
+    @media (max-width: 900px) {
+      flex: 1 1 100%;
+    }
+  }
+
+  .uc-card--basic .uc-card__header {
+    flex-shrink: 0;
+  }
+
+  .uc-card--basic .uc-form {
+    flex: 1;
+    min-height: 0;
+  }
+
+  .uc-radar-wrap {
+    flex: 3 1 0;
+    min-width: 0;
+    align-self: stretch;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+
+    @media (max-width: 900px) {
+      flex: 1 1 100%;
+      min-height: 300px;
+    }
+  }
+
+  .uc-radar-wrap :deep(.uprp) {
+    flex: 1;
+    min-height: 0;
+    height: auto;
   }
 
   .uc-card {
@@ -637,7 +945,7 @@
       display: flex;
       align-items: center;
       justify-content: space-between;
-      padding: 16px 20px;
+      padding: 12px 16px;
       border-bottom: 1px solid var(--art-card-border);
     }
 
@@ -661,7 +969,15 @@
   }
 
   .uc-form {
-    padding: 20px;
+    padding: 14px 16px;
+
+    :deep(.el-form-item) {
+      margin-bottom: 12px;
+    }
+
+    :deep(.el-form-item:last-child) {
+      margin-bottom: 0;
+    }
 
     &__grid {
       display: grid;
@@ -669,6 +985,11 @@
       gap: 0 20px;
       @media (max-width: 640px) {
         grid-template-columns: 1fr;
+      }
+
+      &--stack {
+        grid-template-columns: 1fr;
+        gap: 10px 0;
       }
     }
   }

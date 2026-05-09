@@ -34,29 +34,31 @@
       </div>
     </header>
 
-    <section class="perf-kpi-strip" aria-label="统计范围内汇总指标">
-      <article
-        v-for="card in kpiCards"
-        :key="card.key"
-        class="premium-kpi-card"
-        :style="{ '--kpi-accent': card.accent }"
-      >
-        <div class="premium-kpi-card__inner">
-          <header class="premium-kpi-card__meta">
-            <span class="premium-kpi-card__label">{{ card.label }}</span>
-            <div class="premium-kpi-card__icon-wrap">
-              <art-svg-icon :icon="card.icon" class="premium-kpi-card__icon" aria-hidden="true" />
+    <section class="perf-kpi-shell" aria-label="统计范围内汇总指标">
+      <div class="perf-kpi-strip">
+        <article
+          v-for="card in kpiCards"
+          :key="card.key"
+          class="premium-kpi-card"
+          :style="{ '--kpi-accent': card.accent }"
+        >
+          <div class="premium-kpi-card__inner">
+            <header class="premium-kpi-card__meta">
+              <span class="premium-kpi-card__label">{{ card.label }}</span>
+              <div class="premium-kpi-card__icon-wrap">
+                <art-svg-icon :icon="card.icon" class="premium-kpi-card__icon" aria-hidden="true" />
+              </div>
+            </header>
+            <div class="premium-kpi-card__data">
+              <p class="premium-kpi-card__value">{{ card.value }}</p>
             </div>
-          </header>
-          <div class="premium-kpi-card__data">
-            <p class="premium-kpi-card__value">{{ card.value }}</p>
           </div>
-        </div>
 
-        <div class="premium-kpi-card__watermark">
-          <art-svg-icon :icon="card.icon" aria-hidden="true" />
-        </div>
-      </article>
+          <div class="premium-kpi-card__watermark">
+            <art-svg-icon :icon="card.icon" aria-hidden="true" />
+          </div>
+        </article>
+      </div>
     </section>
 
     <div class="perf-charts">
@@ -118,6 +120,12 @@
 
   const kpiCards = computed(() => {
     const s = summary.value?.totals;
+    const headcountForAvg = (s?.headcount ?? allStats.value.length) || 0;
+    const completed = s?.completedTasks ?? 0;
+    const avgDeliverPerPerson =
+      headcountForAvg > 0
+        ? Math.round((completed / headcountForAvg) * 10) / 10
+        : '—';
     return [
       {
         key: 'head',
@@ -132,6 +140,13 @@
         value: s?.completedTasks ?? 0,
         icon: 'mdi:check-decagram',
         accent: '#67C23A' // Element Success
+      },
+      {
+        key: 'avgDone',
+        label: '人均本期交付',
+        value: avgDeliverPerPerson,
+        icon: 'mdi:chart-box-outline',
+        accent: '#14b8a6'
       },
       {
         key: 'wl',
@@ -447,15 +462,21 @@
 </script>
 
 <style scoped lang="scss">
-  /* 基础布局：统一 8px 规范倍数 */
+  /* 基础布局：大块之间仅用同一 gap，避免与其它全局 margin 叠加以致参差不齐 */
   .perf-dashboard {
+    --perf-section-gap: 24px;
     padding: 24px;
     display: flex;
     flex-direction: column;
-    gap: 24px;
+    gap: var(--perf-section-gap);
     box-sizing: border-box;
     min-height: 100%;
     // background-color: var(--el-bg-color-page);
+  }
+
+  /* 抵消全局 `.art-table-card { margin-top: 12px }`，否则图表→表格会比其它相邻区块多出一段间距 */
+  .perf-dashboard > .perf-table-card.art-table-card {
+    margin-top: 0;
   }
 
   /* 统一面板基础样式 (顶部操作栏使用) */
@@ -525,29 +546,42 @@
     flex-wrap: wrap;
   }
 
-  /* ========== KPI 炫酷长条 (强制一行) ========== */
-  .perf-kpi-strip {
-    display: flex; /* 改用 Flex 强制一行 */
-    align-items: stretch;
-    gap: 16px;
+  /* KPI：不再套整块 perf-panel，与图表区同宽（仅继承 .perf-dashboard 左右 padding） */
+  .perf-kpi-shell {
     flex-shrink: 0;
     width: 100%;
-    /* 处理极端小屏下的溢出 */
-    @media (max-width: 1200px) {
-      overflow-x: auto;
-      padding-bottom: 8px; /* 为滚动条留空 */
-    }
+    box-sizing: border-box;
+    padding: 0;
+    margin: 0;
+    background: transparent;
+    border: none;
+    box-shadow: none;
+    border-radius: 0;
+  }
+
+  .perf-kpi-strip {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 16px;
+    width: 100%;
+    box-sizing: border-box;
   }
 
   .premium-kpi-card {
-    flex: 1; /* 核心：平均分配空间并允许压缩 */
-    min-width: 180px; /* 保证卡片即使被挤压也不会完全变形 */
-    background-color: var(--el-bg-color-overlay);
+    min-width: 0;
+    width: 100%;
+    background-color: var(--el-fill-color-blank);
     border-radius: 12px;
+    border: 1px solid var(--el-border-color);
     position: relative;
     overflow: hidden; /* 裁剪水印图标 */
-    transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
-    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.04);
+    transition:
+      border-color 0.25s ease,
+      box-shadow 0.25s ease,
+      transform 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+    box-shadow:
+      0 1px 2px rgba(15, 23, 42, 0.05),
+      0 6px 14px rgba(15, 23, 42, 0.06);
     box-sizing: border-box;
     cursor: default;
 
@@ -566,9 +600,11 @@
     }
 
     &:hover {
-      transform: translateY(-5px);
-      box-shadow: 0 12px 24px -8px color-mix(in srgb, var(--kpi-accent) 25%, rgba(0, 0, 0, 0.15));
-      // border: 1px solid color-mix(in srgb, var(--kpi-accent) 20%, var(--el-border-color-light));
+      transform: translateY(-4px);
+      border-color: color-mix(in srgb, var(--kpi-accent) 32%, var(--el-border-color));
+      box-shadow:
+        0 2px 6px rgba(15, 23, 42, 0.06),
+        0 14px 28px -10px color-mix(in srgb, var(--kpi-accent) 22%, rgba(15, 23, 42, 0.18));
 
       .premium-kpi-card__watermark {
         opacity: 0.12;

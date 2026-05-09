@@ -290,7 +290,8 @@
     "business": {
       "title": "Business",
       "performanceRules": "Rules",
-      "pointsLedger": "Points Ledger"
+      "pointsLedger": "Points Ledger",
+      "pointsLedgerMine": "My Points Ledger"
     },
     "system": {
       "title": "System Settings",

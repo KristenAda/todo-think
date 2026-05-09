@@ -290,7 +290,8 @@
     "business": {
       "title": "业务管理",
       "performanceRules": "规则管理",
-      "pointsLedger": "积分记录"
+      "pointsLedger": "积分记录",
+      "pointsLedgerMine": "个人积分记录"
     },
     "system": {
       "title": "系统管理",

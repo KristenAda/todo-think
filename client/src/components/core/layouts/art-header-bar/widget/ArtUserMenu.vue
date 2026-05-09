@@ -3,7 +3,7 @@
   <ElPopover
     ref="userMenuPopover"
     placement="bottom-end"
-    :width="240"
+    :width="296"
     :hide-after="0"
     :offset="10"
     trigger="hover"
@@ -39,6 +39,7 @@
             <span class="block mt-0.5 text-xs text-g-500 truncate">{{ userInfo.email }}</span>
           </div>
         </div>
+        <UserPerfTierSnippet />
         <ul class="py-4 mt-3 border-t border-g-300/80">
           <li class="btn-item" @click="goPage('/system/user-center')">
             <ArtSvgIcon icon="ri:user-3-line" />
@@ -69,8 +70,10 @@
 <script setup lang="ts">
   import { useI18n } from 'vue-i18n';
   import { useRouter } from 'vue-router';
+  import { storeToRefs } from 'pinia';
   import { ElMessageBox } from 'element-plus';
   import { useUserStore } from '@/store/modules/user';
+  import UserPerfTierSnippet from '@/components/business/user-performance/UserPerfTierSnippet.vue';
   import { WEB_LINKS } from '@/utils/constants';
   import { mittBus } from '@/utils/sys';
 

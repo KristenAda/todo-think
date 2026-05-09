@@ -212,7 +212,7 @@
       </div>
 
       <div class="form-actions">
-        <el-button type="primary" size="large" class="apply-btn" @click="emitApply">
+        <el-button type="default" size="large" class="apply-btn" plain @click="emitApply">
           生成并应用到各科公式
         </el-button>
       </div>

@@ -2,7 +2,7 @@
   <ArtDialog
     v-model="innerVisible"
     :title="mode === 'create' ? '新建规则集' : '编辑规则集'"
-    subtitle="基础信息与计算变量在同一处维护，保存时一并生效"
+    subtitle="多数场景仅需填写下方基础信息；自定义数据来源时再展开变量表"
     width="1080px"
   >
     <div class="rule-set-dialog-body">
@@ -37,22 +37,29 @@
         </el-form-item>
       </el-form>
 
-      <el-divider content-position="left">变量配置</el-divider>
-      <el-alert
-        type="info"
-        :closable="false"
-        show-icon
-        class="var-alert"
-        title="默认值主要用于规则试算初始化；任务结算应优先使用真实任务事实数据。"
-      />
-      <div class="var-toolbar">
-        <el-button type="primary" plain @click="emit('add-variable-draft')">新增变量</el-button>
-      </div>
-      <ArtTable :data="variableDrafts" :columns="columns" />
+      <el-collapse v-model="varsPanelActive" class="advanced-vars-collapse">
+        <el-collapse-item name="vars">
+          <template #title>
+            <span class="collapse-vars-title">自定义变量（高级，可选）</span>
+            <span class="collapse-vars-hint">需要映射任务字段或调整默认值时再展开</span>
+          </template>
+          <el-alert
+            type="info"
+            :closable="false"
+            show-icon
+            class="var-alert"
+            title="默认值主要用于规则试算初始化；任务结算应优先使用真实任务事实数据。"
+          />
+          <div class="var-toolbar">
+            <el-button plain @click="emit('add-variable-draft')">新增变量</el-button>
+          </div>
+          <ArtTable :data="variableDrafts" :columns="columns" />
+        </el-collapse-item>
+      </el-collapse>
     </div>
     <template #footer>
       <el-button @click="innerVisible = false">取消</el-button>
-      <el-button type="primary" :loading="saving" @click="emit('save')">{{
+      <el-button type="default" :loading="saving" @click="emit('save')">{{
         mode === 'create' ? '创建' : '保存'
       }}</el-button>
     </template>
@@ -60,8 +67,11 @@
 </template>
 
 <script setup lang="ts">
-  import { computed } from 'vue';
+  import { computed, ref } from 'vue';
   import { RULE_SCOPE_OPTIONS, RuleScopeEnum } from '@/enums/modules/performanceRulesEnum';
+
+  /** 默认折叠，降低首次新建的认知负担 */
+  const varsPanelActive = ref<string[]>([]);
 
   const props = defineProps<{
     visible: boolean;
@@ -103,5 +113,31 @@
   }
   .var-toolbar {
     margin-bottom: 8px;
+  }
+  .advanced-vars-collapse {
+    margin-top: 8px;
+    border: none;
+    --el-collapse-header-height: auto;
+  }
+  .advanced-vars-collapse :deep(.el-collapse-item__header) {
+    align-items: flex-start;
+    flex-wrap: wrap;
+    gap: 4px 12px;
+    line-height: 1.45;
+    padding-top: 10px;
+    padding-bottom: 10px;
+  }
+  .advanced-vars-collapse :deep(.el-collapse-item__wrap) {
+    border-bottom: none;
+  }
+  .collapse-vars-title {
+    font-weight: 600;
+    color: var(--el-text-color-primary);
+    margin-right: 8px;
+  }
+  .collapse-vars-hint {
+    font-size: 12px;
+    font-weight: normal;
+    color: var(--el-text-color-secondary);
   }
 </style>

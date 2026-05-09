@@ -12,6 +12,7 @@ import { useUserStore } from '@/store/modules/user';
 import { useAppMode } from '@/hooks/core/useAppMode';
 import { fetchGetMenuList, fetchGetUserMenuTree } from '@/api/system-manage';
 import { asyncRoutes } from '../routes/asyncRoutes';
+import { pointsLedgerMineMenuRoute } from '../modules/business';
 import { RoutesAlias } from '../routesAlias';
 import { formatMenuTitle } from '@/utils';
 
@@ -29,11 +30,45 @@ export class MenuProcessor {
       menuList = await this.processBackendMenu();
     }
 
+    // 后端菜单缺少前端定义的辅助子路由时补齐（如本人积分流水）
+    menuList = this.injectPointsLedgerMineRoute(menuList);
+
     // 在规范化路径之前，验证原始路径配置
     this.validateMenuPaths(menuList);
 
     // 规范化路径（将相对路径转换为完整路径）
     return this.normalizeMenuPaths(menuList);
+  }
+
+  /**
+   * 后端下发的菜单树不含「积分记录（本人）」子路由时，在业务管理下注入，
+   * 否则动态注册阶段根本不会生成 `/business/points-ledger/mine`。
+   */
+  private injectPointsLedgerMineRoute(menuList: AppRouteRecord[]): AppRouteRecord[] {
+    return menuList.map((item) => {
+      const children = item.children?.length
+        ? this.injectPointsLedgerMineRoute(item.children)
+        : item.children;
+
+      const isBusiness =
+        item.name === 'Business' ||
+        item.path === '/business' ||
+        item.path === 'business';
+
+      const hasLedger =
+        children?.some((c) => c.name === 'PointsLedgerLog') ?? false;
+      const hasMine =
+        children?.some((c) => c.name === 'PointsLedgerMine') ?? false;
+
+      if (children?.length && isBusiness && hasLedger && !hasMine) {
+        return {
+          ...item,
+          children: [...children, { ...pointsLedgerMineMenuRoute }]
+        };
+      }
+
+      return children !== item.children ? { ...item, children } : item;
+    });
   }
 
   /**

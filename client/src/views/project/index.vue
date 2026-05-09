@@ -576,27 +576,27 @@
     .card-footer {
       flex-shrink: 0;
       display: flex;
-      gap: 10px;
-      align-items: stretch;
-      padding: 12px 18px 14px;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+      align-items: center;
+      gap: 6px;
+      padding: 10px 18px 12px;
       border-top: 1px dashed rgba(15, 23, 42, 0.12);
-      background: color-mix(
-        in srgb,
-        var(--el-fill-color-lighter, #fafafa) 82%,
-        var(--default-box-color, #fff)
-      );
+      /* 与中部正文同一底盘色，避免操作区单独一块偏灰/偏深 */
+      background: var(--default-box-color, #fff);
 
       .footer-btn {
-        display: flex;
-        flex: 1;
+        display: inline-flex;
+        flex: 0 0 auto;
         align-items: center;
         justify-content: center;
-        gap: 4px;
-        padding: 9px 8px;
+        gap: 3px;
+        padding: 4px 10px;
         border: none;
-        border-radius: 8px;
-        font-size: 13px;
+        border-radius: 6px;
+        font-size: 12px;
         font-weight: 500;
+        line-height: 1.25;
         cursor: pointer;
         transition: background 0.2s ease;
 

@@ -383,7 +383,7 @@
     </div>
     <template #footer>
       <el-button @click="assigneePickerVisible = false">取消</el-button>
-      <el-button type="primary" @click="confirmAssigneePicker">确定</el-button>
+      <el-button type="default" @click="confirmAssigneePicker">确定</el-button>
     </template>
   </ArtDialog>
 
@@ -454,7 +454,7 @@
     </div>
     <template #footer>
       <el-button @click="testerPickerVisible = false">取消</el-button>
-      <el-button type="primary" @click="confirmTesterPicker">确定</el-button>
+      <el-button type="default" @click="confirmTesterPicker">确定</el-button>
     </template>
   </ArtDialog>
 </template>
