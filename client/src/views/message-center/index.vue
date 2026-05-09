@@ -141,6 +141,7 @@
                 items.push({
                   key: 'viewTask',
                   label: '查看任务',
+                  disabled: false,
                   onClick: async () => {
                     if (!row?.isRead && row?.id) {
                       try {

@@ -84,11 +84,19 @@ export const systemRoutes: AppRouteRecord = {
     },
     {
       path: 'performance-rules',
-      redirect: '/business/performance-rules'
+      redirect: '/business/performance-rules',
+      meta: {
+        title: 'menus.business.performanceRules',
+        isHide: true
+      }
     },
     {
       path: 'points-ledger',
-      redirect: '/business/points-ledger'
+      redirect: '/business/points-ledger',
+      meta: {
+        title: 'menus.business.pointsLedger',
+        isHide: true
+      }
     },
     {
       path: 'nested',

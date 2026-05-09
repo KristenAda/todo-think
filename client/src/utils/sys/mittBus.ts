@@ -66,6 +66,11 @@ type Events = {
     earnedPoints: number;
     totalPoints: number;
   };
+  /** 粒子落点后触发顶栏数字滚动等业务衔接 */
+  pointsParticleHitTarget: {
+    earnedPoints: number;
+    totalPoints: number;
+  };
 };
 
 // 创建类型安全的事件总线实例

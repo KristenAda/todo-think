@@ -1,4 +1,4 @@
-import { defineConfig, loadEnv } from 'vite';
+import { defineConfig, loadEnv, type ConfigEnv } from 'vite';
 import vue from '@vitejs/plugin-vue';
 import path from 'path';
 import { fileURLToPath } from 'url';
@@ -11,14 +11,28 @@ import { ElementPlusResolver } from 'unplugin-vue-components/resolvers';
 import tailwindcss from '@tailwindcss/vite';
 // import { visualizer } from 'rollup-plugin-visualizer'
 
-export default ({ mode }: { mode: string }) => {
+export default ({ mode }: ConfigEnv) => {
   const root = process.cwd();
   const env = loadEnv(mode, root);
+  const devEnv = loadEnv('development', root);
+  // preview 使用 production 模式，仅读 .env.production，常缺 VITE_API_PROXY_URL，导致 target 为空而报 Must set target or forward
+  const VITE_API_PROXY_URL = env.VITE_API_PROXY_URL || devEnv.VITE_API_PROXY_URL;
   console.log('env :>> ', env);
-  const { VITE_VERSION, VITE_PORT, VITE_BASE_URL, VITE_API_URL, VITE_API_PROXY_URL } = env;
+  const { VITE_VERSION, VITE_PORT, VITE_BASE_URL, VITE_API_URL } = env;
 
   console.log(`🚀 API_URL = ${VITE_API_URL}`);
   console.log(`🚀 VERSION = ${VITE_VERSION}`);
+
+  const apiProxy =
+    VITE_API_PROXY_URL != null && String(VITE_API_PROXY_URL).trim() !== ''
+      ? {
+          '/api': {
+            target: String(VITE_API_PROXY_URL).trim(),
+            changeOrigin: true,
+            rewrite: (path: string) => path.replace(/^\/api/, '') // 通常建议重写路径，视后端情况而定
+          }
+        }
+      : undefined;
 
   return defineConfig({
     define: {
@@ -27,18 +41,14 @@ export default ({ mode }: { mode: string }) => {
     base: VITE_BASE_URL,
     server: {
       port: Number(VITE_PORT),
-      proxy: {
-        '/api': {
-          target: VITE_API_PROXY_URL,
-          changeOrigin: true,
-          rewrite: (path) => path.replace(/^\/api/, '') // 通常建议重写路径，视后端情况而定
-        }
-      },
+      ...(apiProxy ? { proxy: apiProxy } : {}),
+      allowedHosts: true,
       host: true
     },
     // 路径别名（dedupe 避免 @vue-office + vue-demi 预构建后出现多份 Vue，引发 isFunction 等运行时错误）
+    // 注意：勿将 @vue/shared 列入 dedupe，否则生产构建时 Rollup 可能无法解析该包（pnpm 嵌套路径）
     resolve: {
-      dedupe: ['vue', 'vue-demi', '@vue/shared'],
+      dedupe: ['vue', 'vue-demi'],
       alias: {
         '@': fileURLToPath(new URL('./src', import.meta.url)),
         '@views': resolvePath('src/views'),
@@ -112,12 +122,7 @@ export default ({ mode }: { mode: string }) => {
     // 依赖预构建：避免运行时重复请求与转换，提升首次加载速度
     optimizeDeps: {
       // 使用包内 lib/v3/*.mjs 直连，并排除对 UMD 入口的预构建，避免与 Vue 合并 chunk 后出现 defineComponent 内 isFunction 异常
-      exclude: [
-        '@vue-office/pdf',
-        '@vue-office/docx',
-        '@vue-office/excel',
-        '@vue-office/pptx'
-      ],
+      exclude: ['@vue-office/pdf', '@vue-office/docx', '@vue-office/excel', '@vue-office/pptx'],
       include: [
         'vue',
         'vue-demi',
