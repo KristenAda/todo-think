@@ -61,23 +61,23 @@ model Project {
   description String? @db.Text // 项目描述
 
   // 👉 【统一新增的字段】
-  orgId   Int? // 归属部门/组织ID（解决数据隔离；nullable：无法确定时设为 null）
-  version Int @default(0) // 乐观锁版本号
+  orgId   Int? @map("org_id")
+  version Int @default(0) @map("version")
 
-  managerId  Int // 负责人ID
-  status     String    @default("ACTIVE") @db.VarChar(20)
-  startDate  DateTime? // 计划开始时间
-  endDate    DateTime? // 计划结束时间
-  createTime DateTime  @default(now())
-  updateTime DateTime  @updatedAt
-  deletedAt  DateTime? // 软删除
+  managerId  Int @map("manager_id")
+  status     String    @default("ACTIVE") @db.VarChar(20) @map("status")
+  startDate  DateTime? @map("start_date")
+  endDate    DateTime? @map("end_date")
+  createTime DateTime  @default(now()) @map("created_at")
+  updateTime DateTime  @updatedAt @map("updated_at")
+  deletedAt  DateTime? @map("deleted_at")
 
   manager User   @relation("ProjectManager", fields: [managerId], references: [id])
   taskRule ProjectTaskRule?
   tasks   Task[]
 
   /// 用户指定的验收计分生效规则版本（结算优先使用；为空则按规则集自动择优）
-  activeRuleSetVersionId Int?
+  activeRuleSetVersionId Int? @map("active_rule_set_version_id")
   activeRuleSetVersion   RuleSetVersion? @relation("ProjectActiveScoringRule", fields: [activeRuleSetVersionId], references: [id], onDelete: SetNull)
 
   @@index([orgId, id])
@@ -87,16 +87,15 @@ model Project {
 /// 项目级任务流转规则（配置化：用于流程治理主线B）
 model ProjectTaskRule {
   id        Int     @id @default(autoincrement())
-  projectId Int    @unique
+  projectId Int    @unique @map("project_id")
 
-  // 规则开关（默认值保持“当前系统行为不变”）
-  requireEstimateHours Boolean @default(false)
-  requireDueDate Boolean @default(false)
-  requireTestEvidenceForDev Boolean @default(true)
-  allowCoAssigneeSubmitQa Boolean @default(false)
-  allowQaRejectWithoutHours Boolean @default(true)
+  requireEstimateHours Boolean @default(false) @map("require_estimate_hours")
+  requireDueDate Boolean @default(false) @map("require_due_date")
+  requireTestEvidenceForDev Boolean @default(true) @map("require_test_evidence_for_dev")
+  allowCoAssigneeSubmitQa Boolean @default(false) @map("allow_co_assignee_submit_qa")
+  allowQaRejectWithoutHours Boolean @default(true) @map("allow_qa_reject_without_hours")
 
-  updatedAt DateTime @updatedAt
+  updatedAt DateTime @updatedAt @map("updated_at")
 
   project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
 
@@ -106,41 +105,36 @@ model ProjectTaskRule {
 /// 任务表
 model Task {
   id        Int @id @default(autoincrement())
-  projectId Int // 所属项目
+  projectId Int @map("project_id")
 
-  // 👉 【统一新增的核心业务与安全字段】
-  orgId    Int? // 归属部门/组织ID（冗余提升查询性能；nullable：无法确定时设为 null）
-  version  Int          @default(0) // 乐观锁版本号
-  parentId Int? // 父任务ID（支持需求拆解）
-  type       TaskType       @default(FEATURE) // 事项类型（需求/缺陷等）
-  workDomain TaskWorkDomain @default(GENERAL) // 任务领域（仅软件开发可走测试用例）
-  priority   TaskPriority   @default(P2) // 任务优先级
-  dueDate  DateTime? // 计划完成/截止时间
+  orgId    Int? @map("org_id")
+  version  Int          @default(0) @map("version")
+  parentId Int? @map("parent_id")
+  type       TaskType       @default(FEATURE) @map("type")
+  workDomain TaskWorkDomain @default(GENERAL) @map("work_domain")
+  priority   TaskPriority   @default(P2) @map("priority")
+  dueDate  DateTime? @map("due_date")
 
-  title       String     @db.VarChar(200) // 任务名称
-  description String?    @db.Text // 任务描述
-  status      TaskStatus @default(PENDING) // 任务状态
+  title       String     @db.VarChar(200) @map("title")
+  description String?    @db.Text @map("description")
+  status      TaskStatus @default(PENDING) @map("status")
 
-  // 人员关联
-  managerId      Int? // 分配者/管理者ID
-  mainAssigneeId Int? // 主要负责人ID
-  testerId       Int? // 测试验收人ID
+  managerId      Int? @map("manager_id")
+  mainAssigneeId Int? @map("main_assignee_id")
+  testerId       Int? @map("tester_id")
 
-  // 工时
-  estimatedHours Float? // 预期工时（小时）
-  actualHours    Float? // 实际工时（小时）
-  suggestedBaseScore Float? // 系统建议基础积分（由任务信息估算）
-  baseScore Float? // 最终基础积分（用于结算）
-  baseScoreSource String @default("AUTO") @db.VarChar(20) // AUTO / MANUAL
-  /** 难度档位；绩效结算按档位映射系数，见 TaskComplexityTier */
-  complexityTier TaskComplexityTier @default(STANDARD)
-  /// 与 complexityTier 对应的系数冗余（规则变量 task.complexity），由应用层同步
-  complexity       Float  @default(1)
-  qaRejectReason String? @db.Text // 最近一次验收打回原因（任务级）
+  estimatedHours Float? @map("estimated_hours")
+  actualHours    Float? @map("actual_hours")
+  suggestedBaseScore Float? @map("suggested_base_score")
+  baseScore Float? @map("base_score")
+  baseScoreSource String @default("AUTO") @db.VarChar(20) @map("base_score_source")
+  complexityTier TaskComplexityTier @default(STANDARD) @map("complexity_tier")
+  complexity       Float  @default(1) @map("complexity")
+  qaRejectReason String? @db.Text @map("qa_reject_reason")
 
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  acceptedAt DateTime? // 验收通过时间（业务发生时间；用于绩效账期归属）
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+  acceptedAt DateTime? @map("accepted_at")
 
   // 关联关系
   project Project @relation(fields: [projectId], references: [id])
@@ -169,9 +163,9 @@ model Task {
 /// 任务协助负责人中间表（多对多）
 model TaskCoAssignee {
   id        Int      @id @default(autoincrement())
-  taskId    Int
-  userId    Int
-  createdAt DateTime @default(now())
+  taskId    Int @map("task_id")
+  userId    Int @map("user_id")
+  createdAt DateTime @default(now()) @map("created_at")
 
   task Task @relation(fields: [taskId], references: [id], onDelete: Cascade)
   user User @relation("TaskCoAssignee", fields: [userId], references: [id])
@@ -183,21 +177,19 @@ model TaskCoAssignee {
 /// 测试用例表
 model TestCase {
   id             Int    @id @default(autoincrement())
-  taskId         Int // 所属任务
-  description    String @db.Text // 用例描述/操作步骤
-  expectedResult String @db.Text // 预期结果
+  taskId         Int @map("task_id")
+  description    String @db.Text @map("description")
+  expectedResult String @db.Text @map("expected_result")
 
-  // 自测
-  selfTestStatus TestStatus @default(UNTESTED) // 开发者自测状态
-  selfTestRemark String?    @db.Text // 自测备注
+  selfTestStatus TestStatus @default(UNTESTED) @map("self_test_status")
+  selfTestRemark String?    @db.Text @map("self_test_remark")
 
-  // QA 验收
-  qaStatus TestStatus @default(UNTESTED) // QA 验收状态
-  qaRemark String?    @db.Text // QA 备注
-  bugCount Int        @default(0) // 累计 Bug 次数
+  qaStatus TestStatus @default(UNTESTED) @map("qa_status")
+  qaRemark String?    @db.Text @map("qa_remark")
+  bugCount Int        @default(0) @map("bug_count")
 
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
 
   task Task @relation(fields: [taskId], references: [id], onDelete: Cascade)
 
@@ -207,11 +199,11 @@ model TestCase {
 /// 工时与动态记录表
 model WorkLog {
   id        Int      @id @default(autoincrement())
-  taskId    Int // 所属任务
-  userId    Int // 填报人
-  hours     Float // 本次消耗工时（小时）
-  content   String   @db.Text // 工作内容描述
-  createdAt DateTime @default(now())
+  taskId    Int @map("task_id")
+  userId    Int @map("user_id")
+  hours     Float @map("hours")
+  content   String   @db.Text @map("content")
+  createdAt DateTime @default(now()) @map("created_at")
 
   task Task @relation(fields: [taskId], references: [id], onDelete: Cascade)
   user User @relation("WorkLogUser", fields: [userId], references: [id])
@@ -224,10 +216,10 @@ model WorkLog {
 /// 任务级附件（创建任务时关联，挂在任务下）
 model TaskAttachment {
   id           Int @id @default(autoincrement())
-  taskId       Int
-  attachmentId Int
-  sort         Int @default(0)
-  createdAt    DateTime @default(now())
+  taskId       Int @map("task_id")
+  attachmentId Int @map("attachment_id")
+  sort         Int @default(0) @map("sort")
+  createdAt    DateTime @default(now()) @map("created_at")
 
   task       Task       @relation(fields: [taskId], references: [id], onDelete: Cascade)
   attachment Attachment @relation(fields: [attachmentId], references: [id], onDelete: Cascade)
@@ -240,10 +232,10 @@ model TaskAttachment {
 /// 工时登记附件
 model WorkLogAttachment {
   id           Int @id @default(autoincrement())
-  workLogId    Int
-  attachmentId Int
-  sort         Int @default(0)
-  createdAt    DateTime @default(now())
+  workLogId    Int @map("work_log_id")
+  attachmentId Int @map("attachment_id")
+  sort         Int @default(0) @map("sort")
+  createdAt    DateTime @default(now()) @map("created_at")
 
   workLog    WorkLog    @relation(fields: [workLogId], references: [id], onDelete: Cascade)
   attachment Attachment @relation(fields: [attachmentId], references: [id], onDelete: Cascade)
@@ -256,11 +248,11 @@ model WorkLogAttachment {
 /// 任务评论
 model TaskComment {
   id        Int      @id @default(autoincrement())
-  taskId    Int
-  userId    Int
-  content   String   @db.Text
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  taskId    Int @map("task_id")
+  userId    Int @map("user_id")
+  content   String   @db.Text @map("content")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
 
   task        Task                    @relation(fields: [taskId], references: [id], onDelete: Cascade)
   user        User                    @relation("TaskCommentUser", fields: [userId], references: [id])
@@ -273,10 +265,10 @@ model TaskComment {
 /// 任务评论附件
 model TaskCommentAttachment {
   id           Int      @id @default(autoincrement())
-  commentId    Int
-  attachmentId Int
-  sort         Int      @default(0)
-  createdAt    DateTime @default(now())
+  commentId    Int      @map("comment_id")
+  attachmentId Int      @map("attachment_id")
+  sort         Int      @default(0) @map("sort")
+  createdAt    DateTime @default(now()) @map("created_at")
 
   comment    TaskComment @relation(fields: [commentId], references: [id], onDelete: Cascade)
   attachment Attachment  @relation(fields: [attachmentId], references: [id], onDelete: Cascade)
@@ -289,15 +281,15 @@ model TaskCommentAttachment {
 /// 任务时间线事件
 model TaskTimeline {
   id          Int      @id @default(autoincrement())
-  taskId       Int
-  eventType    String   @db.VarChar(40)
-  title        String   @db.VarChar(120)
-  content      String?  @db.Text
-  fromStatus   TaskStatus?
-  toStatus     TaskStatus?
-  operatorId   Int?
-  payload      Json?
-  createdAt    DateTime @default(now())
+  taskId       Int @map("task_id")
+  eventType    String   @db.VarChar(40) @map("event_type")
+  title        String   @db.VarChar(120) @map("title")
+  content      String?  @db.Text @map("content")
+  fromStatus   TaskStatus? @map("from_status")
+  toStatus     TaskStatus? @map("to_status")
+  operatorId   Int? @map("operator_id")
+  payload      Json? @map("payload")
+  createdAt    DateTime @default(now()) @map("created_at")
 
   task      Task  @relation(fields: [taskId], references: [id], onDelete: Cascade)
   operator  User? @relation("TaskTimelineOperator", fields: [operatorId], references: [id])

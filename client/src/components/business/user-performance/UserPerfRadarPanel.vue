@@ -33,9 +33,9 @@
         <div ref="chartRef" class="uprp__chart" />
       </template>
       <div v-else class="uprp__empty">
-        <art-svg-icon icon="mdi:chart-donut" class="uprp__empty-icon" />
-        <p>暂无队内绩效样本</p>
-        <p class="uprp__empty-hint">在完成主要负责人事项并纳入统计范围后，将展示段位与五维画像。</p>
+        <ArtEmpty description="暂无队内绩效样本" compact :image-size="88">
+          <p class="uprp__empty-hint">在完成主要负责人事项并纳入统计范围后，将展示段位与五维画像。</p>
+        </ArtEmpty>
       </div>
     </div>
   </div>
@@ -357,32 +357,16 @@
   .uprp__empty {
     flex: 1;
     display: flex;
-    flex-direction: column;
     align-items: center;
     justify-content: center;
-    text-align: center;
-    padding: 16px 12px;
     min-height: 168px;
-    color: var(--el-text-color-secondary);
-    font-size: 14px;
-
-    p {
-      margin: 0;
-    }
-  }
-
-  .uprp__empty-icon {
-    font-size: 40px;
-    margin-bottom: 12px;
-    opacity: 0.35;
-    color: var(--el-color-primary);
   }
 
   .uprp__empty-hint {
-    margin-top: 8px !important;
+    margin: 0 !important;
     font-size: 12px;
     line-height: 1.5;
     max-width: 280px;
-    opacity: 0.85;
+    color: var(--el-text-color-secondary);
   }
 </style>

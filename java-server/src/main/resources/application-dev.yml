@@ -1,0 +1,19 @@
+spring:
+  datasource:
+    url: jdbc:mysql://localhost:3306/todo_think_db?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai&useSSL=false&allowPublicKeyRetrieval=true
+    username: root
+    password: a000000
+    driver-class-name: com.mysql.cj.jdbc.Driver
+  servlet:
+    multipart:
+      max-file-size: 11MB
+      max-request-size: 11MB
+
+app:
+  jwt:
+    secret: your-super-secret-key-change-it-in-prod
+    expiration-hours: 24
+  upload:
+    root: ../server/uploads
+    max-file-bytes: 104857600
+    session-ttl-hours: 24

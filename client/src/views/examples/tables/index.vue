@@ -56,7 +56,7 @@
               <div class="flex flex-col gap-2">
                 <div class="max-h-50 overflow-y-auto">
                   <div v-if="cacheDebugLogs.length === 0" class="p-5 text-center">
-                    <ElEmpty description="暂无缓存日志" :image-size="60" />
+                    <ArtEmpty description="暂无缓存日志" compact :image-size="72" />
                   </div>
                   <div v-else class="flex flex-col gap-1">
                     <div

@@ -54,6 +54,8 @@ import { storeToRefs } from 'pinia';
 import { useSettingStore } from '@/store/modules/setting';
 import { getCssVar } from '@/utils/ui';
 import type { BaseChartProps, ChartThemeConfig, UseChartOptions } from '@/types/component/chart';
+import noDataRaw from '@/assets/icons/empty/no_data.svg?raw';
+import { withEmptySvgRootStyle } from '@/utils/themeifyEmptySvg';
 
 // 图表主题配置
 export const useChartOps = (): ChartThemeConfig => ({
@@ -167,9 +169,6 @@ export function useChart(options: UseChartOptions = {}) {
   const setupThemeWatcher = () => {
     if (autoTheme) {
       themeStopHandle = watch(isDark, () => {
-        // 更新空状态样式
-        emptyStateManager.updateStyle();
-
         if (chart && !isDestroyed) {
           // 使用 requestAnimationFrame 优化主题更新
           requestAnimationFrame(() => {
@@ -463,12 +462,19 @@ export function useChart(options: UseChartOptions = {}) {
         flex-direction: column;
         align-items: center;
         justify-content: center;
-        font-size: 12px;
-        color: ${isDark.value ? '#555555' : '#B3B2B2'};
         background: transparent;
         z-index: 10;
       `;
-      emptyStateDiv.innerHTML = `<span>暂无数据</span>`;
+      const emptySvg = withEmptySvgRootStyle(
+        noDataRaw,
+        'width:100%;height:auto;display:block;vertical-align:top'
+      );
+      emptyStateDiv.innerHTML = `
+        <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;padding:12px;max-width:100%;box-sizing:border-box;">
+          <div style="width:72px;max-width:40%;flex-shrink:0;line-height:0">${emptySvg}</div>
+          <span style="font-size:12px;line-height:1.4;color:var(--el-text-color-secondary);">暂无数据</span>
+        </div>
+      `;
 
       // 确保父容器有相对定位
       if (
@@ -485,12 +491,6 @@ export function useChart(options: UseChartOptions = {}) {
       if (emptyStateDiv && chartRef.value) {
         chartRef.value.removeChild(emptyStateDiv);
         emptyStateDiv = null;
-      }
-    },
-
-    updateStyle: () => {
-      if (emptyStateDiv) {
-        emptyStateDiv.style.color = isDark.value ? '#666' : '#999';
       }
     }
   };
@@ -697,7 +697,6 @@ export function useChartComponent<T extends BaseChartProps>(options: UseChartCom
 
     // 监听主题变化
     const themeStopHandle = watch(isDark, () => {
-      emptyStateManager.updateStyle();
       updateChart();
     });
     stopHandles.push(themeStopHandle);

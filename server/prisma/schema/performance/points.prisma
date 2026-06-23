@@ -1,11 +1,11 @@
 model PointsAccount {
   id        BigInt   @id @default(autoincrement())
-  ownerType String   @db.VarChar(20) // USER/TEAM/ROLE
-  ownerId   Int
-  status    String   @default("ACTIVE") @db.VarChar(20)
+  ownerType String   @db.VarChar(20) @map("owner_type")
+  ownerId   Int @map("owner_id")
+  status    String   @default("ACTIVE") @db.VarChar(20) @map("status")
 
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
 
   entries PointsLedgerEntry[]
 
@@ -15,24 +15,24 @@ model PointsAccount {
 
 model PointsLedgerEntry {
   id              BigInt   @id @default(autoincrement())
-  accountId       BigInt
+  accountId       BigInt @map("account_id")
 
-  bizType         String   @db.VarChar(30) // task_settlement/adjustment/reversal/manual
-  bizId           String   @db.VarChar(64) // settlementId
+  bizType         String   @db.VarChar(30) @map("biz_type")
+  bizId           String   @db.VarChar(64) @map("biz_id")
 
-  projectId       Int?
-  taskId          Int?
+  projectId       Int? @map("project_id")
+  taskId          Int? @map("task_id")
 
-  ruleSetVersionId Int?
-  pointsType      String   @db.VarChar(40) // timeliness/quality/bonus/...
-  amount          Int // 积分分录，可正可负
+  ruleSetVersionId Int? @map("rule_set_version_id")
+  pointsType      String   @db.VarChar(40) @map("points_type")
+  amount          Int @map("amount")
 
-  occurredAt      DateTime // 业务发生时间（验收通过时间/冲正发生时间）
-  createdAt       DateTime @default(now())
+  occurredAt      DateTime @map("occurred_at")
+  createdAt       DateTime @default(now()) @map("created_at")
 
-  idempotencyKey  String   @unique @db.VarChar(128)
+  idempotencyKey  String   @unique @db.VarChar(128) @map("idempotency_key")
 
-  explain         Json?
+  explain         Json? @map("explain")
 
   account         PointsAccount @relation(fields: [accountId], references: [id], onDelete: Restrict)
   ruleSetVersion  RuleSetVersion? @relation(fields: [ruleSetVersionId], references: [id], onDelete: SetNull)
@@ -43,4 +43,3 @@ model PointsLedgerEntry {
   @@index([taskId])
   @@map("points_ledger_entry")
 }
-

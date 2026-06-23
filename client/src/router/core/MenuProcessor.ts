@@ -41,8 +41,9 @@ export class MenuProcessor {
   }
 
   /**
-   * 后端下发的菜单树不含「积分记录（本人）」子路由时，在业务管理下注入，
-   * 否则动态注册阶段根本不会生成 `/business/points-ledger/mine`。
+   * 注入「个人积分记录」隐藏子路由 `/business/points-ledger/mine`。
+   * - 侧边栏不展示（isHide），入口在个人中心等；
+   * - 勿依赖是否已有「积分记录」管理菜单：多数角色种子未绑 141，否则路由未注册个人中心链接会 404。
    */
   private injectPointsLedgerMineRoute(menuList: AppRouteRecord[]): AppRouteRecord[] {
     return menuList.map((item) => {
@@ -55,12 +56,10 @@ export class MenuProcessor {
         item.path === '/business' ||
         item.path === 'business';
 
-      const hasLedger =
-        children?.some((c) => c.name === 'PointsLedgerLog') ?? false;
       const hasMine =
         children?.some((c) => c.name === 'PointsLedgerMine') ?? false;
 
-      if (children?.length && isBusiness && hasLedger && !hasMine) {
+      if (children?.length && isBusiness && !hasMine) {
         return {
           ...item,
           children: [...children, { ...pointsLedgerMineMenuRoute }]

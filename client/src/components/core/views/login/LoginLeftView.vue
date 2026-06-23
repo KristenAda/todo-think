@@ -7,7 +7,7 @@
     </div>
 
     <div class="left-img">
-      <ThemeSvg :src="loginIcon" size="100%" />
+      <LoginBlobFollower />
     </div>
 
     <div class="text-wrap">
@@ -71,7 +71,7 @@
 </template>
 
 <script setup lang="ts">
-  import loginIcon from '@imgs/svg/login_icon.svg';
+  import LoginBlobFollower from './LoginBlobFollower.vue';
   import { themeAnimation } from '@/utils/ui/animation';
 
   // 定义 props
@@ -111,11 +111,20 @@
 
     .left-img {
       position: absolute;
-      inset: 0 0 10.5%;
+      inset: 72px 0 13%;
       z-index: 10;
-      width: 40%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: min(48%, 500px);
+      min-width: 340px;
       margin: auto;
       animation: slideInLeft 0.6s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
+      pointer-events: none;
+
+      :deep(.blob-scene) {
+        pointer-events: auto;
+      }
     }
 
     .text-wrap {
@@ -479,6 +488,11 @@
 
     @media only screen and (width <= 1600px) {
       width: 60vw;
+
+      .left-img {
+        width: min(52%, 460px);
+        min-width: 300px;
+      }
 
       .text-wrap {
         bottom: 40px;

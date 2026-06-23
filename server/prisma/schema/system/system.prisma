@@ -1,89 +1,84 @@
 // ==========================================
 // 3. 菜单/权限表 (Menu)
 // ==========================================
+/// 菜单与权限
 model Menu {
   id        Int     @id @default(autoincrement())
-  parentId  Int?
-  name      String? // 新增：菜单名称标识
-  title     String  // 菜单显示名称
-  path      String? // 路由路径
-  component String? // 组件路径
-  icon      String? // 菜单图标
-  type      Int     @default(2) // 1:目录 2:菜单 3:按钮
-  sort      Int     @default(0) // 排序
+  parentId  Int?    @map("parent_id")
+  name      String? @map("name")
+  title     String  @map("title")
+  path      String? @map("path")
+  component String? @map("component")
+  icon      String? @map("icon")
+  type      Int     @default(2) @map("type")
+  sort      Int     @default(0) @map("sort")
 
-  // ★★★ 前端路由所需的元数据 ★★★
-  isEnable  Boolean @default(true) // 是否启用
-  keepAlive Boolean @default(true) // 是否缓存
-  isIframe  Boolean @default(false) // 是否为内嵌
-  isHide    Boolean @default(false) // 是否隐藏菜单
-  isHideTab Boolean @default(false) // 是否隐藏标签
-  link      String? // 外部链接
-  showBadge Boolean @default(false) // 是否显示徽章
-  showTextBadge String? // 文本徽章
-  fixedTab  Boolean @default(false) // 是否固定标签
-  activePath String? // 激活路径
-  isFullPage Boolean @default(false) // 是否全屏页面
-  roles     String? // 角色权限（JSON 数组字符串）
+  isEnable  Boolean @default(true) @map("is_enable")
+  keepAlive Boolean @default(true) @map("keep_alive")
+  isIframe  Boolean @default(false) @map("is_iframe")
+  isHide    Boolean @default(false) @map("is_hide")
+  isHideTab Boolean @default(false) @map("is_hide_tab")
+  link      String? @map("link")
+  showBadge Boolean @default(false) @map("show_badge")
+  showTextBadge String? @map("show_text_badge")
+  fixedTab  Boolean @default(false) @map("fixed_tab")
+  activePath String? @map("active_path")
+  isFullPage Boolean @default(false) @map("is_full_page")
+  roles     String? @map("roles")
 
-  // 权限列表（JSON 数组字符串，格式：[{"authMark":"add","title":"新增"}]）
-  authList  String? @db.LongText
+  authList  String? @db.LongText @map("auth_list")
 
-  // 关联
   roleMenus Role[]
 
-  createTime DateTime @default(now())
-  updateTime DateTime @updatedAt
+  createTime DateTime @default(now()) @map("created_at")
+  updateTime DateTime @updatedAt @map("updated_at")
+
+  @@map("menus")
 }
 
-// ==========================================
-// 4. 部门表 (Department) - 更新版
-// ==========================================
+/// 部门表
 model Department {
   id        Int     @id @default(autoincrement())
-  parentId  Int?
-  ancestors String? // ★ 祖级列表 (如 "0,1,5")
-  name      String
-  sort      Int     @default(0)
-  leader    String? // 部门负责人
-  phone     String? // 联系电话
-  email     String? // 邮箱
-  status    Int     @default(1) // 部门状态 (1:正常 0:停用)
+  parentId  Int?    @map("parent_id")
+  ancestors String? @map("ancestors")
+  name      String  @map("name")
+  sort      Int     @default(0) @map("sort")
+  leader    String? @map("leader")
+  phone     String? @map("phone")
+  email     String? @map("email")
+  status    Int     @default(1) @map("status")
 
-  // 多对多：部门管理者（通过 DeptManager 关系表）
   managers DeptManager[]
-  // 多对多：部门成员（通过 DeptMember 关系表）
   members  DeptMember[]
-  // 角色数据权限关联
   roles    Role[] @relation("RoleDepts")
 
-  createTime DateTime  @default(now())
-  updateTime DateTime  @updatedAt
-  deletedAt  DateTime? // 软删除
+  createTime DateTime  @default(now()) @map("created_at")
+  updateTime DateTime  @updatedAt @map("updated_at")
+  deletedAt  DateTime? @map("deleted_at")
+
+  @@map("departments")
 }
 
-// ==========================================
-// 5. 部门-管理者 关系表 (多对多)
-// ==========================================
+/// 部门-管理者 关系表
 model DeptManager {
-  deptId    Int
-  userId    Int
+  deptId    Int @map("dept_id")
+  userId    Int @map("user_id")
   dept      Department @relation(fields: [deptId], references: [id])
   user      User       @relation("UserManagedDepts", fields: [userId], references: [id])
-  createdAt DateTime   @default(now())
+  createdAt DateTime   @default(now()) @map("created_at")
 
   @@id([deptId, userId])
+  @@map("dept_managers")
 }
 
-// ==========================================
-// 6. 部门-成员 关系表 (多对多)
-// ==========================================
+/// 部门-成员 关系表
 model DeptMember {
-  deptId    Int
-  userId    Int
+  deptId    Int @map("dept_id")
+  userId    Int @map("user_id")
   dept      Department @relation(fields: [deptId], references: [id])
   user      User       @relation("UserMemberDepts", fields: [userId], references: [id])
-  createdAt DateTime   @default(now())
+  createdAt DateTime   @default(now()) @map("created_at")
 
   @@id([deptId, userId])
+  @@map("dept_members")
 }

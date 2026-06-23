@@ -5,14 +5,24 @@
         <span class="pdc-card__title">综合得分</span>
         <span class="pdc-card__badge">按分数从高到低</span>
       </div>
-      <div ref="rankRef" class="pdc-card__chart" />
+      <div class="pdc-card__chart-wrap">
+        <div ref="rankRef" class="pdc-card__chart" />
+        <div v-if="!hasMemberRows" class="pdc-card__chart-empty">
+          <ArtEmpty compact :image-size="92" description="本期范围内暂无成员绩效数据，可调整项目或时间后再查询" />
+        </div>
+      </div>
     </div>
     <div class="pdc-card pdc-card--modern pdc-card--hours">
       <div class="pdc-card__title-row">
         <span class="pdc-card__title">预估 vs 实际工时</span>
         <span class="pdc-card__badge pdc-card__badge--hours">双柱对比</span>
       </div>
-      <div ref="hoursRef" class="pdc-card__chart" />
+      <div class="pdc-card__chart-wrap">
+        <div ref="hoursRef" class="pdc-card__chart" />
+        <div v-if="!hasMemberRows" class="pdc-card__chart-empty">
+          <ArtEmpty compact :image-size="92" description="暂无工时对比数据" />
+        </div>
+      </div>
     </div>
     <div class="pdc-card pdc-card--span2 pdc-card--modern pdc-card--heatmap">
       <div class="pdc-card__head">
@@ -26,14 +36,28 @@
           </p>
         </div>
       </div>
-      <div ref="heatmapRef" class="pdc-card__chart pdc-card__chart--heatmap" :style="{ height: heatmapHeightPx + 'px' }" />
+      <div class="pdc-card__chart-wrap pdc-card__chart-wrap--heatmap">
+        <div
+          ref="heatmapRef"
+          class="pdc-card__chart pdc-card__chart--heatmap"
+          :style="{ height: heatmapHeightPx + 'px' }"
+        />
+        <div v-if="!hasMemberRows" class="pdc-card__chart-empty">
+          <ArtEmpty compact :image-size="92" description="暂无五维对比数据（需有成员样本）" />
+        </div>
+      </div>
     </div>
     <div class="pdc-card pdc-card--modern pdc-card--type">
       <div class="pdc-card__title-row">
         <span class="pdc-card__title">完成事项类型分布</span>
         <span class="pdc-card__badge">主要负责人完成</span>
       </div>
-      <div ref="typeRef" class="pdc-card__chart pdc-card__chart--tall" />
+      <div class="pdc-card__chart-wrap pdc-card__chart-wrap--tall">
+        <div ref="typeRef" class="pdc-card__chart pdc-card__chart--tall" />
+        <div v-if="!hasTypeChartData" class="pdc-card__chart-empty">
+          <ArtEmpty compact :image-size="92" description="暂无完成事项类型统计" />
+        </div>
+      </div>
     </div>
     <div class="pdc-card pdc-card--modern pdc-card--pace">
       <div class="pdc-card__title-row">
@@ -43,7 +67,12 @@
       <p class="pdc-card__hint pdc-card__hint--compact">
         柱状：交付周期中位数（天） · 折线：按期交付率（%），成员顺序与综合得分排名一致。
       </p>
-      <div ref="paceRef" class="pdc-card__chart pdc-card__chart--tall" />
+      <div class="pdc-card__chart-wrap pdc-card__chart-wrap--tall">
+        <div ref="paceRef" class="pdc-card__chart pdc-card__chart--tall" />
+        <div v-if="!hasMemberRows" class="pdc-card__chart-empty">
+          <ArtEmpty compact :image-size="92" description="暂无交付周期与按期率数据" />
+        </div>
+      </div>
     </div>
   </div>
 </template>
@@ -80,6 +109,15 @@
     allStats: Api.Task.PerformanceStat[];
     summary: Api.Task.PerformanceStatsSummary | null;
   }>();
+
+  /** 依赖成员的图表：无样本时不渲染 ECharts，展示 ArtEmpty */
+  const hasMemberRows = computed(() => props.allStats.length > 0);
+
+  /** 类型分布仅依赖汇总 tasksByType */
+  const hasTypeChartData = computed(() => {
+    const tb = props.summary?.tasksByType ?? {};
+    return Object.values(tb).some((v) => Number(v) > 0);
+  });
 
   const rankRef = ref<HTMLElement | null>(null);
   const hoursRef = ref<HTMLElement | null>(null);
@@ -142,7 +180,8 @@
   }
 
   const heatmapHeightPx = computed(() => {
-    const n = Math.max(1, props.allStats.length);
+    const n = props.allStats.length;
+    if (n === 0) return 280;
     return Math.min(640, Math.max(312, 72 + n * 26));
   });
 
@@ -166,6 +205,10 @@
     const heatmapYNames = rows.map(shortName);
 
     if (rankRef.value) {
+      if (!hasMemberRows.value) {
+        chRank?.dispose();
+        chRank = null;
+      } else {
       if (!chRank) chRank = echarts.init(rankRef.value);
       const nRows = rows.length;
       chRank.setOption({
@@ -252,9 +295,14 @@
           }
         ]
       });
+      }
     }
 
     if (hoursRef.value) {
+      if (!hasMemberRows.value) {
+        chHours?.dispose();
+        chHours = null;
+      } else {
       if (!chHours) chHours = echarts.init(hoursRef.value);
       chHours.setOption({
         animationDurationUpdate: 480,
@@ -342,6 +390,7 @@
           }
         ]
       });
+      }
     }
 
     const dimLabels = PERF_SUB_SCORE_KEYS.map((k) => PERF_SUB_SCORE_LABEL[k]);
@@ -353,6 +402,10 @@
     });
 
     if (heatmapRef.value) {
+      if (!hasMemberRows.value) {
+        chHeatmap?.dispose();
+        chHeatmap = null;
+      } else {
       if (!chHeatmap) chHeatmap = echarts.init(heatmapRef.value);
       const showCellLabel = rows.length <= 12 && rows.length > 0;
       chHeatmap.setOption({
@@ -466,6 +519,7 @@
           }
         ]
       });
+      }
     }
 
     const tb = props.summary?.tasksByType ?? {};
@@ -473,6 +527,10 @@
       .map(([k, v]) => ({ code: k, label: taskTypeLabel(k), value: v }))
       .sort((a, b) => b.value - a.value);
     if (typeRef.value) {
+      if (!hasTypeChartData.value) {
+        chType?.dispose();
+        chType = null;
+      } else {
       if (!chType) chType = echarts.init(typeRef.value);
       chType.setOption({
         animationDurationUpdate: 520,
@@ -551,9 +609,14 @@
           }
         ]
       });
+      }
     }
 
     if (paceRef.value) {
+      if (!hasMemberRows.value) {
+        chPace?.dispose();
+        chPace = null;
+      } else {
       if (!chPace) chPace = echarts.init(paceRef.value);
       const nMem = rows.length;
       const bottomPad = nMem > 8 ? 68 : nMem > 5 ? 52 : 40;
@@ -687,6 +750,7 @@
           }
         ]
       });
+      }
     }
   }
 
@@ -699,7 +763,8 @@
   }
 
   watch(
-    () => [props.allStats, props.summary, heatmapHeightPx.value] as const,
+    () =>
+      [props.allStats, props.summary, heatmapHeightPx.value, hasTypeChartData.value] as const,
     () => {
       nextTick(() => {
         renderAll();
@@ -872,6 +937,33 @@
     font-size: 12px;
     line-height: 1.5;
     color: var(--el-text-color-secondary);
+  }
+
+  .pdc-card__chart-wrap {
+    position: relative;
+    border-radius: 10px;
+
+    &--heatmap {
+      min-height: 280px;
+    }
+
+    &--tall {
+      min-height: 300px;
+    }
+  }
+
+  .pdc-card__chart-empty {
+    position: absolute;
+    inset: 0;
+    z-index: 2;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 12px;
+    box-sizing: border-box;
+    background: var(--art-main-bg-color, var(--el-bg-color));
+    border-radius: 10px;
+    border: 1px dashed var(--el-border-color-lighter);
   }
 
   .pdc-card__chart {

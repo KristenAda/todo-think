@@ -5,11 +5,21 @@
   "main": "index.js",
   "scripts": {
     "dev": "tsx watch --clear-screen=false src/app.ts",
+    "dev:testdb": "node scripts/load-env-and-run.cjs .env.test npx tsx watch --clear-screen=false src/app.ts",
     "build": "node scripts/build.js",
     "build:ts": "tsc && tsc-alias",
     "start": "node dist/app.js",
     "setup": "node scripts/db-cli.cjs setup",
     "db": "node scripts/db-cli.cjs",
+    "db:test:deploy": "node scripts/run-prisma-env.cjs .env.test migrate deploy",
+    "db:test:reset": "node scripts/run-prisma-env.cjs .env.test migrate reset --force --skip-seed",
+    "db:test:seed": "node scripts/apply-test-seed.cjs",
+    "db:test:fresh": "npm run db:test:reset && npm run db:test:seed",
+    "db:test:full": "npm run db:test:fresh && npm run db:scenario:small-team",
+    "db:test:comments": "node scripts/run-prisma-env.cjs .env.test migrate deploy && node scripts/load-env-and-run.cjs .env.test node scripts/prismaMysqlApplyComments.js",
+    "db:test:comments:apply": "node scripts/load-env-and-run.cjs .env.test node scripts/prismaMysqlApplyComments.js",
+    "db:scenario:small-team": "npx prisma generate && npx tsx scripts/seed-scenario-small-team.ts",
+    "db:scenario:small-team:seed": "node scripts/load-env-and-run.cjs .env.test npx tsx scripts/seed-scenario-small-team.ts",
     "comments": "node scripts/prisma-comments-cli.cjs all"
   },
   "keywords": [],
@@ -47,6 +57,9 @@
     "ts-node-dev": "^2.0.0",
     "tsc-alias": "^1.8.16",
     "tsx": "^4.21.0",
-    "typescript": "^5.9.3"
+    "typescript": "^5.9.3",
+    "@types/supertest": "^6.0.3",
+    "supertest": "^7.1.4",
+    "vitest": "^3.2.4"
   }
 }

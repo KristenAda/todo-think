@@ -21,5 +21,5 @@ export function initRouter(app: App<Element>): void {
   app.use(router);
 }
 
-// 主页路径：主控制台（未配置时回退为菜单第一个有效路径）
-export const HOME_PAGE_PATH = '/analysis/console';
+// 主页路径：主控制台（与菜单「工作台 › 主控制台」路由 `/dashboard/console` 一致）
+export const HOME_PAGE_PATH = '/dashboard/console';

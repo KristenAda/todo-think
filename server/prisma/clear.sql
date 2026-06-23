@@ -8,15 +8,15 @@ SET FOREIGN_KEY_CHECKS = 0;
 -- ==========================================
 TRUNCATE TABLE `_MenuToRole`;
 TRUNCATE TABLE `_RoleToUser`;
-TRUNCATE TABLE `DeptMember`;
-TRUNCATE TABLE `Menu`;
-TRUNCATE TABLE `Role`;
-TRUNCATE TABLE `User`;
-TRUNCATE TABLE `Department`;
+TRUNCATE TABLE `dept_members`;
+TRUNCATE TABLE `dept_managers`;
+TRUNCATE TABLE `menus`;
+TRUNCATE TABLE `roles`;
+TRUNCATE TABLE `users`;
+TRUNCATE TABLE `departments`;
 
 -- ==========================================
 -- 3. 清空业务与任务管理相关表 (Task)
--- 根据你的 Prisma schema 映射的表名
 -- ==========================================
 TRUNCATE TABLE `work_log`;
 TRUNCATE TABLE `test_case`;

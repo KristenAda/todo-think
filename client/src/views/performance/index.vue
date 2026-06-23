@@ -25,8 +25,8 @@
           type="daterange"
           value-format="YYYY-MM-DDTHH:mm:ssZ"
           range-separator="至"
-          start-placeholder="统计开始"
-          end-placeholder="统计结束"
+          start-placeholder="开始日期"
+          end-placeholder="结束日期"
           style="width: 300px"
           @change="onFilterChange"
         />
@@ -115,7 +115,7 @@
     const pr = periodRange.value;
     if (pr?.[0] && pr?.[1])
       return `本期统计：${pr[0].slice(0, 10)} — ${pr[1].slice(0, 10)} · 绩效评级按得分区间划分`;
-    return '筛选项目与统计区间后，绩效评级由综合得分区间决定，不按队内名次排队';
+    return '绩效评级基于综合得分的绝对区间判定，非团队内横向排名。';
   });
 
   const kpiCards = computed(() => {
@@ -123,34 +123,32 @@
     const headcountForAvg = (s?.headcount ?? allStats.value.length) || 0;
     const completed = s?.completedTasks ?? 0;
     const avgDeliverPerPerson =
-      headcountForAvg > 0
-        ? Math.round((completed / headcountForAvg) * 10) / 10
-        : '—';
+      headcountForAvg > 0 ? Math.round((completed / headcountForAvg) * 10) / 10 : '—';
     return [
       {
         key: 'head',
-        label: '统计人数',
+        label: '参与人数',
         value: s?.headcount ?? allStats.value.length,
         icon: 'mdi:account-group',
         accent: '#409EFF' // Element Primary
       },
       {
         key: 'done',
-        label: '本期交付数',
+        label: '交付任务数',
         value: s?.completedTasks ?? 0,
         icon: 'mdi:check-decagram',
         accent: '#67C23A' // Element Success
       },
       {
         key: 'avgDone',
-        label: '人均本期交付',
+        label: '人均交付任务数',
         value: avgDeliverPerPerson,
         icon: 'mdi:chart-box-outline',
         accent: '#14b8a6'
       },
       {
         key: 'wl',
-        label: '提报总工时 (h)',
+        label: '实际投入工时 (h)',
         value: s?.totalWorkLogHours ?? 0,
         icon: 'mdi:clock-outline',
         accent: '#E6A23C' // Element Warning
@@ -164,7 +162,7 @@
       },
       {
         key: 'rej',
-        label: '验收返工 (次)',
+        label: '验收不通过 (次)',
         value: s?.totalQaRejects ?? 0,
         icon: 'mdi:undo-variant',
         accent: '#F56C6C' // Element Danger

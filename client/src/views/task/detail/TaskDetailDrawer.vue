@@ -171,9 +171,10 @@
                   >共 {{ sortedTestCases.length }} 条</span
                 >
               </div>
-              <el-empty
+              <ArtEmpty
                 v-if="!sortedTestCases.length"
                 description="暂无测试用例"
+                compact
                 :image-size="56"
               />
               <div v-else class="test-case-list">
@@ -264,7 +265,7 @@
                 <art-svg-icon icon="mdi:clock-outline" />
                 <span>工时记录</span>
               </div>
-              <el-empty v-if="!task.workLogs?.length" description="暂无工时记录" :image-size="50" />
+              <ArtEmpty v-if="!task.workLogs?.length" description="暂无工时记录" compact :image-size="50" />
               <div v-else class="worklog-list">
                 <div v-for="log in task.workLogs" :key="log.id" class="worklog-item">
                   <UserAvatar
@@ -363,9 +364,10 @@
                 </div>
               </div>
 
-              <el-empty
+              <ArtEmpty
                 v-if="!task.comments?.length"
                 description="暂无评论记录"
+                compact
                 :image-size="46"
                 class="comment-empty"
               />
@@ -434,9 +436,10 @@
               <art-svg-icon icon="mdi:timeline-clock-outline" />
               <span>任务时间线</span>
             </div>
-            <el-empty
+            <ArtEmpty
               v-if="!task.timelines?.length"
               description="暂无时间线记录"
+              compact
               :image-size="54"
             />
             <div v-else class="timeline-list">

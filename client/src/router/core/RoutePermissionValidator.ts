@@ -60,17 +60,15 @@ export class RoutePermissionValidator {
     }
 
     for (const menuItem of menuList) {
-      if (!menuItem.path) continue;
-      // 默认跳过隐藏项；辅助路由可标记 allowAccessWhenHidden 仍参与路径校验
-      if (menuItem.meta?.isHide && !menuItem.meta?.allowAccessWhenHidden) {
-        continue;
+      // 目录设为「隐藏」时仍可能有可见子菜单（如工作台目录隐藏、主控制台展示），必须递归子树
+      const skipHiddenSelf =
+        !!menuItem.meta?.isHide && !menuItem.meta?.allowAccessWhenHidden;
+
+      if (menuItem.path && !skipHiddenSelf) {
+        const menuPath = menuItem.path.startsWith('/') ? menuItem.path : `/${menuItem.path}`;
+        pathSet.add(menuPath);
       }
 
-      // 标准化路径并添加到集合
-      const menuPath = menuItem.path.startsWith('/') ? menuItem.path : `/${menuItem.path}`;
-      pathSet.add(menuPath);
-
-      // 递归处理子菜单
       if (menuItem.children?.length) {
         this.buildMenuPathSet(menuItem.children, pathSet);
       }

@@ -78,6 +78,17 @@ function printHelp() {
   comments-apply    仅将 /// 同步到 MySQL（同 npm run comments:apply）
   seed-build      从 prisma/seed/todo_think_db.sql 生成 prisma/seed.sql
 
+  测试库（需先有 .env.test，库名须含 test，见 .env.test.example）:
+    test-reset      清空测试库数据：migrate reset --force --skip-seed（重建表结构，无业务数据）
+    test-fresh      test-reset + test-seed（推荐：干净权限种子 + 仅 admin）
+    test-full       test-fresh + scenario-small-team（含研发部小团队业务种子数据）
+    test-deploy     PRISMA_ENV_FILE=.env.test 执行 migrate deploy（不删数据，仅补迁移）
+    test-seed       执行 prisma/seed/todo_think_test_seed.sql（勿在已有数据上重复灌，易主键冲突）
+    test-comments        等同 npm run db:test:comments（test-deploy + 测试库 COMMENT）
+    test-comments-apply  等同 npm run db:test:comments:apply（仅 COMMENT）
+    scenario-small-team        npm run db:scenario:small-team（依赖 .env.test；建议先 test-fresh）
+    scenario-small-team-seed   npm run db:scenario:small-team:seed（仅灌场景，不 prisma generate；后端已占用引擎时用）
+
   （兼容旧名：sync-comments → comments-migrate；comment-apply → comments-apply）
 `);
 }
@@ -129,6 +140,68 @@ try {
       break;
     case "seed-build":
       runNode("build-seed-from-dump.cjs");
+      break;
+    case "test-deploy":
+      runNode("run-prisma-env.cjs", [".env.test", "migrate", "deploy"]);
+      break;
+    case "test-reset":
+      runNode("run-prisma-env.cjs", [
+        ".env.test",
+        "migrate",
+        "reset",
+        "--force",
+        "--skip-seed",
+      ]);
+      break;
+    case "test-fresh":
+      runNode("run-prisma-env.cjs", [
+        ".env.test",
+        "migrate",
+        "reset",
+        "--force",
+        "--skip-seed",
+      ]);
+      runNode("apply-test-seed.cjs");
+      break;
+    case "test-full":
+      runNode("run-prisma-env.cjs", [
+        ".env.test",
+        "migrate",
+        "reset",
+        "--force",
+        "--skip-seed",
+      ]);
+      runNode("apply-test-seed.cjs");
+      sh("npx prisma generate && npx tsx scripts/seed-scenario-small-team.ts");
+      break;
+    case "test-seed":
+      runNode("apply-test-seed.cjs");
+      break;
+    case "test-comments":
+      runNode("run-prisma-env.cjs", [".env.test", "migrate", "deploy"]);
+      runNode("load-env-and-run.cjs", [
+        ".env.test",
+        "node",
+        "scripts/prismaMysqlApplyComments.js",
+      ]);
+      break;
+    case "test-comments-apply":
+      runNode("load-env-and-run.cjs", [
+        ".env.test",
+        "node",
+        "scripts/prismaMysqlApplyComments.js",
+      ]);
+      break;
+    case "scenario-small-team":
+      sh("npx prisma generate && npx tsx scripts/seed-scenario-small-team.ts");
+      break;
+    case "scenario-small-team-seed":
+      runNode("load-env-and-run.cjs", [
+        ".env.test",
+        "npx",
+        "tsx",
+        "scripts/seed-scenario-small-team.ts",
+      ]);
       break;
     default:
       console.error(`[db] 未知命令: ${cmd}\n`);

@@ -9,6 +9,40 @@
 
 import { h } from 'vue';
 
+/** 已从仓库移除的视图：菜单库若仍指向旧 component，统一落到现有页，避免动态路由注册报错 */
+const REMOVED_VIEW_COMPONENT_TARGETS: ReadonlyArray<{ match: (normalized: string) => boolean; target: string }> = [
+  {
+    match: (n) =>
+      n === '/dashboard/analysis' ||
+      n === '/dashboard/analysis/index' ||
+      n.startsWith('/dashboard/analysis/'),
+    target: '/dashboard/console'
+  },
+  {
+    match: (n) =>
+      n === '/dashboard/ecommerce' ||
+      n === '/dashboard/ecommerce/index' ||
+      n.startsWith('/dashboard/ecommerce/'),
+    target: '/dashboard/console'
+  }
+];
+
+function normalizeComponentPathForAlias(componentPath: string): string {
+  const trimmed = componentPath.trim().replace(/\\/g, '/');
+  const withSlash = trimmed.startsWith('/') ? trimmed : `/${trimmed}`;
+  return withSlash.replace(/\/+/g, '/');
+}
+
+function resolveRemovedViewAlias(componentPath: string): string | null {
+  const normalized = normalizeComponentPathForAlias(componentPath);
+  for (const { match, target } of REMOVED_VIEW_COMPONENT_TARGETS) {
+    if (match(normalized.toLowerCase())) {
+      return target;
+    }
+  }
+  return null;
+}
+
 export class ComponentLoader {
   private modules: Record<string, () => Promise<any>>;
 
@@ -23,6 +57,11 @@ export class ComponentLoader {
   load(componentPath: string): () => Promise<any> {
     if (!componentPath) {
       return this.createEmptyComponent();
+    }
+
+    const aliased = resolveRemovedViewAlias(componentPath);
+    if (aliased) {
+      return this.load(aliased);
     }
 
     // 1. 确保路径前缀格式正确 (之前修复的防漏斜杠逻辑)

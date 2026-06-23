@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.todothink.modules.system.mapper.UserMapper">
+
+    <select id="selectRoleCodesByUserId" resultType="string">
+        SELECT r.role_code
+        FROM roles r
+        INNER JOIN `_RoleToUser` ru ON ru.A = r.id
+        WHERE ru.B = #{userId}
+          AND r.enabled = 1
+          AND r.deleted_at IS NULL
+    </select>
+
+    <select id="selectRoleIdsByUserId" resultType="int">
+        SELECT r.id
+        FROM roles r
+        INNER JOIN `_RoleToUser` ru ON ru.A = r.id
+        WHERE ru.B = #{userId}
+          AND r.enabled = 1
+          AND r.deleted_at IS NULL
+    </select>
+
+</mapper>

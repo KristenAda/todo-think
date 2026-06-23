@@ -3,6 +3,14 @@ import { glob } from "glob";
 import path from "path";
 // 🚀 删除了 import { pathToFileURL } from 'url'; 我们不再需要它了
 
+function isRouterLike(m: unknown): m is Router {
+  return (
+    !!m &&
+    typeof (m as Router).routes === "function" &&
+    typeof (m as Router).allowedMethods === "function"
+  );
+}
+
 const router = new Router();
 
 // 动态获取当前文件的后缀名 (.ts 或 .js)
@@ -29,7 +37,7 @@ export const loadRoutes = async () => {
       // 兼容 ES6 的 "export default" 和 CommonJS 导出
       const moduleRouter = routeModule.default || routeModule;
 
-      if (moduleRouter && moduleRouter instanceof Router) {
+      if (isRouterLike(moduleRouter)) {
         router.use(moduleRouter.routes());
         router.use(moduleRouter.allowedMethods());
         console.log(`[Route] Loaded: ${path.basename(file)}`);

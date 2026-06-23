@@ -76,9 +76,9 @@
         <pre v-else-if="previewKind === 'text'" class="txt-preview">{{ textContent }}</pre>
 
         <template v-else-if="previewKind === 'unsupported'">
-          <el-empty description="该类型不支持在线预览，请下载后查看">
+          <ArtEmpty variant="no_info" description="该类型不支持在线预览，请下载后查看">
             <el-button type="primary" @click="emitDownload">下载文件</el-button>
-          </el-empty>
+          </ArtEmpty>
         </template>
       </template>
     </div>

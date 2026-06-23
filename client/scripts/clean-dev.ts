@@ -162,8 +162,6 @@ const targets = [
   'src/views/system/nested',
   'src/views/widgets',
   'src/views/template',
-  'src/views/dashboard/analysis',
-  'src/views/dashboard/ecommerce',
   'src/mock/json',
   'src/mock/temp/articleList.ts',
   'src/mock/temp/commentDetail.ts',

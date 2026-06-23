@@ -12,19 +12,20 @@
 const fs = require("fs");
 const readline = require("readline");
 const path = require("path");
+const { patchSql } = require("./sql-snake-case-patch.cjs");
 
 const SERVER_ROOT = path.resolve(__dirname, "..");
 const DUMP_PATH = path.join(SERVER_ROOT, "prisma", "seed", "todo_think_db.sql");
 const OUT_PATH = path.join(SERVER_ROOT, "prisma", "seed.sql");
 
-/** 导出里小写表名 -> Prisma 迁移中的表名（与 FK 一致） */
+/** 导出里小写表名 -> 迁移后的 snake_case 表名（与 FK 一致） */
 const TABLE_RENAME = {
-  department: "Department",
-  deptmember: "DeptMember",
-  deptmanager: "DeptManager",
-  menu: "Menu",
-  role: "Role",
-  user: "User",
+  department: "departments",
+  deptmember: "dept_members",
+  deptmanager: "dept_managers",
+  menu: "menus",
+  role: "roles",
+  user: "users",
   _menutorole: "_MenuToRole",
   _roletouser: "_RoleToUser",
 };
@@ -114,13 +115,13 @@ function nullOutDataImageFields(sql) {
 function sanitizeUserLine(line) {
   if (!/^INSERT INTO `user`/i.test(line)) return line;
   let s = nullOutDataImageFields(line);
-  s = s.replace(/INSERT INTO `user`/i, "INSERT INTO `User`");
+  s = s.replace(/INSERT INTO `user`/i, "INSERT INTO `users`");
   return s;
 }
 
 function sanitizeMenuLine(line) {
   if (!/^INSERT INTO `menu`/i.test(line)) return line;
-  let s = line.replace(/^INSERT INTO `menu`/i, "INSERT INTO `Menu`");
+  let s = line.replace(/^INSERT INTO `menu`/i, "INSERT INTO `menus`");
   // 系统管理一级：type 应为 1（目录）；图标与现网一致
   s = s.replace(
     /\(1, NULL, 'System', '系统管理', '\/system', '\/index\/index', 'ri:user-3-line', 2,/,
@@ -169,6 +170,7 @@ async function main() {
     if (tLower === "user") out = sanitizeUserLine(out);
     else if (tLower === "menu") out = sanitizeMenuLine(out);
     else out = renameTableInInsert(out);
+    out = patchSql(out);
 
     buckets[tLower].push(out);
   }

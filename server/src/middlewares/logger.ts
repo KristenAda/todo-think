@@ -18,6 +18,12 @@ function safeJson(value: unknown): string {
  * 请求结束：记录 status、耗时
  */
 export async function requestLogger(ctx: Context, next: Next) {
+  // Vitest 下跳过请求日志，避免 JWT 抽样测试产生大量 → / ← 行
+  if (process.env.VITEST === "true") {
+    await next();
+    return;
+  }
+
   const start = Date.now();
   const { method, url, ip } = ctx;
   const body = (ctx.request as { body?: unknown }).body;

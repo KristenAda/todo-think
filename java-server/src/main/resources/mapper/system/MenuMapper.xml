@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.todothink.modules.system.mapper.MenuMapper">
+
+    <select id="selectMenusByRoleIds" resultType="com.todothink.modules.system.entity.Menu">
+        SELECT DISTINCT m.*
+        FROM menus m
+        INNER JOIN `_MenuToRole` mr ON mr.A = m.id
+        WHERE mr.B IN
+        <foreach collection="roleIds" item="id" open="(" separator="," close=")">
+            #{id}
+        </foreach>
+        AND m.type IN (2, 3)
+        ORDER BY m.sort ASC
+    </select>
+
+</mapper>

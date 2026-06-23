@@ -36,8 +36,7 @@
       </div>
 
       <div v-else-if="!projectList.length" class="empty-holder">
-        <art-svg-icon icon="mdi:folder-open-outline" />
-        <p>没有找到相关项目</p>
+        <ArtEmpty variant="search_no_results" description="没有找到相关项目" :image-size="128" />
       </div>
 
       <transition-group v-else name="list-fade" tag="div" class="grid-layout">
@@ -642,14 +641,8 @@
 
   .empty-holder {
     display: flex;
-    flex-direction: column;
-    align-items: center;
-    padding: 100px 0;
-    color: #94a3b8;
-    svg {
-      font-size: 64px;
-      margin-bottom: 16px;
-    }
+    justify-content: center;
+    padding: 80px 16px 100px;
   }
 
   .skeleton-card {

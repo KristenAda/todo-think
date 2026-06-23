@@ -1,0 +1,14 @@
+{
+  "java.configuration.updateBuildConfiguration": "automatic",
+  "java.compile.nullAnalysis.mode": "disabled",
+  "java.jdt.ls.java.home": "D:\\Jdk",
+  "maven.executable.path": "D:\\maven\\bin\\mvn.cmd",
+  "java.configuration.runtimes": [
+    {
+      "name": "JavaSE-1.8",
+      "path": "D:\\Jdk",
+      "default": true
+    }
+  ],
+  "java.import.maven.enabled": true
+}

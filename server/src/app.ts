@@ -1,52 +1,24 @@
 // 最优先加载环境变量，确保后续所有模块都能读到
 import "dotenv/config";
-// dashboard module loaded
 
-import Koa from "koa";
-import bodyParser from "@koa/bodyparser";
-import cors from "@koa/cors";
-import jwt from "koa-jwt";
 import type { IncomingMessage } from "http";
 import { WebSocketServer, WebSocket } from "ws";
 import jsonwebtoken from "jsonwebtoken";
-import { loadRoutes } from "./routers";
+import { createApp } from "./createApp";
 import { AuthUtil } from "./core/auth.util";
-import { errorHandler } from "./middlewares/error";
-import { responseDateFormat } from "./middlewares/response.date";
-import { requestLogger } from "./middlewares/logger";
 import logger from "./core/logger";
 import prisma from "./core/prisma";
 import { bindUserSocket, unbindUserSocket } from "./core/wsHub";
 import { startOverdueReminderJob } from "./modules/task/overdueReminder.job";
 import { startPerformanceSettlementJob } from "./modules/performance/settlement.job";
 
-const app = new Koa();
-
-// 最外层：在路由处理完成后统一格式化响应中的日期字段
-app.use(responseDateFormat);
-
-app.use(cors());
-app.use(bodyParser());
-
-// 全局错误处理（最外层，捕获所有异常）
-app.use(errorHandler);
-
-// 请求日志
-app.use(requestLogger);
-
-// JWT 拦截器
-app.use(
-  jwt({ secret: AuthUtil.getSecret() }).unless({
-    path: [/^\/auth\/login/, /^\/auth\/register/, /^\/docs/],
-  }),
-);
-
 const start = async () => {
-  const router = await loadRoutes();
-  app.use(router.routes()).use(router.allowedMethods());
+  const app = await createApp();
 
   const server = app.listen(3000, () => {
     logger.info("Server running at http://localhost:3000");
+    startOverdueReminderJob();
+    startPerformanceSettlementJob();
   });
 
   /**
@@ -122,8 +94,3 @@ const start = async () => {
 };
 
 start();
-
-// 在服务启动后初始化逾期提醒 Job（幂等由 TaskTimeline 控制）
-startOverdueReminderJob();
-// 在服务启动后初始化绩效/积分结算 Job
-startPerformanceSettlementJob();

@@ -83,6 +83,16 @@ export const systemRoutes: AppRouteRecord = {
       }
     },
     {
+      path: 'help-center',
+      name: 'HelpCenter',
+      component: '/system/help-center/index',
+      meta: {
+        title: 'menus.system.helpCenter',
+        icon: 'mdi:book-open-variant',
+        keepAlive: true
+      }
+    },
+    {
       path: 'performance-rules',
       redirect: '/business/performance-rules',
       meta: {

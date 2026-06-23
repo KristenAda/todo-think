@@ -235,7 +235,7 @@
                   >
                 </div>
                 <div v-if="!segmentSandboxRows.length" class="breakdown-empty">
-                  暂无数据，请点击「运行测算」
+                  <ArtEmpty description="暂无数据，请点击「运行测算」" compact :image-size="72" />
                 </div>
               </div>
 
@@ -1396,10 +1396,9 @@
     font-family: inherit;
   }
   .breakdown-empty {
-    font-size: 13px;
-    color: var(--el-text-color-placeholder);
-    text-align: center;
-    padding: 20px 0;
+    display: flex;
+    justify-content: center;
+    padding: 12px 0;
   }
 
   .result-total {

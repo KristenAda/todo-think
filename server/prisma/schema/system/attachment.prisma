@@ -2,17 +2,18 @@
 // 附件与分片上传会话（文件在磁盘，库中仅存相对路径）
 // ==========================================
 
+/// 附件元数据
 model Attachment {
   id           Int       @id @default(autoincrement())
-  originalName String
+  originalName String    @map("original_name")
   /// 相对上传根目录的路径，POSIX 风格，如 attachments/2026/04/xxx.pdf
-  storedPath   String    @db.VarChar(1024)
-  mimeType     String?   @db.VarChar(200)
-  size         Int
-  uploadedById Int
+  storedPath   String    @db.VarChar(1024) @map("stored_path")
+  mimeType     String?   @db.VarChar(200) @map("mime_type")
+  size         Int       @map("size")
+  uploadedById Int       @map("uploaded_by_id")
   uploadedBy   User      @relation("AttachmentUploader", fields: [uploadedById], references: [id])
-  createTime   DateTime  @default(now())
-  deletedAt    DateTime?
+  createTime   DateTime  @default(now()) @map("created_at")
+  deletedAt    DateTime? @map("deleted_at")
 
   uploadSession UploadSession?
 
@@ -28,18 +29,18 @@ model Attachment {
 /// 分片上传会话：合并完成后写入 attachmentId
 model UploadSession {
   id          String   @id @default(uuid())
-  fileName    String
-  mimeType    String?  @db.VarChar(200)
-  totalSize   Int
-  chunkSize   Int
-  totalChunks Int
-  userId      Int
+  fileName    String   @map("file_name")
+  mimeType    String?  @db.VarChar(200) @map("mime_type")
+  totalSize   Int      @map("total_size")
+  chunkSize   Int      @map("chunk_size")
+  totalChunks Int      @map("total_chunks")
+  userId      Int      @map("user_id")
   user        User     @relation("UploadSessionUser", fields: [userId], references: [id])
-  status      String   @default("pending") // pending | merged | failed | expired
-  attachmentId Int?    @unique
+  status      String   @default("pending") @map("status")
+  attachmentId Int?    @unique @map("attachment_id")
   attachment   Attachment? @relation(fields: [attachmentId], references: [id])
-  expiresAt   DateTime
-  createTime  DateTime @default(now())
+  expiresAt   DateTime @map("expires_at")
+  createTime  DateTime @default(now()) @map("created_at")
 
   @@index([userId])
   @@map("upload_session")

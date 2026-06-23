@@ -38,7 +38,7 @@
               {{ user.status === '1' ? '正常' : '停用' }}
             </el-tag>
           </div>
-          <el-empty v-if="filteredUsers.length === 0" description="暂无可选用户" :image-size="60" />
+          <ArtEmpty v-if="filteredUsers.length === 0" description="暂无可选用户" compact :image-size="72" />
         </div>
       </el-scrollbar>
     </div>

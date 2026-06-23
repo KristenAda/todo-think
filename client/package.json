@@ -11,6 +11,7 @@
     "tauri": "tauri",
     "build": "vue-tsc --noEmit && vite build",
     "serve": "vite preview",
+    "clean:dev": "tsx scripts/clean-dev.ts",
     "lint": "eslint",
     "fix": "eslint --fix",
     "lint:prettier": "prettier --write \"**/*.{js,cjs,ts,json,tsx,css,less,scss,vue,html,md}\"",
@@ -18,8 +19,7 @@
     "lint:lint-staged": "lint-staged",
     "prepare": "husky",
     "postinstall": "node node_modules/@vue-office/pdf/lib/script/postinstall.js && node node_modules/@vue-office/docx/lib/script/postinstall.js && node node_modules/@vue-office/excel/lib/script/postinstall.js && node node_modules/@vue-office/pptx/lib/script/postinstall.js",
-    "commit": "git-cz",
-    "clean:dev": "tsx scripts/clean-dev.ts"
+    "commit": "git-cz"
   },
   "config": {
     "commitizen": {
@@ -91,6 +91,7 @@
     "@commitlint/cli": "^19.4.1",
     "@commitlint/config-conventional": "^19.4.1",
     "@eslint/js": "^9.9.1",
+    "@playwright/test": "^1.59.1",
     "@tauri-apps/cli": "^2.10.1",
     "@types/node": "^24.0.5",
     "@types/three": "^0.184.1",
@@ -98,6 +99,7 @@
     "@typescript-eslint/parser": "^8.3.0",
     "@vitejs/plugin-vue": "^6.0.1",
     "@vue/compiler-sfc": "^3.5.22",
+    "@vue/test-utils": "^2.4.6",
     "commitizen": "^4.3.0",
     "cz-git": "^1.11.1",
     "eslint": "^9.9.1",
@@ -105,6 +107,7 @@
     "eslint-plugin-prettier": "^5.2.1",
     "eslint-plugin-vue": "^9.27.0",
     "globals": "^15.9.0",
+    "happy-dom": "^17.6.3",
     "husky": "^9.1.5",
     "lint-staged": "^15.5.2",
     "prettier": "^3.5.3",
@@ -126,6 +129,7 @@
     "vite": "^7.1.5",
     "vite-plugin-compression": "^0.5.1",
     "vite-plugin-vue-devtools": "^7.7.6",
+    "vitest": "^3.2.4",
     "vue-img-cutter": "^3.0.5",
     "vue-tsc": "~2.1.6"
   }

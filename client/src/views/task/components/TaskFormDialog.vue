@@ -171,9 +171,11 @@
                 border
                 size="small"
                 class="test-case-table"
-                empty-text="暂无测试用例，点击下方添加"
                 :row-key="testCaseRowKey"
               >
+                <template #empty>
+                  <ArtEmpty description="暂无测试用例，点击下方添加" compact :image-size="64" />
+                </template>
                 <el-table-column type="index" label="#" width="52" align="center" />
                 <el-table-column label="用例描述 / 操作步骤" min-width="220">
                   <template #default="{ row }">

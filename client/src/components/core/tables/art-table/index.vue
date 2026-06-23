@@ -54,7 +54,7 @@
 
       <template #empty>
         <div v-if="loading"></div>
-        <ElEmpty v-else :description="emptyText" :image-size="120" />
+        <ArtEmpty v-else :description="emptyText" :image-size="120" />
       </template>
     </ElTable>
 

@@ -76,11 +76,11 @@ async function tableExists(conn, tableName) {
 }
 
 async function getUserCount(conn) {
-  if (!(await tableExists(conn, "User"))) {
+  if (!(await tableExists(conn, "users"))) {
     return 0;
   }
   const [rows] = await conn.query(
-    "SELECT COUNT(*) AS c FROM `User` WHERE `deletedAt` IS NULL",
+    "SELECT COUNT(*) AS c FROM `users` WHERE `deleted_at` IS NULL",
   );
   const row = rows[0];
   return Number(row?.c ?? 0);

@@ -1,0 +1,163 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.todothink.modules.task.mapper.TaskQueryMapper">
+
+    <sql id="taskOrgAccessWhere">
+        (
+            t.org_id IN
+            <foreach collection="orgIds" item="oid" open="(" separator="," close=")">
+                #{oid}
+            </foreach>
+            OR (
+                t.org_id IS NULL
+                AND p.org_id IN
+                <foreach collection="orgIds" item="oid2" open="(" separator="," close=")">
+                    #{oid2}
+                </foreach>
+                AND p.deleted_at IS NULL
+            )
+        )
+        <if test="projectId != null">
+            AND t.project_id = #{projectId}
+        </if>
+        <if test="status != null and status != ''">
+            AND t.status = #{status}
+        </if>
+        <if test="mainAssigneeId != null">
+            AND t.main_assignee_id = #{mainAssigneeId}
+        </if>
+        <if test="keyword != null and keyword != ''">
+            AND t.title LIKE CONCAT('%', #{keyword}, '%')
+        </if>
+    </sql>
+
+    <select id="selectTaskPage" resultType="com.todothink.modules.task.entity.Task">
+        SELECT t.*
+        FROM task t
+        LEFT JOIN project p ON t.project_id = p.id
+        WHERE
+        <include refid="taskOrgAccessWhere"/>
+        ORDER BY t.id DESC
+        LIMIT #{offset}, #{limit}
+    </select>
+
+    <select id="countTaskPage" resultType="long">
+        SELECT COUNT(*)
+        FROM task t
+        LEFT JOIN project p ON t.project_id = p.id
+        WHERE
+        <include refid="taskOrgAccessWhere"/>
+    </select>
+
+    <select id="countTestCasesByTaskId" resultType="long">
+        SELECT COUNT(*) FROM test_case WHERE task_id = #{taskId}
+    </select>
+
+    <select id="countWorkLogsByTaskId" resultType="long">
+        SELECT COUNT(*) FROM work_log WHERE task_id = #{taskId}
+    </select>
+
+    <select id="selectWorkLogsByTaskId" resultType="map">
+        SELECT
+            wl.id AS id,
+            wl.task_id AS taskId,
+            wl.user_id AS userId,
+            wl.hours AS hours,
+            wl.content AS content,
+            wl.created_at AS createdAt,
+            u.id AS user_id,
+            u.user_name AS user_userName,
+            u.nick_name AS user_nickName,
+            u.avatar AS user_avatar,
+            u.user_email AS user_userEmail
+        FROM work_log wl
+        LEFT JOIN users u ON wl.user_id = u.id
+        WHERE wl.task_id = #{taskId}
+        ORDER BY wl.created_at DESC
+    </select>
+
+    <select id="selectWorkLogAttachmentsByWorkLogIds" resultType="map">
+        SELECT
+            wla.id AS id,
+            wla.work_log_id AS workLogId,
+            wla.attachment_id AS attachmentId,
+            wla.sort AS sort,
+            wla.created_at AS createdAt,
+            a.id AS att_id,
+            a.original_name AS att_originalName,
+            a.mime_type AS att_mimeType,
+            a.size AS att_size,
+            a.created_at AS att_createTime
+        FROM work_log_attachment wla
+        INNER JOIN attachment a ON wla.attachment_id = a.id AND a.deleted_at IS NULL
+        WHERE wla.work_log_id IN
+        <foreach collection="workLogIds" item="wid" open="(" separator="," close=")">
+            #{wid}
+        </foreach>
+        ORDER BY wla.work_log_id ASC, wla.sort ASC
+    </select>
+
+    <select id="selectCommentsByTaskId" resultType="map">
+        SELECT
+            tc.id AS id,
+            tc.task_id AS taskId,
+            tc.user_id AS userId,
+            tc.content AS content,
+            tc.created_at AS createdAt,
+            tc.updated_at AS updatedAt,
+            u.id AS user_id,
+            u.user_name AS user_userName,
+            u.nick_name AS user_nickName,
+            u.avatar AS user_avatar,
+            u.user_email AS user_userEmail
+        FROM task_comment tc
+        LEFT JOIN users u ON tc.user_id = u.id
+        WHERE tc.task_id = #{taskId}
+        ORDER BY tc.created_at DESC
+    </select>
+
+    <select id="selectCommentAttachmentsByCommentIds" resultType="map">
+        SELECT
+            tca.id AS id,
+            tca.comment_id AS commentId,
+            tca.attachment_id AS attachmentId,
+            tca.sort AS sort,
+            tca.created_at AS createdAt,
+            a.id AS att_id,
+            a.original_name AS att_originalName,
+            a.mime_type AS att_mimeType,
+            a.size AS att_size,
+            a.created_at AS att_createTime
+        FROM task_comment_attachment tca
+        INNER JOIN attachment a ON tca.attachment_id = a.id AND a.deleted_at IS NULL
+        WHERE tca.comment_id IN
+        <foreach collection="commentIds" item="cid" open="(" separator="," close=")">
+            #{cid}
+        </foreach>
+        ORDER BY tca.comment_id ASC, tca.sort ASC
+    </select>
+
+    <select id="selectTimelinesByTaskId" resultType="map">
+        SELECT
+            tt.id AS id,
+            tt.task_id AS taskId,
+            tt.event_type AS eventType,
+            tt.title AS title,
+            tt.content AS content,
+            tt.from_status AS fromStatus,
+            tt.to_status AS toStatus,
+            tt.operator_id AS operatorId,
+            tt.payload AS payload,
+            tt.created_at AS createdAt,
+            u.id AS operator_id,
+            u.user_name AS operator_userName,
+            u.nick_name AS operator_nickName,
+            u.avatar AS operator_avatar,
+            u.user_email AS operator_userEmail
+        FROM task_timeline tt
+        LEFT JOIN users u ON tt.operator_id = u.id
+        WHERE tt.task_id = #{taskId}
+        ORDER BY tt.created_at DESC
+    </select>
+</mapper>

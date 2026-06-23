@@ -81,8 +81,7 @@
         </div>
         <div class="board-col__list" v-loading="loading">
           <div v-if="!loading && pendingTasks.length === 0" class="board-col__empty">
-            <art-svg-icon icon="mdi:check-all" class="empty-icon empty-icon--ok" />
-            <span>暂无待处理任务</span>
+            <ArtEmpty description="暂无待处理任务" compact :image-size="56" />
           </div>
           <div
             v-for="task in pendingTasks"
@@ -120,8 +119,7 @@
         </div>
         <div class="board-col__list" v-loading="loading">
           <div v-if="!loading && qaTasks.length === 0" class="board-col__empty">
-            <art-svg-icon icon="mdi:shield-check" class="empty-icon empty-icon--ok" />
-            <span>暂无待验收任务</span>
+            <ArtEmpty description="暂无待验收任务" compact :image-size="56" />
           </div>
           <div
             v-for="task in qaTasks"
@@ -157,8 +155,7 @@
         </div>
         <div class="board-col__list" v-loading="loading">
           <div v-if="!loading && overdueTasks.length === 0" class="board-col__empty">
-            <art-svg-icon icon="mdi:timer-off-outline" class="empty-icon" />
-            <span>暂无逾期任务</span>
+            <ArtEmpty description="暂无逾期任务" compact :image-size="56" />
           </div>
           <div
             v-for="task in overdueTasks"
@@ -194,8 +191,7 @@
         </div>
         <div class="board-col__list" v-loading="loading">
           <div v-if="!loading && processedTasks.length === 0" class="board-col__empty">
-            <art-svg-icon icon="mdi:inbox-outline" class="empty-icon" />
-            <span>暂无已完成任务</span>
+            <ArtEmpty description="暂无已完成任务" compact :image-size="56" />
           </div>
           <div
             v-for="task in processedTasks"
@@ -806,22 +802,10 @@
 
     &__empty {
       display: flex;
-      flex-direction: column;
       align-items: center;
       justify-content: center;
-      gap: 8px;
-      padding: 40px 0;
-      color: var(--el-text-color-placeholder);
-      font-size: 13px;
+      padding: 24px 8px;
       height: 100%;
-    }
-  }
-
-  .empty-icon {
-    font-size: 40px;
-    color: var(--el-text-color-disabled);
-    &--ok {
-      color: #a7f3d0;
     }
   }
 

@@ -54,6 +54,7 @@ export const useMenuStore = defineStore('menuStore', () => {
    */
   const setMenuList = (list: AppRouteRecord[]) => {
     menuList.value = list;
+    // 首页固定为主控制台（HOME_PAGE_PATH）；默认角色 everyone 已含该菜单时恒为可访问路径
     setHomePath(HOME_PAGE_PATH || getFirstMenuPath(list));
   };
 

@@ -1,0 +1,31 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "type": "java",
+      "name": "☕ Debug TodoThinkApplication",
+      "request": "launch",
+      "mainClass": "com.todothink.TodoThinkApplication",
+      "projectName": "todo-think-server-java",
+      "cwd": "${workspaceFolder}",
+      "vmArgs": "-Dspring.profiles.active=dev"
+    },
+    {
+      "type": "java",
+      "name": "☕ Run TodoThinkApplication (无调试)",
+      "request": "launch",
+      "mainClass": "com.todothink.TodoThinkApplication",
+      "projectName": "todo-think-server-java",
+      "cwd": "${workspaceFolder}",
+      "vmArgs": "-Dspring.profiles.active=dev",
+      "noDebug": true
+    },
+    {
+      "name": "☕ npm run dev",
+      "type": "node-terminal",
+      "request": "launch",
+      "command": "npm run dev",
+      "cwd": "${workspaceFolder}"
+    }
+  ]
+}

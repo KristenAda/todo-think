@@ -1,5 +1,5 @@
 <template>
-  <div class="org-wrapper">
+  <div class="org-wrapper art-full-height">
     <div class="panel left-panel">
       <div class="panel-header">
         <div class="header-title">
@@ -23,10 +23,11 @@
       </div>
 
       <div class="tree-container" v-loading="treeLoading">
-        <el-empty
+        <ArtEmpty
           v-if="deptTree.length === 0 && !treeLoading"
           description="暂无组织架构"
-          :image-size="60"
+          compact
+          :image-size="72"
         />
         <el-tree
           v-else
@@ -69,7 +70,7 @@
 
     <div class="panel right-panel">
       <div v-if="deptTree.length === 0 && !treeLoading" class="global-empty">
-        <el-empty description="系统暂无组织架构数据，请先创建部门" :image-size="120" />
+        <ArtEmpty description="系统暂无组织架构数据，请先创建部门" :image-size="120" />
       </div>
       <div v-else-if="!selectedDeptId" class="global-empty placeholder-view">
         <art-svg-icon icon="mdi:sitemap" class="placeholder-icon" />
@@ -442,14 +443,28 @@
   /* 基础变量与颜色重置 - 使用框架 CSS 变量适配亮/暗模式 */
   $primary-color: var(--el-color-primary);
 
-  .org-wrapper {
+  /* 与系统其它列表页一致：占满布局计算后的可视内容高度（--art-full-height） */
+  .org-wrapper.art-full-height {
     display: flex;
-    height: 100%;
+    flex-direction: row;
+    align-items: stretch;
+    box-sizing: border-box;
     width: 100%;
-    background-color: var(--art-main-bg-color);
+    min-height: var(--art-full-height);
+    height: var(--art-full-height);
+    max-height: var(--art-full-height);
     padding: 16px;
     gap: 16px;
-    box-sizing: border-box;
+    overflow: hidden;
+    background-color: var(--art-main-bg-color);
+
+    @media (max-width: 640px) {
+      flex-direction: column;
+      height: auto;
+      max-height: none;
+      min-height: var(--art-full-height);
+      overflow: visible;
+    }
 
     /* 通用面板样式 */
     .panel {
@@ -459,6 +474,7 @@
       display: flex;
       flex-direction: column;
       overflow: hidden;
+      min-height: 0;
     }
   }
 
@@ -466,6 +482,7 @@
   .left-panel {
     width: 340px;
     flex-shrink: 0;
+    align-self: stretch;
 
     .panel-header {
       padding: 16px 20px;
@@ -494,8 +511,16 @@
 
     .tree-container {
       flex: 1;
+      min-height: 0;
       overflow-y: auto;
       padding: 0 12px 16px;
+      display: flex;
+      flex-direction: column;
+
+      :deep(.art-empty) {
+        flex: 1;
+        min-height: 0;
+      }
 
       /* 树组件深度美化 */
       .custom-tree {
@@ -560,11 +585,15 @@
   .right-panel {
     flex: 1;
     min-width: 0;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
     background: transparent;
     box-shadow: none;
 
     .global-empty {
-      height: 100%;
+      flex: 1;
+      min-height: 0;
       background: var(--default-box-color);
       border-radius: 8px;
       display: flex;
@@ -586,7 +615,8 @@
     .content-layout {
       display: flex;
       flex-direction: column;
-      height: 100%;
+      flex: 1;
+      min-height: 0;
       gap: 16px;
 
       .dept-title-bar {

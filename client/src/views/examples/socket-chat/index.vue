@@ -144,7 +144,12 @@
               <div class="message-content">{{ message.content }}</div>
             </div>
 
-            <ElEmpty v-if="messageList.length === 0" description="暂无消息记录" :image-size="100" />
+            <ArtEmpty
+              v-if="messageList.length === 0"
+              variant="no_message"
+              description="暂无消息记录"
+              :image-size="100"
+            />
           </div>
         </ElCard>
       </ElCol>
@@ -175,7 +180,7 @@
           </template>
         </ElAlert>
 
-        <ElEmpty v-if="logList.length === 0" description="暂无日志记录" :image-size="100" />
+        <ArtEmpty v-if="logList.length === 0" description="暂无日志记录" :image-size="100" />
       </div>
     </ElCard>
   </div>

@@ -9,6 +9,10 @@
  *   npm run comments:migrate
  *   npm run comments:apply
  *   npm run comments
+ *
+ * 测试库（.env.test，见 .env.test.example）：
+ *   npm run db:test:comments       — migrate deploy + 写库 COMMENT（与 dev 的 comments 链路对应）
+ *   npm run db:test:comments:apply — 仅将 /// 同步到测试库 COMMENT（无待迁移时可单独跑）
  */
 
 const path = require("path");
@@ -75,6 +79,10 @@ npm 快捷:
   npm run comments:migrate
   npm run comments:apply
   npm run comments          （等同 all）
+
+测试库（.env.test）:
+  npm run db:test:comments       migrate deploy + COMMENT
+  npm run db:test:comments:apply 仅 COMMENT
 `);
 } else {
   console.error(`[comments] 未知参数: ${process.argv[2]}`);

@@ -26,7 +26,10 @@ export async function errorHandler(ctx: Context, next: Next) {
     // 401 鉴权失败
     if (error.status === 401) {
       const reason = error.originalError?.message ?? error.message;
-      logger.warn(`鉴权失败 [${ctx.method} ${ctx.url}] ${reason}`);
+      // Vitest 集成测试会大量请求无 Token 接口以校验 401，此处刷屏无助于排查
+      if (process.env.VITEST !== "true") {
+        logger.warn(`鉴权失败 [${ctx.method} ${ctx.url}] ${reason}`);
+      }
       ctx.status = 401;
       ctx.body = { code: 401, message: "身份验证失败" };
       return;

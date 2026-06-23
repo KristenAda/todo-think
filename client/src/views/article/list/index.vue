@@ -69,7 +69,11 @@
     </div>
 
     <div style="margin-top: 16vh" v-if="showEmpty">
-      <ElEmpty :description="`未找到相关数据 ${EmojiText[0]}`" />
+      <ArtEmpty
+        variant="search_no_results"
+        :description="`未找到相关数据 ${EmojiText[0]}`"
+        :image-size="120"
+      />
     </div>
 
     <div style="display: flex; justify-content: center; margin-top: 20px">

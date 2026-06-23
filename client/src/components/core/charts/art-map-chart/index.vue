@@ -2,7 +2,7 @@
 <template>
   <div class="relative w-full" :style="{ height: 'calc(100vh - 120px)' }">
     <div v-if="isEmpty" class="h-full flex-cc">
-      <ElEmpty description="暂无地图数据" />
+      <ArtEmpty variant="no_location" description="暂无地图数据" :image-size="120" />
     </div>
 
     <div v-else id="china-map" ref="chinaMapRef" class="h-full w-full overflow-hidden rounded-lg" />

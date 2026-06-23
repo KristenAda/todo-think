@@ -28,6 +28,13 @@ function currentUserId(ctx: Context): number {
   return (ctx.state as any).user?.id as number;
 }
 
+/** Koa 默认 JSON 序列化不支持 BigInt（如 PerfSettlement.id） */
+function jsonSafeForResponse<T>(data: T): T {
+  return JSON.parse(
+    JSON.stringify(data, (_k, v) => (typeof v === "bigint" ? v.toString() : v)),
+  ) as T;
+}
+
 // ======================== Project Controller ========================
 
 class ProjectController {
@@ -421,7 +428,7 @@ class PerformanceController {
     }
     try {
       const data = await performanceService.reconcileTask(taskId, currentUserId(ctx));
-      ctx.body = Result.success(data);
+      ctx.body = Result.success(jsonSafeForResponse(data));
     } catch (e: any) {
       ctx.status = e.status ?? 500;
       ctx.body = Result.error(e.message ?? "操作失败", e.status ?? 500);

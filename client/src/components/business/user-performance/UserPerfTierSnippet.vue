@@ -14,7 +14,9 @@
         </div>
       </div>
     </template>
-    <div v-else class="tier-snippet__empty">暂无队内绩效样本</div>
+    <div v-else class="tier-snippet__empty">
+      <ArtEmpty description="暂无队内绩效样本" compact :image-size="40" />
+    </div>
   </div>
 </template>
 
@@ -117,8 +119,8 @@
   }
 
   .tier-snippet__empty {
-    font-size: 12px;
-    color: var(--el-text-color-secondary);
-    line-height: 1.45;
+    display: flex;
+    justify-content: center;
+    padding: 4px 0;
   }
 </style>

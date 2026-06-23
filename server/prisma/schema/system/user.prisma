@@ -1,33 +1,46 @@
 // ==========================================
 // 1. 用户表 (User) - user.prisma
 // ==========================================
+/// 用户账户表
 model User {
   id        Int     @id @default(autoincrement())
-  userName  String  @unique // 改名：username → userName
-  password  String
-  nickName  String? // 改名：nickname → nickName
-  userPhone String? // 改名：phone → userPhone
-  userEmail String? // 改名：email → userEmail
-  userGender String? // 新增：性别 (男/女)
-  avatar    String? @db.LongText // 使用 LongText 支持大型 base64 图片
-  status    String  @default("1") // 改为 String：'1'正常 '2'离线 '3'异常 '4'注销
-  remark    String? // 备注
-  tags      String? // 个人标签（JSON 数组字符串，如 ["Vue","TypeScript"]）
+  /// 登录用户名
+  userName  String  @unique @map("user_name")
+  /// 加密后的密码
+  password  String  @map("password")
+  /// 昵称
+  nickName  String? @map("nick_name")
+  /// 手机号
+  userPhone String? @map("user_phone")
+  /// 邮箱
+  userEmail String? @map("user_email")
+  /// 性别
+  userGender String? @map("user_gender")
+  /// 头像
+  avatar    String? @db.LongText @map("avatar")
+  /// 状态：1正常 2离线 3异常 4注销
+  status    String  @default("1") @map("status")
+  /// 备注
+  remark    String? @map("remark")
+  /// 个人标签 JSON
+  tags      String? @map("tags")
 
   roles Role[]
 
-  // 多对多：该用户作为管理者的部门（通过 DeptManager 关系表）
   managedDepts DeptManager[] @relation("UserManagedDepts")
-  // 多对多：该用户所属的部门（通过 DeptMember 关系表）
   memberDepts  DeptMember[]  @relation("UserMemberDepts")
 
-  createBy  String? // 新增：创建人
-  createTime DateTime @default(now()) // 改名：createdAt → createTime
-  updateBy  String? // 新增：更新人
-  updateTime DateTime @updatedAt // 改名：updatedAt → updateTime
-  deletedAt DateTime? // 软删除标志
+  /// 创建人
+  createBy  String? @map("create_by")
+  /// 创建时间
+  createTime DateTime @default(now()) @map("created_at")
+  /// 更新人
+  updateBy  String? @map("update_by")
+  /// 更新时间
+  updateTime DateTime @updatedAt @map("updated_at")
+  /// 软删除时间
+  deletedAt DateTime? @map("deleted_at")
 
-  // ===== 任务模块反向关联 =====
   managedProjects   Project[]        @relation("ProjectManager")
   managedTasks      Task[]           @relation("TaskManager")
   mainAssigneeTasks Task[]           @relation("TaskMainAssignee")
@@ -40,43 +53,41 @@ model User {
   attachments    Attachment[]    @relation("AttachmentUploader")
   uploadSessions UploadSession[] @relation("UploadSessionUser")
 
-  // ===== 站内消息反向关联 =====
   sentMessages     Message[] @relation("MessageSender")
   receivedMessages Message[] @relation("MessageReceiver")
+
+  @@map("users")
 }
 
-// ==========================================
-// 2. 角色表 (Role)
-// ==========================================
+/// 角色表
 model Role {
   id          Int     @id @default(autoincrement())
-  roleName    String  // 角色名称 (如 超级管理员)
-  roleCode    String  @unique // 改名：roleKey → roleCode，角色权限标识 (如 admin)
-  description String? // 新增：角色描述
-  enabled     Boolean @default(true) // 改名：status → enabled，改为 Boolean
-  sort        Int     @default(0) // 角色排序
+  /// 角色名称
+  roleName    String  @map("role_name")
+  /// 角色权限标识
+  roleCode    String  @unique @map("role_code")
+  /// 角色描述
+  description String? @map("description")
+  /// 是否启用
+  enabled     Boolean @default(true) @map("enabled")
+  /// 排序
+  sort        Int     @default(0) @map("sort")
 
-  // ★★★ 数据权限核心字段 ★★★
-  dataScope Int @default(1) // 1:全部数据权限 2:自定数据权限 3:本部门数据权限 4:本部门及以下数据权限 5:仅本人数据权限
+  /// 数据权限范围
+  dataScope Int @default(1) @map("data_scope")
 
-  /** 为 true 时：所有登录用户自动叠加该角色的菜单（无需把用户绑定到此角色）；全局至多一个为 true */
-  isDefaultRole Boolean @default(false)
+  /// 是否为默认角色（全局至多一个）
+  isDefaultRole Boolean @default(false) @map("is_default_role")
 
   users User[]
   menus Menu[]
 
-  // 当 dataScope=2 时，角色具体关联的部门集合 (用于自定数据权限)
   depts Department[] @relation("RoleDepts")
 
-  remark     String?
-  createTime DateTime  @default(now())
-  updateTime DateTime  @updatedAt
-  deletedAt  DateTime? // 软删除
-}
+  remark     String? @map("remark")
+  createTime DateTime  @default(now()) @map("created_at")
+  updateTime DateTime  @updatedAt @map("updated_at")
+  deletedAt  DateTime? @map("deleted_at")
 
-model Todo {
-  id        Int      @id @default(autoincrement())
-  title     String   @db.VarChar(255)
-  completed Boolean  @default(false)
-  createdAt DateTime @default(now())
+  @@map("roles")
 }

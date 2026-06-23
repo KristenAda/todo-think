@@ -223,9 +223,7 @@
     },
     "dashboard": {
       "title": "Dashboard",
-      "console": "Console",
-      "analysis": "Analysis",
-      "ecommerce": "Ecommerce"
+      "console": "Console"
     },
     "widgets": {
       "title": "Components",
@@ -308,7 +306,8 @@
       "menu32": "Menu 3-2",
       "menu321": "Menu 3-2-1",
       "organization": "Organization",
-      "attachment": "Attachments"
+      "attachment": "Attachments",
+      "helpCenter": "Help Center"
     },
     "safeguard": {
       "title": "Safeguard",
@@ -323,6 +322,113 @@
       "document": "Document",
       "liteVersion": "Lite Version",
       "oldVersion": "v2.6.1 Version"
+    }
+  },
+  "helpCenterPage": {
+    "hero": {
+      "badge": "Official Guide · Quick Start",
+      "title": "Help & Support Center",
+      "subtitle": "A structured overview of the System, Business, and Performance modules to help your team quickly understand workflows and feature scopes. Your actual access to specific functions is determined by your assigned role.",
+      "chip1": "System Setup",
+      "chip2": "Business Workflow",
+      "chip3": "Performance Insights"
+    },
+    "toc": {
+      "title": "On this page"
+    },
+    "intro": "This guide is continuously updated alongside system releases. For specific questions regarding points settlement or appraisal rules, we recommend checking the detailed guidelines within the relevant modules or contacting your system administrator.",
+    "footnote": "Note: If certain menus or action buttons are hidden from your interface, it typically means your account lacks the necessary permissions, rather than a system defect. Please contact an admin if you need additional access.",
+    "system": {
+      "navShort": "System",
+      "title": "System Settings",
+      "lead": "The foundational layer of the platform, covering account management, organization structure, and permission allocation. Primarily maintained by administrators, while team members can update their profiles in the User Center.",
+      "cards": {
+        "user": {
+          "title": "Accounts & Users",
+          "l1": "Manage system accounts, basic profiles, and department assignments. Establishing a user's basic profile is a prerequisite for assigning system permissions.",
+          "l2": "The roles bound to an account directly determine a member's operational permissions. After a role update, the user usually needs to log in again for the changes to take effect.",
+          "l3": "To ensure accurate attribution of your performance points and audit logs, please keep your account secure and avoid sharing it."
+        },
+        "role": {
+          "title": "Roles & Permissions",
+          "l1": "Group specific menu access and operation permissions into 'Roles', which are then assigned to corresponding team members.",
+          "l2": "Role modifications directly impact a member's collaboration scope and data visibility. We utilize a strict multi-tiered authorization mechanism.",
+          "l3": "When new features are deployed, administrators must grant the necessary permissions to relevant roles before members can see the new menu entries."
+        },
+        "menu": {
+          "title": "Menu Configuration",
+          "l1": "Configure the hierarchy and routing paths of the system's sidebar navigation.",
+          "l2": "Provide granular control over action buttons on specific pages, ensuring only authorized roles can perform sensitive operations.",
+          "l3": "If a menu is disabled here, it will be automatically hidden from the interface, even if users technically possess the underlying permission."
+        },
+        "org": {
+          "title": "Organization",
+          "l1": "Visually build and manage the company's organizational tree to clearly outline reporting lines and personnel placement.",
+          "l2": "When team members are reassigned, please update their department info here promptly to ensure accurate data aggregation and access boundaries.",
+          "l3": "Department structure represents administrative grouping. Actual R&D collaboration remains driven by specific 'Projects' and 'Tasks'."
+        },
+        "profile": {
+          "title": "User Center",
+          "l1": "Your personal workspace. Update your basic information, contact details, and modify your login password here.",
+          "l2": "The 'Performance Radar' provides multi-dimensional insights, visually highlighting your core competencies and team contributions.",
+          "l3": "Customize your profile tags, and use the quick shortcut to securely access your personal points ledger.",
+          "l4": "Upload a custom avatar, which will be synchronized across the top navigation bar and other business modules."
+        },
+        "attachment": {
+          "title": "Files & Attachments",
+          "l1": "Centralized management of all media assets and documents uploaded during system workflows.",
+          "l2": "Administrators can monitor storage usage and safely clean up expired or redundant attachments to free up space.",
+          "l3": "Files uploaded via various business forms are securely archived and displayed in this centralized registry."
+        }
+      }
+    },
+    "business": {
+      "navShort": "Business",
+      "title": "Business Workflow",
+      "lead": "The core collaboration hub for R&D operations, seamlessly integrating project tracking, task lifecycles, performance rules, and the automated points settlement engine.",
+      "cards": {
+        "project": {
+          "title": "Project Planning",
+          "l1": "Create and maintain full-lifecycle project records, including schedules, key leads, and team rosters.",
+          "l2": "Bind dedicated scoring rule versions to specific projects, establishing the baseline for future output measurement and points settlement.",
+          "l3": "Your ability to view or edit specific projects depends on your designated role within the project and your global system permissions."
+        },
+        "task": {
+          "title": "Task Tracking",
+          "l1": "Covers the entire workflow from requirements breakdown and assignment to development, testing, and final acceptance.",
+          "l2": "Key fields like the 'Primary Assignee' dictate who will be awarded the performance points upon task completion.",
+          "l3": "Accurately fill out estimated hours, testing evidence, and due dates, as these variables are crucial inputs for the performance calculation engine.",
+          "l4": "Once a task is closed or accepted, the system automatically triggers the rule engine to calculate and distribute the corresponding performance points."
+        },
+        "rules": {
+          "title": "Rules Engine",
+          "l1": "Configure the core performance rule library, defining scoring formulas and trigger conditions. Newly published rules automatically apply to future task settlements.",
+          "l2": "Provides tools to create, simulate, and publish rule sets. High-risk operations like manual point adjustments are typically restricted to authorized specialists.",
+          "l3": "To understand execution logic, cross-reference the applied rule versions with your 'Points Ledger' and specific 'Task Details'.",
+          "l4": "For compliance and auditing purposes, rule modifications only affect future settlements and will never retrospectively alter historical ledger records."
+        },
+        "points": {
+          "title": "Points Ledger",
+          "l1": "In the global 'Points Ledger', authorized managers can filter and review team point transactions across dimensions like projects, members, and timeframes.",
+          "l2": "The 'My Points Ledger' accessed via the User Center features strict data isolation, ensuring you can only view your own transaction history.",
+          "l3": "Trace the lifecycle of any transaction to view its associated task context and the specific rule version applied during settlement.",
+          "l4": "Summary metrics dynamically recalculate based on your active filters, making it easy to audit points earned or spent during a specific period."
+        }
+      }
+    },
+    "performance": {
+      "navShort": "Performance",
+      "title": "R&D Effectiveness",
+      "lead": "Utilize multi-dimensional data visualizations to track team productivity trends and performance distribution, empowering management with data-driven insights and retrospectives.",
+      "cards": {
+        "stats": {
+          "title": "Effectiveness Metrics",
+          "l1": "Explore comprehensive dashboards designed to help management grasp throughput, efficiency, and delivery quality within a project cycle.",
+          "l2": "Data visibility strictly adheres to your configured access boundaries, serving as a top-down complement to the individual 'Performance Radar'.",
+          "l3": "For core management roles, advanced features like 'Task Reconciliation' allow for spot-checking automated point settlements to guarantee accuracy.",
+          "l4": "When significant metric anomalies are detected, we recommend drilling down into associated task details, applied rule versions, and ledger logs for root-cause analysis."
+        }
+      }
     }
   },
   "table": {

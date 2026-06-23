@@ -10,8 +10,8 @@ export const pointsLedgerMineMenuRoute: AppRouteRecord = {
     icon: 'mdi:history',
     keepAlive: true,
     isHide: true,
-    allowAccessWhenHidden: true,
-    roles: ['admin', 'R_SUPER', 'R_ADMIN']
+    allowAccessWhenHidden: true
+    // 不设 roles：登录即可（服务端 /mine 仅返回本人流水）；避免前端菜单模式下非 admin 被滤掉
   }
 };
 

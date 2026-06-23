@@ -1,0 +1,48 @@
+@baseUrl = http://localhost:3000
+@token = {{login.response.body.data.token}}
+
+### 登录
+# @name login
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+
+{
+  "userName": "admin",
+  "password": "8d969eef6ecad3c29a3a629280e686cf0c3f5d5a86aff3ca12020c923adc6c92"
+}
+
+### 当前用户
+GET {{baseUrl}}/auth/info
+Authorization: Bearer {{token}}
+
+### 消息列表
+GET {{baseUrl}}/messages/?page=1&pageSize=20
+Authorization: Bearer {{token}}
+
+### 未读数
+GET {{baseUrl}}/messages/unread-count
+Authorization: Bearer {{token}}
+
+### 附件列表
+GET {{baseUrl}}/attachments/?page=1&pageSize=20
+Authorization: Bearer {{token}}
+
+### 项目列表
+GET {{baseUrl}}/projects?page=1&pageSize=20
+Authorization: Bearer {{token}}
+
+### 任务列表
+GET {{baseUrl}}/tasks?page=1&pageSize=20
+Authorization: Bearer {{token}}
+
+### 工作台
+GET {{baseUrl}}/dashboard/workbench
+Authorization: Bearer {{token}}
+
+### 规则集列表
+GET {{baseUrl}}/rule-sets
+Authorization: Bearer {{token}}
+
+### 我的积分
+GET {{baseUrl}}/performance/my-total-points
+Authorization: Bearer {{token}}
