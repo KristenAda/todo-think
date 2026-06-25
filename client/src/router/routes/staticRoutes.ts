@@ -22,6 +22,15 @@ export const staticRoutes: AppRouteRecordRaw[] = [
     path: '/login',
     redirect: '/auth/login'
   },
+  /** 历史菜单 path=/analysis 兼容重定向 */
+  {
+    path: '/analysis',
+    redirect: '/dashboard/console'
+  },
+  {
+    path: '/analysis/console',
+    redirect: '/dashboard/console'
+  },
   {
     path: '/auth/login',
     name: 'Login',

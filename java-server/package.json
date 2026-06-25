@@ -7,6 +7,7 @@
     "dev": "node scripts/dev.cjs",
     "start": "npm run dev",
     "build": "node scripts/run-mvn.cjs package -DskipTests",
-    "compile": "node scripts/run-mvn.cjs compile -DskipTests"
+    "compile": "node scripts/run-mvn.cjs compile -DskipTests",
+    "test": "node scripts/run-mvn.cjs test"
   }
 }

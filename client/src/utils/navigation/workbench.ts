@@ -11,6 +11,8 @@ export async function pushWorkbenchOpenTask(taskId: number): Promise<void> {
   const q = { [OPEN_TASK_QUERY_KEY]: String(taskId) };
   if (router.hasRoute('Console')) {
     await router.push({ name: 'Console', query: q });
+  } else if (router.hasRoute('AnalysisConsole')) {
+    await router.push({ name: 'AnalysisConsole', query: q });
   } else {
     await router.push({ name: 'OutsideWorkbench', query: q });
   }

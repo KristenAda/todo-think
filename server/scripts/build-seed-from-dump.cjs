@@ -133,6 +133,10 @@ function sanitizeMenuLine(line) {
     "(3, NULL, 'Dashboard', '工作台', '/dashboard',",
   );
   s = s.replace(
+    /\(30, 3, 'AnalysisConsole', '主控制台', 'console', 'dashboard\/console\/index'/,
+    "(30, 3, 'Console', '主控制台', 'console', '/dashboard/console'",
+  );
+  s = s.replace(
     /\(3, NULL, 'Dashboard', '工作台', '\/dashboard', '\/index\/index', 'mdi:chart-box-outline', 2,/,
     "(3, NULL, 'Dashboard', '工作台', '/dashboard', '/index/index', 'ri:pie-chart-line', 1,",
   );

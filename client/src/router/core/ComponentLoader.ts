@@ -24,20 +24,28 @@ const REMOVED_VIEW_COMPONENT_TARGETS: ReadonlyArray<{ match: (normalized: string
       n === '/dashboard/ecommerce/index' ||
       n.startsWith('/dashboard/ecommerce/'),
     target: '/dashboard/console'
+  },
+  {
+    match: (n) => n === '/dashboard/console/index',
+    target: '/dashboard/console'
   }
 ];
 
 function normalizeComponentPathForAlias(componentPath: string): string {
   const trimmed = componentPath.trim().replace(/\\/g, '/');
   const withSlash = trimmed.startsWith('/') ? trimmed : `/${trimmed}`;
-  return withSlash.replace(/\/+/g, '/');
+  return withSlash.replace(/\/+/g, '/').toLowerCase();
 }
 
 function resolveRemovedViewAlias(componentPath: string): string | null {
   const normalized = normalizeComponentPathForAlias(componentPath);
   for (const { match, target } of REMOVED_VIEW_COMPONENT_TARGETS) {
-    if (match(normalized.toLowerCase())) {
-      return target;
+    if (match(normalized)) {
+      const normalizedTarget = normalizeComponentPathForAlias(target);
+      // 避免 target 与自身相同导致 load() 无限递归
+      if (normalizedTarget !== normalized) {
+        return target;
+      }
     }
   }
   return null;

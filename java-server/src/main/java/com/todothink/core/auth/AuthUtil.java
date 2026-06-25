@@ -5,11 +5,16 @@ import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.SignatureAlgorithm;
 import io.jsonwebtoken.security.Keys;
-import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.core.env.Environment;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
 
+import javax.annotation.PostConstruct;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
+import java.util.Arrays;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
@@ -21,11 +26,32 @@ import java.util.Map;
 @Component
 public class AuthUtil {
 
-    private final AppProperties appProperties;
-    private final BCryptPasswordEncoder passwordEncoder = new BCryptPasswordEncoder(10);
+    private static final Logger log = LoggerFactory.getLogger(AuthUtil.class);
 
-    public AuthUtil(AppProperties appProperties) {
+    private final AppProperties appProperties;
+    private final PasswordEncoder passwordEncoder;
+    private final Environment environment;
+
+    public AuthUtil(AppProperties appProperties, PasswordEncoder passwordEncoder, Environment environment) {
         this.appProperties = appProperties;
+        this.passwordEncoder = passwordEncoder;
+        this.environment = environment;
+    }
+
+    @PostConstruct
+    public void validateJwtSecret() {
+        String secret = appProperties.getSecret();
+        int length = secret == null ? 0 : secret.getBytes(StandardCharsets.UTF_8).length;
+        if (length < 32) {
+            throw new IllegalStateException("APP_JWT_SECRET must be at least 32 bytes for HS256");
+        }
+
+        if (isWeakSecret(secret)) {
+            if (isProdProfile()) {
+                throw new IllegalStateException("APP_JWT_SECRET is weak and cannot be used in prod profile");
+            }
+            log.warn("[security] 当前 JWT secret 为开发占位值，请在生产环境通过 APP_JWT_SECRET 配置强密钥");
+        }
     }
 
     public String sha256(String plain) {
@@ -72,5 +98,20 @@ public class AuthUtil {
                 .build()
                 .parseClaimsJws(token)
                 .getBody();
+    }
+
+    private boolean isWeakSecret(String secret) {
+        if (secret == null) {
+            return true;
+        }
+        String normalized = secret.toLowerCase();
+        return normalized.contains("change")
+                || normalized.contains("fallback")
+                || normalized.contains("please-set")
+                || normalized.contains("dev-secret");
+    }
+
+    private boolean isProdProfile() {
+        return Arrays.asList(environment.getActiveProfiles()).contains("prod");
     }
 }
